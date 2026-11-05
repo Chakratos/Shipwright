@@ -33,7 +33,7 @@ ROM data.
   Hooks include `OnPlayerUpdate`, `VB_PLAYER_MODIFY_RUN_SPEED` and
   `VB_PLAYER_LIMIT_JUMP_SPEED`.
 
-An existing Ship of Harkinian `RocsFeather.cpp` / `MoonJump.cpp` illustrates
+The first concrete original-game symbols and their unresolved semantics are\nlisted in [RE_SOURCE_MAP.md](RE_SOURCE_MAP.md).\n\nAn existing Ship of Harkinian `RocsFeather.cpp` / `MoonJump.cpp` illustrates
 how player velocity is changed by hooks. **Those enhancements are not Goemon
 reference behavior** and must never be used as a substitute for it.
 
@@ -71,7 +71,7 @@ reference behavior** and must never be used as a substitute for it.
 
 `soh/soh/Enhancements/Goemon/ReferenceTrace.cpp` registers a read-only
 `OnPlayerUpdate` hook. It is **disabled by default**. Set the Ship CVar
-`CVAR_SETTING("Goemon.ShipTrace")` to integer `1` in the running game
+`gSettings.Goemon.ShipTrace` (the expanded\n`CVAR_SETTING("Goemon.ShipTrace")`) to integer `1` in the running game
 (configuration / developer tooling), then set it to `0` to close the trace.
 It writes `goemon_ship_trace.csv` in Ship's current **working directory**.
 The file is overwritten when each capture session starts. The hook does not
@@ -93,6 +93,42 @@ not proof of parity by itself. Fixed-step timing, axis orientation and position
 units must be calibrated between game engines before comparing traces.
 Physical button masks also differ; map equivalent **actions** when producing
 replay inputs instead of assuming equal raw button numbers.
+
+## Exploratory Goemon64Recomp probe
+
+The separate diagnostic source at
+`tools/goemon/reference_probe/goemon_probe.c` reads **actual original-game**
+character/action identifiers, controller values, root-object position and
+animation progress. It is designed for a **separate local Goemon64Recomp**
+checkout, not linked into Ship.
+
+To install the additional Goemon-side capture with a reversible source edit:
+
+```sh
+python tools/goemon/reference_probe/install_probe.py /path/to/Goemon64Recomp
+# Build and run that separate Goemon64Recomp checkout using its own instructions.
+# Save the application console output as goemon_runtime.log.
+python tools/goemon/reference_probe/log_to_csv.py goemon_runtime.log goemon_raw.csv
+python tools/goemon/reference_probe/install_probe.py /path/to/Goemon64Recomp --remove
+```
+
+The installer changes only `patches/main.c` and adds
+`patches/goemon_trace_probe.c` inside the supplied working copy. Its Makefile
+already compiles patch sources by wildcard. There is no GH Actions workflow.
+
+**Important**: the probe currently samples the *render callback* in
+`main_initialize_display_lists`, not a proven physics-update callback. The
+CSV is intentionally labeled `root_pos_*` and `root_rot_*`, not normalized
+`pos_*` and `yaw`. The original renderer masks object rotations to 10-bit
+values; those are NOT OoT 16-bit yaw units. This probe is for discovering the
+original state machine and choosing the correct physics trace hook. It does
+**not** demonstrate movement parity yet.
+
+Run tooling tests locally without GitHub Actions:
+
+```sh
+python -m unittest discover -s tools/goemon/reference_probe/tests -v
+```
 
 ## Comparison tool and validation
 
@@ -127,7 +163,7 @@ returns non-zero on missing source data or unacceptable error.
 - [x] Isolate project in feature branch and define original-fidelity contract.
 - [x] Install read-only Zelda player instrumentation (off by default).
 - [x] Add a frame-by-frame comparison tool and unit tests.
-- [ ] Find and identify original Goemon player routines / state memory.
+- [x] Identify initial original player task, action, root-object and input structures.\n- [x] Add a reversible exploratory Goemon64Recomp render-state probe (not yet build-tested).\n- [ ] Identify the actual Goemon physics tick and movement-state routines.
 - [ ] Instrument the original Goemon runtime, obtain synchronized captures.
 - [ ] Reconstruct and integrate the original character models and animations.
 - [ ] Port authentic player controller and character switching.
