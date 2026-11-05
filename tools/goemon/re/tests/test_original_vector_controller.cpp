@@ -78,7 +78,7 @@ int main() {
     auto reset=AdvanceMeasuredOriginalVectorController(air,jump,unblocked);
     assert(reset);
     Close(std::hypot(reset->desiredPlanar.x,reset->desiredPlanar.z),0.84f);
-    Close(reset->desiredPlanar.x,0.129f,0.004f);
+    Close(reset->desiredPlanar.x,0.13344084f);
     assert(reset->airborne);
     jump.action=28;jump.previousAction=26;
     assert(!AdvanceMeasuredOriginalVectorController(air,jump,unblocked));
