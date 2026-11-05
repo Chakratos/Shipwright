@@ -15,6 +15,21 @@ if (-not (Get-Command py -ErrorAction SilentlyContinue)) {
     throw "Python Launcher 'py -3' fehlt."
 }
 
+# Fail before launching the game if any postprocessor has a Python syntax
+# defect. The 2026-11-05 v0.3 capture exposed why this guard matters.
+$ScriptsToCheck = @(
+    (Join-Path $PSScriptRoot "reprocess_log.py"),
+    (Join-Path $Project "tools\goemon\reference_probe\log_to_csv.py"),
+    (Join-Path $Project "tools\goemon\reference_probe\action_transitions.py"),
+    (Join-Path $Project "tools\goemon\reference_probe\tick_analysis.py"),
+    (Join-Path $Project "tools\goemon\reference_probe\memory_candidates.py"),
+    (Join-Path $Project "tools\goemon\reference_probe\character_coverage.py")
+)
+& py -3 -m py_compile @ScriptsToCheck
+if ($LASTEXITCODE -ne 0) {
+    throw "Fehler in einem Auswertungsskript. Aufnahme nicht gestartet; vorhandene Spielaufzeichnungen bleiben unangetastet."
+}
+
 $Date = Get-Date -Format "yyyyMMdd-HHmmss"
 $Run = Join-Path $Output "run-$Date"
 New-Item -ItemType Directory -Force -Path $Run | Out-Null
