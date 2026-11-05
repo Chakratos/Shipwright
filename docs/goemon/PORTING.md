@@ -172,6 +172,12 @@ returns non-zero on missing source data or unacceptable error.
 - [x] Implement four-character original graphics-resource identification and raw extraction.
 - [x] Pin matching Goemon, decompilation, symbol and Ship source revisions.
 - [x] Create local unit tests and a one-command test runner.
+- [x] Decode selected original MIPS instructions (memory, branches, calls, COP1).
+- [x] Decode original 24-byte Skeleton and variable-pointer AnimatedSkeleton records.
+- [x] Capture original character rig / animation pointers when source character changes.
+- [x] Resolve runtime segment-8/direct pointers against locally extracted original graphics files.
+- [x] Implement byte-accurate original PlayerTask / Player / Object memory views in native C++20.
+- [x] Compile and execute native C++20 unit checks and 19 new Python tests locally.
 - [ ] Identify the actual Goemon physics tick and movement-state routines.
 - [ ] Instrument the original Goemon runtime, obtain synchronized captures.
 - [ ] Reconstruct and integrate the original character models and animations.
@@ -189,6 +195,9 @@ The Ship CMake configuration uses `GLOB_RECURSE` for `soh/*.cpp`, so the
 trace source is picked up without changing `z_player.c` or the CMake file.
 
 **Current state:** source-guided reverse-engineering toolchain, original
-resource identifiers, game instrumentation and tests are committed. The tools
-have **not** been tested against a real ROM, and the Ship trace has not been
-compiled. No playable Goemon controller exists yet.
+resource identifiers, Goemon runtime probing, N64 skeleton decoding,
+a verified rig-pointer resolver, portable C++20 original-memory views and
+locally executed tests are committed. **No real game ROM was available for
+validation.** Neither the Goemon diagnostic patch nor the Ship executable
+has been built against its game repository. Original Goemon physics and
+animations have **not yet been ported**; no playable Goemon controller exists.
