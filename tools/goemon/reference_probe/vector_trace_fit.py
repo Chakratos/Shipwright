@@ -3,8 +3,8 @@
 
 Original ground vector: (speed-0.30)*prevUnit + 0.84*targetYaw.
 Original airborne vector: speed*prevUnit + 0.84*targetYaw.
-Direction is normalized; scalar speeds advance 0.54 (ground) or
-0.84 (air) subject to 2.8 cap. Exceptions are reported, not omitted.
+The vector is capped AFTER combining forces. Strong turns can
+decelerate below 2.8; exceptional low-stick initial impulses are kept.
 """
 from __future__ import annotations
 import argparse
@@ -42,8 +42,12 @@ def predict(a:dict,b:dict,phase:str)->tuple[float,float]:
     vz=retain*a["vz"]/a["speed"]+.84*target_z
     magnitude=math.hypot(vx,vz)
     if magnitude<.000001:raise ValueError("cancelled original direction")
-    predicted_speed=min(2.8,a["speed"]+(.54 if phase=="ground_acceleration" else .84))
-    return predicted_speed*vx/magnitude,predicted_speed*vz/magnitude
+    # The original clamps the vector AFTER adding the directional
+    # impulse. Sharp turns can therefore legitimately slow the player
+    # below 2.8 (real sample 35->36: 2.7250823).
+    if magnitude > 2.8:
+        return 2.8*vx/magnitude,2.8*vz/magnitude
+    return vx,vz
 
 def analyze(rows:list[dict])->dict:
     records={name:[] for name in PHASES}
@@ -66,6 +70,9 @@ def analyze(rows:list[dict])->dict:
     for name,group in records.items():
         results[name]={
             "count":len(group),
+            "vector_within_0_000002":sum(x["vector_error"]<2e-6 for x in group),
+            "vector_within_0_012":sum(x["vector_error"]<.012 for x in group),
+            "maximum_vector_error":max((x["vector_error"] for x in group),default=None),
             "direction_within_0_000002":sum(x["direction_error"]<2e-6 for x in group),
             "direction_within_0_001":sum(x["direction_error"]<.001 for x in group),
             "speed_within_0_012":sum(abs(x["speed_error"])<.012 for x in group),
@@ -84,8 +91,10 @@ def analyze(rows:list[dict])->dict:
         "direction_matches_within_0_001":sum(v["direction_within_0_001"] for v in results.values()),
         "direction_matches_within_0_000002":sum(v["direction_within_0_000002"] for v in results.values()),
         "speed_matches_within_0_012":sum(v["speed_within_0_012"] for v in results.values()),
+        "vector_matches_within_0_012":sum(v["vector_within_0_012"] for v in results.values()),
+        "vector_matches_within_0_000002":sum(v["vector_within_0_000002"] for v in results.values()),
         "phases":results,
-        "limitations":"Only tested original action and analog cases. One speed exception and one sub-millidegree start difference are preserved; no guessed landing/camera/partial-stick code.",
+        "limitations":"Only observed original full-stick action cases. Start sample 146 deviates by 0.008809 due to an unresolved initial input condition; no guessed landing/camera/partial-stick code.",
     }
 
 def main(argv=None)->int:
