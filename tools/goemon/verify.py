@@ -43,11 +43,11 @@ def windows_msvc() -> tuple[str, dict[str, str]] | None:
         print(f"MSVC: VsDevCmd failed ({result.returncode}): {result.stderr[-800:]}",
               file=sys.stderr)
         return None
-    environment = dict(os.environ)
+    environment = {key.upper(): value for key, value in os.environ.items()}
     for line in result.stdout.splitlines():
         if "=" in line and not line.startswith("="):
             key, value = line.split("=", 1)
-            environment[key] = value
+            environment[key.upper()] = value
     compiler = shutil.which("cl.exe", path=environment.get("PATH"))
     if not compiler:
         print(f"MSVC: cl.exe missing after {devcmd}", file=sys.stderr)
