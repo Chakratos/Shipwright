@@ -32,7 +32,7 @@ def trace_fields(instructions:Iterable[tuple[int,int]])->list[dict]:
             if base and base[0]=='const':
                 delta=imm if op==0x0d else sign16(imm)
                 value=('const',((base[1] | delta) if op==0x0d else (base[1]+delta))&0xffffffff)
-            elif base and base[0]=='task' and op in (0x08,0x09) and sign16(imm)==0:
+            elif base and base[0] in ('task','player') and op in (0x08,0x09) and sign16(imm)==0:
                 value=base
         elif op in LOADS|STORES:
             offset=sign16(imm)
@@ -46,6 +46,19 @@ def trace_fields(instructions:Iterable[tuple[int,int]])->list[dict]:
                     'field':FIELDS[offset], 'offset':f'0x{offset:02X}',
                     'direction':'write' if op in STORES else 'read',
                 })
+                if offset == 0x5C and op == 0x23:
+                    value=('player',base[1])
+            if base and base[0]=='player' and 0 <= offset < 0x1C0:
+                proof.append({
+                    'pc':f'0x{pc:08X}', 'global':base[1],
+                    'field':f'Player+0x{offset:03X}', 'offset':f'0x{offset:03X}',
+                    'direction':'write' if op in STORES else 'read',
+                    'object':'opaque_player',
+                })
+        elif op in (0x10,0x11):
+            # MFCx and CFCx replace a GPR with a coprocessor value.
+            if rs in (0,2) and rt:
+                reg.pop(rt,None)
         elif op==0:
             fn=word&63
             if fn in (0x21,0x20,0x25):
