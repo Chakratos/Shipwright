@@ -11,6 +11,7 @@
 #include "goemon_capture_gate.h"
 
 extern void* D_801FC604_5B8514; // PlayerTask* (player one)
+extern void* D_801FC60C_5B851C; // Object* player-one render object (not the root)
 extern void* D_801FC614_5B8524; // Object* player-one render root
 extern SYS_W D_8008CCC0_8D8C0; // original global system state; missing in pinned mnsg/common.h
 extern u32 D_8015C5DC_15D1DC; // globally selected character
@@ -18,9 +19,10 @@ extern u32 D_8015C5DC_15D1DC; // globally selected character
 // No assumed host pointer size: code is compiled to MIPS o32 (32-bit).
 typedef char verify_u32_pointer_layout[(sizeof(void*) == 4) ? 1 : -1];
 
-#define GOEMON_TRACE_MAX_FRAMES 2400
-#define GOEMON_TRACE_MEM_EVERY 8
-#define GOEMON_TRACE_MAX_MEMORY_SAMPLES 128
+// ~6.7 minutes at 30 original game steps/s; manual stop is preferred.
+#define GOEMON_TRACE_MAX_FRAMES 12000
+#define GOEMON_TRACE_MEM_EVERY 4
+#define GOEMON_TRACE_MAX_MEMORY_SAMPLES 3072
 
 static u32 trace_frame = 0;
 static u32 trace_memory_count = 0;
@@ -62,6 +64,40 @@ static void CapturePlayerMemory(const u8* player, u32 frame, u8 character, u8 ac
                   frame, (s32)D_8008CCC0_8D8C0.frames_elapsed,
                   (u32)character, (u32)action, x, y, z, bytes_as_hex);
     ++trace_memory_count;
+}
+
+// Copy all 0xF0 bytes of the original PlayerTask on EVERY sampled update.
+// This preserves original position/velocity/state candidates that are not
+// present in the render root, at the original game's own sampling cadence.
+// Unlike the fixed 18-column GOEMON_REF row, GOEMON_TASK is a side-channel.
+static void CaptureTaskMemory(const u8* task, u32 frame, u8 character, u8 action) {
+    static char hex_bytes[0xF0 * 2 + 1];
+    u32 i;
+    if (task == 0) return;
+    for (i = 0; i < 0xF0; ++i) {
+        const u8 value = task[i];
+        hex_bytes[i * 2] = k_hex[value >> 4];
+        hex_bytes[i * 2 + 1] = k_hex[value & 0x0f];
+    }
+    hex_bytes[sizeof(hex_bytes) - 1] = '\0';
+    recomp_printf("GOEMON_TASK,%u,%d,%u,%u,%s\n",
+                  frame, (s32)D_8008CCC0_8D8C0.frames_elapsed,
+                  (u32)character, (u32)action, hex_bytes);
+}
+
+// Player model and root are distinct original objects. Record both.
+// Previous v0.2 samples used only the root, whose Y remains constant
+// during most jumping states, so they cannot establish jump height.
+static void CapturePlayerObject(const u8* object, u32 frame,
+                                u8 character, u8 action) {
+    if (object == 0) return;
+    recomp_printf("GOEMON_OBJ,%u,%u,%u,%f,%f,%f,%d,%d,%d,%f\n",
+                  frame, (u32)character, (u32)action,
+                  ReadF32(object, 0x08), ReadF32(object, 0x0c),
+                  ReadF32(object, 0x10),
+                  (s32)ReadS16(object, 0x14), (s32)ReadS16(object, 0x16),
+                  (s32)ReadS16(object, 0x18),
+                  ReadF32(object, 0x28));
 }
 
 // In the official mod template this hook is called by the game's game-mode
@@ -144,6 +180,9 @@ RECOMP_HOOK_RETURN("func_80002040_2C40") void goemon_capture_mode_handler(void) 
                   (s32)input->stick_raw_x, (s32)input->stick_raw_y,
                   input->stick_x, input->stick_y);
 
+    CaptureTaskMemory(task, frame, character, action);
+    CapturePlayerObject((const u8*)D_801FC60C_5B851C,
+                        frame, character, action);
     CapturePlayerMemory(player, frame, character, action, x, y, z);
 
     recomp_printf("GOEMON_TICK,%u,%d,%d,%u,%u\n",
