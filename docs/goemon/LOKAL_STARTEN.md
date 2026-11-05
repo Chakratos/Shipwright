@@ -35,7 +35,7 @@ Die lokale Dekomprimierung läuft temporär; danach folgen automatisch:
 - ROM-Version und Quellrevisionen erfassen;
 - Overlay `.file_11` nach Original-Spielerfunktionen und Schreibzugriffen
   durchsuchen;
-- die vier bekannten Player-Funktionen als MIPS-Analyse ausgeben;
+- den Aufrufgraphen der vier bekannten Original-Playerfunktionen ermitteln;
 - die originalen Charaktergrafik-Datei-IDs und SHA-256-Manifeste ermitteln;
 - die vorhandenen Python-Unit-Tests ausführen;
 - **ausschließlich JSON/LOG-Dateien** in eine ZIP packen.
