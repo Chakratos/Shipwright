@@ -175,6 +175,10 @@ returns non-zero on missing source data or unacceptable error.
 - [x] Decode selected original MIPS instructions (memory, branches, calls, COP1).
 - [x] Track original MIPS register provenance from player globals into action/character field reads and writes.
 - [x] Capture and analyze Goemon SYS_W frame/loop/retrace counters for update-loop identification.
+- [x] Find original `COL_TREE` / `COL_NODE` / `COL_PLANE` collision code in the Goemon decompilation.
+- [x] Port original scaled-point and actor BSP queries to standalone C++20, with native tests.
+- [x] Scan original `.file_11` for writes to `PlayerTask` and the opaque `Player` record.
+- [x] Seed proven MIPS `PlayerTask*` function arguments in four original entry points.
 - [x] Decode original 24-byte Skeleton and variable-pointer AnimatedSkeleton records.
 - [x] Capture original character rig / animation pointers when source character changes.
 - [x] Resolve runtime segment-8/direct pointers against locally extracted original graphics files.
@@ -196,10 +200,11 @@ or with an explicitly configured **self-hosted** runner once available.
 The Ship CMake configuration uses `GLOB_RECURSE` for `soh/*.cpp`, so the
 trace source is picked up without changing `z_player.c` or the CMake file.
 
-**Current state:** source-guided reverse-engineering toolchain, original
-resource identifiers, Goemon runtime probing, N64 skeleton decoding,
-a verified rig-pointer resolver, portable C++20 original-memory views and
-locally executed tests are committed. **No real game ROM was available for
-validation.** Neither the Goemon diagnostic patch nor the Ship executable
-has been built against its game repository. Original Goemon physics and
-animations have **not yet been ported**; no playable Goemon controller exists.
+**Current state:** Original memory views, a register-aware
+original-game Player writer scanner, N64 skeleton/rig analysis, and two
+source-derived Goemon collision BSP queries are implemented. The new ROM
+scanner and collision port were locally exercised against synthetic data.
+**No real game ROM was available for validation.** The Goemon diagnostic
+patch and Ship executable have not been built against the complete game
+sources. The full original Goemon player physics, models and animations are
+**not yet ported**, and no playable Goemon character exists yet.
