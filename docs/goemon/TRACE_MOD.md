@@ -8,22 +8,23 @@ als .nrm-Datei.
 
 ## Einmalige Voraussetzungen
 
-- Git und Python 3.11+ sind von der bisherigen ROM-Analyse vorhanden.
-- LLVM/Clang mit MIPS-Target (das offizielle Mod-Template empfiehlt **18.1.8**,
-  da 19.1.0 kein funktionierendes MIPS-Target bietet).
-- ld.lld und make.
-- RecompModTool.exe wird vom Buildskript automatisch aus dem offiziellen
-  [N64Recomp-Release](https://github.com/N64Recomp/N64Recomp/releases/tag/mod-tool-release)
-  heruntergeladen.
+Nur **Git for Windows** und PowerShell werden für den Build benötigt.
+Die bisherige Python-Installation bleibt für die nachfolgende
+Aufzeichnungs-Auswertung erforderlich.
 
-Mit Chocolatey, falls vorhanden:
+Das Buildskript prüft zuerst, ob ein Clang mit **MIPS-Backend** und
+ld.lld bereits vorhanden ist. Fehlt er, lädt es das offizielle
+**portable LLVM 18.1.8 für Windows** in den benachbarten Ordner
+GoemonTraceLLVM. Der einmalige Download umfasst rund **982 MB**.
+Danach wird die lokale Installation wiederverwendet.
 
-~~~powershell
-choco install llvm --version=18.1.8 make -y
-clang --version
-make --version
-ld.lld --version
-~~~
+Es installiert keine systemweiten Programme, benötigt keine Adminrechte
+und verlangt kein separates make, Chocolatey oder einen PATH-Eintrag.
+Der Mod wird direkt mit den Compiler- und Linkerflags des offiziellen
+Goemon-Mod-Templates erstellt.
+
+- [LLVM 18.1.8](https://github.com/llvm/llvm-project/releases/tag/llvmorg-18.1.8)
+- [RecompModTool](https://github.com/N64Recomp/N64Recomp/releases/tag/mod-tool-release)
 
 ## Schritt 1 — Mod bauen
 
@@ -36,8 +37,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\goemon\diagnostic_mo
 
 Das Skript klont das offizielle Mod-Template mit seinen Submodulen in den
 benachbarten Ordner GoemonTraceModBuild, ersetzt das Beispiel durch unseren
-read-only Diagnose-Hook, kompiliert den MIPS-Code und erstellt über
-RecompModTool.exe die Datei:
+read-only Diagnose-Hook, kompiliert den MIPS-Code direkt mit Clang
+und erstellt über RecompModTool.exe die Datei:
 
 ~~~text
 ..\GoemonTraceModBuild\build\goemon_original_trace.nrm
@@ -118,8 +119,8 @@ Die Aufnahme stoppt automatisch nach 2.400 gültigen Player-Frames.
 
 ## Technische Grenzen
 
-Dieser .nrm-Mod ist neu und wurde noch nicht gegen deine konkrete
-Windows-Installation getestet. Die neue manuelle Start/Stop-Einstellung
+Dieser .nrm-Mod und der portable LLVM-Download sind noch nicht
+gegen deine konkrete Windows-Installation getestet. Die neue manuelle Start/Stop-Einstellung
 verwendet das Mod-Konfigurations-API des offiziellen Templates.
 Der Hook kommt aus dem offiziellen Mod-Template, ist aber noch
 **nicht** als Physik-Tick bewiesen.
