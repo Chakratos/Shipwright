@@ -102,7 +102,7 @@ def reprocess(folder: Path) -> Path:
                     ident = int(fields[1])
                     object_y = float(fields[4])
                     animation = float(fields[9])
-                    if (abs(object_y) < 1000000000 and abs(animation) < 1000000000:
+                    if abs(object_y) < 1_000_000_000 and abs(animation) < 1_000_000_000:
                         object_y_by_character.setdefault(ident, []).append(object_y)
                         object_animation_by_character.setdefault(ident, []).append(animation)
                         object_samples += 1
