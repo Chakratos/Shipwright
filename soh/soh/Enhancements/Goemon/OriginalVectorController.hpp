@@ -135,7 +135,12 @@ AdvanceMeasuredOriginalVectorController(
             };
             break;
         case OriginalVectorAction::ContinueBrake:
-            if (!state.braking) return std::nullopt;
+            // Only four successive -0.6 braking steps are evidenced
+            // (2.0 -> 1.4 -> 0.8 -> 0.2 -> -0.4).
+            // The final negative step may then persist against a wall.
+            // Do not invent unlimited backwards acceleration.
+            if (!state.braking || state.signedBrakeSpeed < 0.19f)
+                return std::nullopt;
             state.signedBrakeSpeed -= kOriginalBrakingStep;
             next = {
                 state.brakingHeading.x*state.signedBrakeSpeed,
