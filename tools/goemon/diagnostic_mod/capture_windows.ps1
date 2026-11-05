@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory=$true)][string]$GameExe,
+    [string]$GameExe = "$env:USERPROFILE\Desktop\Goemon64Recompiled\Goemon64Recompiled.exe",
     [string]$Output = ""
 )
 
@@ -22,7 +22,11 @@ $StdOut = Join-Path $Run "stdout.log"
 $StdErr = Join-Path $Run "stderr.log"
 $WorkingDirectory = Split-Path $GameExe -Parent
 Write-Host "Starte Goemon und sammle den Original-Trace ..." -ForegroundColor Cyan
-Write-Host "Spiele 30-60 Sekunden: Stillstand, Laufen, Drehen, Springen und Angriff."
+Write-Host "Die Aufnahme ist standardmaessig AUS."
+Write-Host "Lade deinen Spielstand, aktiviere im Mod-Menue Original-Daten aufnehmen,"
+Write-Host "verlasse das Menue und bewege den Stick, um die Aufnahme zu starten."
+Write-Host "Danach: Stillstand, Laufen, Drehen, Springen und Angriff."
+Write-Host "Zur Beendigung Aufnahme im Mod-Menue auf Aus stellen."
 Write-Host "Danach das Spiel normal schliessen. Die Dateien werden automatisch gesammelt."
 Write-Host ""
 
