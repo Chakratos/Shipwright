@@ -106,6 +106,24 @@ def make_manifest(data: bytes) -> tuple[dict, list[tuple[int, FileEntry]]]:
             "sha256": sha,
         })
         selected.append((slot, entry))
+        # Four original character roots are separated by four consecutive
+        # file-table indices. Inspect neighbors as candidates, not proven
+        # model/texture/animation roles. Real ROM has PIC0000 at root+1.
+        neighbors = []
+        for neighbor_id in range(index, min(index + 4, len(files))):
+            neighbor = files[neighbor_id]
+            payload = data[neighbor.start:neighbor.end]
+            neighbors.append({
+                "file_id": neighbor_id,
+                "relative_to_root": neighbor_id - index,
+                "rom_start": neighbor.start,
+                "rom_end": neighbor.end,
+                "size": neighbor.size,
+                "sha256": hashlib.sha256(payload).hexdigest(),
+                "signature": "PIC0000" if payload.startswith(b"PIC0000") else None,
+                "format_role": None,  # Requires original renderer tracing.
+            })
+        characters[-1]["adjacent_resource_candidates"] = neighbors
 
     return {
         "source": "original decompressed US Mystical Ninja Starring Goemon ROM",
@@ -114,7 +132,7 @@ def make_manifest(data: bytes) -> tuple[dict, list[tuple[int, FileEntry]]]:
         "character_ids_rom_address": f"0x{CHARACTER_GRAPHICS_IDS_ROM_OFFSET:08X}",
         "file_table_count": len(files),
         "character_graphics": characters,
-        "note": "Raw original graphics files only; no model, texture or animation decoder yet.",
+        "note": "Adjacent resources are candidates only; model/texture/animation roles unverified.",
     }, selected
 
 
