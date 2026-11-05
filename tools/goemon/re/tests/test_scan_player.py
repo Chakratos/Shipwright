@@ -69,5 +69,28 @@ class Tests(unittest.TestCase):
         self.assertEqual(r['candidates'][0]['priority_score'],2)
 
 
+
+class TaskArgumentTests(unittest.TestCase):
+    def test_known_original_player_param_direct_write(self):
+        ss=symbols()
+        ss['section'][0]['functions'][0]['name']='func_801DAF54_596E64'
+        b=bytearray(synthetic_rom())
+        for i in range(8):
+            struct.pack_into('>I',b,0x40+i*4,0)
+        struct.pack_into('>I',b,0x40,0xA08000CC)  # sb zero, action_id(a0)
+        r=analyze(bytes(b),ss)
+        self.assertEqual(r['functions_with_evidence'],1)
+        self.assertEqual(r['candidates'][0]['field_accesses'][0]['global'],'argument:a0')
+        self.assertEqual(r['candidates'][0]['field_accesses'][0]['direction'],'write')
+
+    def test_unverified_function_is_not_given_task_pointer(self):
+        b=bytearray(synthetic_rom())
+        for i in range(8):
+            struct.pack_into('>I',b,0x40+i*4,0)
+        struct.pack_into('>I',b,0x40,0xA08000CC)
+        r=analyze(bytes(b),symbols())
+        self.assertEqual(r['functions_with_evidence'],0)
+
+
 if __name__=='__main__':
     unittest.main()
