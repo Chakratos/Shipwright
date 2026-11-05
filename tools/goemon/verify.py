@@ -15,7 +15,7 @@ import unittest
 
 
 def run_native(root: Path) -> int:
-    compiler = shutil.which("c++") or shutil.which("g++") or shutil.which("clang++")
+    compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++") or shutil.which("cl")
     if not compiler:
         print("ERROR: no C++20 compiler found in PATH", file=sys.stderr)
         return 2
@@ -25,10 +25,16 @@ def run_native(root: Path) -> int:
         return 2
     with tempfile.TemporaryDirectory(prefix="goemon-native-test-") as temp:
         executable = Path(temp) / ("test_original_memory.exe" if sys.platform == "win32" else "test_original_memory")
-        command = [
-            compiler, "-std=c++20", "-Wall", "-Wextra", "-Werror", "-pedantic",
-            "-I", str(root.parents[1]), str(source), "-o", str(executable),
-        ]
+        if Path(compiler).stem.lower() == "cl":
+            command = [
+                compiler, "/nologo", "/std:c++20", "/W4", "/WX", "/EHsc",
+                "/I" + str(root.parents[1]), str(source), "/Fe:" + str(executable),
+            ]
+        else:
+            command = [
+                compiler, "-std=c++20", "-Wall", "-Wextra", "-Werror", "-pedantic",
+                "-I", str(root.parents[1]), str(source), "-o", str(executable),
+            ]
         for arguments in (command, [str(executable)]):
             result = subprocess.run(arguments, check=False, timeout=120)
             if result.returncode != 0:
