@@ -63,9 +63,11 @@ standardmäßig auf **Aus** gestellt. Öffne im laufenden Spiel
 die Mod-Einstellungen und stelle sie auf **Aufnahme aktivieren**.
 Danach das Mod-Menü verlassen und den Analogstick bewegen.
 
-Der Mod wartet auf einen gültigen PlayerTask sowie eine
-**aktive Analogstick-Bewegung**. Vorher werden **keine GOEMON_REF-
-Messframes** aufgezeichnet — auch nicht im Titelmenü.
+Der Mod wartet auf einen gültigen PlayerTask, eine **aktive
+Analogstick-Bewegung und eine tatsächliche Positionsänderung**
+der Spielfigur. Vorher werden **keine GOEMON_REF-Messframes**
+aufgezeichnet — auch nicht im Titelmenü oder beim Navigieren
+durch das Mod-Menü.
 Die Mod protokolliert das Einschalten mit GOEMON_TRACE_ARMED,
 den echten Start mit GOEMON_TRACE_BEGIN.
 
