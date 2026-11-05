@@ -174,6 +174,7 @@ returns non-zero on missing source data or unacceptable error.
 - [x] Create local unit tests and a one-command test runner.
 - [x] Decode selected original MIPS instructions (memory, branches, calls, COP1).
 - [x] Track original MIPS register provenance from player globals into action/character field reads and writes.
+- [x] Capture and analyze Goemon SYS_W frame/loop/retrace counters for update-loop identification.
 - [x] Decode original 24-byte Skeleton and variable-pointer AnimatedSkeleton records.
 - [x] Capture original character rig / animation pointers when source character changes.
 - [x] Resolve runtime segment-8/direct pointers against locally extracted original graphics files.
