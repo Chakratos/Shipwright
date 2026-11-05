@@ -185,6 +185,13 @@ def reprocess(folder: Path) -> Path:
              "--output", str(folder / "player_state.json")],
             folder,
         )
+        if task_samples > 0 and csv.is_file():
+            parsers["ship_replay"] = run_parser(
+                "ship_replay",
+                [str(TOOLS / "export_motion_replay.py"), str(csv), str(raw),
+                 "--output", str(folder / "goemon_original_motion_replay.csv")],
+                folder,
+            )
         if task_samples > 0 and object_samples > 0 and csv.is_file():
             parsers["physics_fit"] = run_parser(
                 "physics_fit",
