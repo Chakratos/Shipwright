@@ -16,32 +16,32 @@ import unittest
 
 
 def windows_msvc() -> tuple[str, dict[str, str]] | None:
-    """Find the installed Visual Studio compiler and load its build environment."""
+    """Use installed MSVC and its matching SDK, not an older standalone Clang."""
     if sys.platform != "win32":
         return None
     compiler = shutil.which("cl.exe")
     if compiler:
         return compiler, dict(os.environ)
-    installer = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"))
-    vswhere = installer / "Microsoft Visual Studio" / "Installer" / "vswhere.exe"
-    if not vswhere.is_file():
+    vsbase = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Microsoft Visual Studio"
+    devcmds = sorted(vsbase.glob("*/*/Common7/Tools/VsDevCmd.bat"), reverse=True)
+    if not devcmds:
+        print(f"MSVC: no VS developer command prompt found under {vsbase}", file=sys.stderr)
         return None
-    result = subprocess.run(
-        [str(vswhere), "-latest", "-products", "*", "-requires",
-         "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
-         "-property", "installationPath"],
-        capture_output=True, text=True, check=False, timeout=30,
-    )
-    if result.returncode != 0 or not result.stdout.strip():
-        return None
-    devcmd = Path(result.stdout.strip()) / "Common7" / "Tools" / "VsDevCmd.bat"
-    if not devcmd.is_file():
-        return None
-    result = subprocess.run(
-        ["cmd.exe", "/c", f'call "{devcmd}" -arch=x64 -host_arch=x64 >nul && set'],
-        capture_output=True, text=True, check=False, timeout=60,
-    )
+    devcmd = devcmds[0]
+    with tempfile.TemporaryDirectory(prefix="goemon-msvc-env-") as directory:
+        launcher = Path(directory) / "load-msvc.cmd"
+        launcher.write_text(
+            '@echo off\ncall "' + str(devcmd) +
+            '" -arch=x64 -host_arch=x64 >nul\nif errorlevel 1 exit /b %errorlevel%\nset\n',
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            ["cmd.exe", "/d", "/c", str(launcher)],
+            capture_output=True, text=True, check=False, timeout=90,
+        )
     if result.returncode != 0:
+        print(f"MSVC: VsDevCmd failed ({result.returncode}): {result.stderr[-800:]}",
+              file=sys.stderr)
         return None
     environment = dict(os.environ)
     for line in result.stdout.splitlines():
@@ -49,7 +49,11 @@ def windows_msvc() -> tuple[str, dict[str, str]] | None:
             key, value = line.split("=", 1)
             environment[key] = value
     compiler = shutil.which("cl.exe", path=environment.get("PATH"))
-    return (compiler, environment) if compiler else None
+    if not compiler:
+        print(f"MSVC: cl.exe missing after {devcmd}", file=sys.stderr)
+        return None
+    print(f"Goemon C++20 compiler: {compiler}")
+    return compiler, environment
 
 
 def run_native(root: Path) -> int:
