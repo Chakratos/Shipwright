@@ -33,6 +33,12 @@ ROM data.
   Hooks include `OnPlayerUpdate`, `VB_PLAYER_MODIFY_RUN_SPEED` and
   `VB_PLAYER_LIMIT_JUMP_SPEED`.
 
+The first **genuine NTSC-U ROM validation** and the verified original
+character-initialization callbacks are recorded in
+[REAL_ROM_BASELINE.md](REAL_ROM_BASELINE.md). The submitted 16 MiB ROM
+independently reproduced the original Windows collector's 32 MiB decompressed
+SHA-256, confirming the tested input and reference binary.
+
 The first concrete original-game symbols and their unresolved semantics are\nlisted in [RE_SOURCE_MAP.md](RE_SOURCE_MAP.md).\n\nAn existing Ship of Harkinian `RocsFeather.cpp` / `MoonJump.cpp` illustrates
 how player velocity is changed by hooks. **Those enhancements are not Goemon
 reference behavior** and must never be used as a substitute for it.
@@ -175,6 +181,10 @@ returns non-zero on missing source data or unacceptable error.
 - [x] Decode selected original MIPS instructions (memory, branches, calls, COP1).
 - [x] Track original MIPS register provenance from player globals into action/character field reads and writes.
 - [x] Capture and analyze Goemon SYS_W frame/loop/retrace counters for update-loop identification.
+- [x] Verify original NTSC-U US ROM and reproducible 32 MiB decompression against Windows collector hash.
+- [x] Repair real file-table sentinel logic; map 1,311 resources and four original character resource groups.
+- [x] Recover two original character initializer routines and their distinct update callback addresses.
+- [x] Port validated original character-init state writes to native C++20 with sanitizer-tested regressions.
 - [x] Find original `COL_TREE` / `COL_NODE` / `COL_PLANE` collision code in the Goemon decompilation.
 - [x] Port original scaled-point and actor BSP queries to standalone C++20, with native tests.
 - [x] Recover full original Skeleton child/sibling topology using relative offsets (not Link bones).
@@ -202,11 +212,15 @@ or with an explicitly configured **self-hosted** runner once available.
 The Ship CMake configuration uses `GLOB_RECURSE` for `soh/*.cpp`, so the
 trace source is picked up without changing `z_player.c` or the CMake file.
 
-**Current state:** Original memory views, a register-aware
-original-game Player writer scanner, N64 skeleton/rig analysis, and two
-source-derived Goemon collision BSP queries are implemented. The new ROM
-scanner and collision port were locally exercised against synthetic data.
-**No real game ROM was available for validation.** The Goemon diagnostic
-patch and Ship executable have not been built against the complete game
-sources. The full original Goemon player physics, models and animations are
-**not yet ported**, and no playable Goemon character exists yet.
+**Current state:** A genuine NTSC-U Goemon ROM has now been verified,
+independently decompressed and statically analyzed. The original character
+resource directory, 1,311 file entries, four root graphics IDs, and
+two original character initialization routines and their callbacks have
+been mapped. Native C++20 code implements the **verified memory effects**
+of these original initializers, alongside the previously ported BSP
+collision queries. The uploaded Windows test log had five failures from
+one now-fixed file-table sentinel bug; the full test suite still needs
+to be rerun after the fix. The Goemon runtime probe and complete Ship
+executable have **not** been built or exercised. Player physics,
+character models and animations remain unported; no playable Goemon
+character exists yet.
