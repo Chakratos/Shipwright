@@ -1,16 +1,46 @@
 #!/usr/bin/env python3
-"""Run all Goemon tool tests locally without GitHub Actions or hosted CI."""
+"""Run all local Goemon reverse-engineering tests without GitHub Actions.
+
+Add --native to compile/run the standalone original N64 memory C++20 tests.
+"""
 from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import shutil
+import subprocess
 import sys
+import tempfile
 import unittest
+
+
+def run_native(root: Path) -> int:
+    compiler = shutil.which("c++") or shutil.which("g++") or shutil.which("clang++")
+    if not compiler:
+        print("ERROR: no C++20 compiler found in PATH", file=sys.stderr)
+        return 2
+    source = root / "re" / "tests" / "test_original_memory.cpp"
+    if not source.is_file():
+        print(f"ERROR: native test source missing: {source}", file=sys.stderr)
+        return 2
+    with tempfile.TemporaryDirectory(prefix="goemon-native-test-") as temp:
+        executable = Path(temp) / ("test_original_memory.exe" if sys.platform == "win32" else "test_original_memory")
+        command = [
+            compiler, "-std=c++20", "-Wall", "-Wextra", "-Werror", "-pedantic",
+            "-I", str(root.parents[1]), str(source), "-o", str(executable),
+        ]
+        for arguments in (command, [str(executable)]):
+            result = subprocess.run(arguments, check=False, timeout=120)
+            if result.returncode != 0:
+                return result.returncode
+    print("Goemon C++20 original-memory test: PASS")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quiet", action="store_true")
+    parser.add_argument("--native", action="store_true", help="compile/run native C++20 original-memory tests")
     args = parser.parse_args(argv)
 
     root = Path(__file__).resolve().parent
@@ -31,7 +61,9 @@ def main(argv: list[str] | None = None) -> int:
     result = unittest.TextTestRunner(verbosity=1 if args.quiet else 2).run(all_tests)
     print(f"Goemon tools: {result.testsRun}/{count} tests run, "
           f"failures={len(result.failures)}, errors={len(result.errors)}")
-    return 0 if result.wasSuccessful() else 1
+    if not result.wasSuccessful():
+        return 1
+    return run_native(root) if args.native else 0
 
 
 if __name__ == "__main__":
