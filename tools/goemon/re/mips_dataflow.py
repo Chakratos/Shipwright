@@ -17,8 +17,14 @@ def sign16(n:int)->int:
     n=n&0xffff
     return n-65536 if n>=32768 else n
 
-def trace_fields(instructions:Iterable[tuple[int,int]])->list[dict]:
+def trace_fields(instructions:Iterable[tuple[int,int]], *,
+                 initial_task_registers:dict[int,str]|None=None)->list[dict]:
     reg: dict[int,tuple[str,int|str]] = {0:('const',0)}
+    if initial_task_registers:
+        for register, origin in initial_task_registers.items():
+            if not 1 <= register < 32 or not origin:
+                raise ValueError('invalid original pointer argument register')
+            reg[register] = ('task', origin)
     proof=[]
     for pc,word in instructions:
         op=word>>26
