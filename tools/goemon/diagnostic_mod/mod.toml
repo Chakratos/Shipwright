@@ -1,8 +1,8 @@
 [manifest]
 id = "chakratos_goemon_original_trace"
-version = "0.2.0"
+version = "0.3.0"
 display_name = "Goemon Original Reference Trace"
-description = "Manually arm an in-game reference trace in Mod Settings. Recording begins on your first analog-stick movement and never starts automatically at the title screen."
+description = "Manual in-game capture. Records per-frame original PlayerTask and character model positions, plus full-session Player memory. Starts only when the actual player moves."
 short_description = "In-game capture only; manually enable recording in Mod Settings."
 authors = ["Chakratos Goemon port project"]
 game_id = "mnsg"
