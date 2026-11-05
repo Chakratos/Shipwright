@@ -5,6 +5,7 @@
 // Applies only to verified consecutive same-character full-speed states.
 // Camera-to-target-yaw and partial analog steering remain unresolved.
 #include "OriginalVectorAcceleration.hpp"
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
