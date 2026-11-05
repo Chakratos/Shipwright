@@ -3,9 +3,9 @@
 Captured with **Goemon Original Reference Trace 0.3** using the official
 Goemon64Recompiled executable on Windows and a real NTSC-U ROM.
 
-Submitted user file: \`run-20261105-123100.zip\`;
+Submitted user file: `run-20261105-123100.zip`;
 SHA-256:
-\`e37f13d3670a819bff61a33bb8cb50d45e614aa7ec763c13bb695c6eddbd91ab\`.
+`e37f13d3670a819bff61a33bb8cb50d45e614aa7ec763c13bb695c6eddbd91ab`.
 
 No copyrighted game bytes or game assets are committed to Git.
 All measurements below are derived from the real user capture;
@@ -22,7 +22,7 @@ replay/regression inputs use *only numeric observations*.
 - Raw original character IDs match their globally selected IDs
   for all 2,375 samples.
 - The original log confirms manual arm, start, and stop:
-  \`GOEMON_TRACE_END,2375,594,manual_stop\`.
+  `GOEMON_TRACE_END,2375,594,manual_stop`.
 - One original frame-counter discontinuity at sample **1849**
   (delta **1,441** frames) coincides with a scene/spatial transition.
   Never interpolate speed, gravity, action durations or trajectories
@@ -40,15 +40,15 @@ from the root's always-zero animation-progress fields.
 
 ## Decoded PlayerTask memory layout (N64 big-endian floats)
 
-Original source still labels most of these fields \`unknown_*\`.
+Original source still labels most of these fields `unknown_*`.
 The trace proves their **numerical behavior**:
 
 | PlayerTask byte offset | Recovered meaning | Independent trace validation |
 |---|---|---|
-| \`+0x68\` | horizontal X movement component | matches 2,289 of 2,356 continuous next-frame X displacements |
-| \`+0x6C\` | **actual applied vertical movement per original update** | matches **2,356 / 2,356** consecutive Object Y displacements |
-| \`+0x70\` | horizontal Z movement component | matches 2,289 of 2,356 continuous next-frame Z displacements |
-| \`+0xA4\` | vertical movement prepared for next update | decays by 2/3 during normal airborne motion; reset at ground/early-release changes |
+| `+0x68` | horizontal X movement component | matches 2,289 of 2,356 continuous next-frame X displacements |
+| `+0x6C` | **actual applied vertical movement per original update** | matches **2,356 / 2,356** consecutive Object Y displacements |
+| `+0x70` | horizontal Z movement component | matches 2,289 of 2,356 continuous next-frame Z displacements |
+| `+0xA4` | vertical movement prepared for next update | decays by 2/3 during normal airborne motion; reset at ground/early-release changes |
 
 The remaining **67** horizontal mismatches are the same frames in X and Z,
 when a nonzero task movement vector persisted despite an **unchanged**
@@ -57,8 +57,8 @@ The field is a movement vector and must **not** always be interpreted as
 successfully applied world displacement.
 
 The vertical position needed for jumping is the **player-model Object Y**
-(\`D_801FC60C_5B851C\`), not the often stationary
-root Object Y (\`D_801FC614_5B8524\`).
+(`D_801FC60C_5B851C`), not the often stationary
+root Object Y (`D_801FC614_5B8524`).
 
 ### Normal jump physics reconstructed numerically
 
@@ -77,9 +77,9 @@ An isolated flat-ground model reproduces the observed trajectories:
 
 Original full-jump heights for the 19 applied movement steps:
 
-\`6, 11.333333, 16, 20, 23.333333, 26, 28, 29.333333,
+`6, 11.333333, 16, 20, 23.333333, 26, 28, 29.333333,
 30, 30, 29.333333, 28, 26, 23.333333, 20, 16,
-11.333333, 6, 0\`.
+11.333333, 6, 0`.
 
 All four character IDs exhibit the same **normal flat-ground impulse**
 and gravity.
@@ -96,9 +96,9 @@ and gravity.
 
 The original 2.0 cap is validated by actual examples:
 at recording frame 173, keeping A for one step yields original
-vertical steps \`6, 2, 1.3333, 0.6667, 0, -0.6667, ...\`.
+vertical steps `6, 2, 1.3333, 0.6667, 0, -0.6667, ...`.
 A held for three steps produces
-\`6, 5.3333, 4.6667, 2, 1.3333, 0.6667, ...\`.
+`6, 5.3333, 4.6667, 2, 1.3333, 0.6667, ...`.
 
 **Special-case evidence:** recording frames **2081** and **2096**
 (character ID 1 after the scene transition) begin with **+2.0**
@@ -109,9 +109,9 @@ environment without investigating original state/geometry.
 
 ## Independent full-trajectory replay
 
-\`tools/goemon/reference_probe/jump_trace_fit.py\` deterministically
+`tools/goemon/reference_probe/jump_trace_fit.py` deterministically
 uses original inputs, original action IDs, original root/model positions
-and byte-decoded \`PlayerTask\` values to replay the flight, without
+and byte-decoded `PlayerTask` values to replay the flight, without
 using any ROM bytes, magic teleport, or guessed animation rates.
 
 From the user's actual v0.3 ZIP:
@@ -134,7 +134,7 @@ reverse-engineered recurrence with every original executable callsite.
 
 ## Horizontal movement
 
-- \`PlayerTask+0x68\` (X) and \`PlayerTask+0x70\` (Z) are directly
+- `PlayerTask+0x68` (X) and `PlayerTask+0x70` (Z) are directly
   observed movement components, with a vector-length **2.80**
   original world units/update on normal full-speed movement
   across all four characters.
@@ -151,8 +151,8 @@ reverse-engineered recurrence with every original executable callsite.
 ## Action/animation coverage
 
 This capture includes new original attack/ability states in addition
-to common \`88–93\` states: ID 0 has \`112–114, 124, 127\`,
-ID 1 has \`140, 142, 143\`, ID 3 has \`162–163\`.
+to common `88–93` states: ID 0 has `112–114, 124, 127`,
+ID 1 has `140, 142, 143`, ID 3 has `162–163`.
 Weapon **identities and equipment changes are not yet directly
 decoded**. Treat these as original numerical action states, not
 as formally named attacks or animations.
@@ -160,16 +160,16 @@ as formally named attacks or animations.
 ## Implementation and next work
 
 The feature branch now has a **standalone C++20** header
-\`soh/soh/Enhancements/Goemon/OriginalJump.hpp\` implementing the
+`soh/soh/Enhancements/Goemon/OriginalJump.hpp` implementing the
 tested vertical equations, with native regressions
-\`tools/goemon/re/tests/test_original_jump.cpp\` for normal,
+`tools/goemon/re/tests/test_original_jump.cpp` for normal,
 one-/three-/four-update A holds and the special measured +2 impulse.
 
-\`PlayerTaskView\` in
-\`soh/soh/Enhancements/Goemon/OriginalMemory.hpp\` exposes
+`PlayerTaskView` in
+`soh/soh/Enhancements/Goemon/OriginalMemory.hpp` exposes
 byte-correct movement fields for subsequent runtime integration.
 The new deterministic Python replay runs during
-\`reprocess_log.py\` and creates \`physics_fit.json\`
+`reprocess_log.py` and creates `physics_fit.json`
 for compatible future reference captures.
 
 **Not yet playable in Ship of Harkinian.** Remaining tasks:
