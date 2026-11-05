@@ -41,11 +41,17 @@ world collision resolution is necessary before applying movement.
   magnitude transitions with explicit sign preservation.
 - OriginalJump.hpp: existing recovered jump impulse, gravity,
   variable-height A release and the observed low-impulse variant.
+- OriginalActionPhase.hpp: a **partial** classifier mapping only
+  empirically observed action IDs, input activity and previous task
+  magnitude to the matching measured acceleration/release phase.
+  Returns no result for unknown state combinations, not a guessed
+  movement rule.
 - OriginalMotionAdapter.hpp: flat-floor integration component
   combining horizontal movement, jump arc and game-position stepping.
   It accepts direction externally and REQUIRES a collision callback,
   exposing both the original desired vector and actual applied step.
-- test_original_horizontal.cpp and test_original_motion_adapter.cpp:
+- test_original_horizontal.cpp, test_original_action_phase.cpp
+  and test_original_motion_adapter.cpp:
   standalone GCC 14 C++20 native tests. Both pass strict compiler
   warnings plus AddressSanitizer/UndefinedBehaviorSanitizer.
 - horizontal_trace_fit.py validates the complete real recording
@@ -54,6 +60,14 @@ world collision resolution is necessary before applying movement.
 - test_horizontal_trace_fit.py rejects malformed or missing task
   captures, and verifies representative original-ground/air/braking
   phase sequences.
+
+## New related original measurements
+
+- [ORIGINAL_ANIMATION_HEADING_2026-11-05.md](ORIGINAL_ANIMATION_HEADING_2026-11-05.md):
+  48 measured character-specific animation clock increments and the
+  18/18 verified original 1024-unit world-heading transformation.
+- [REAL_GAME_PHYSICS_2026-11-05.md](REAL_GAME_PHYSICS_2026-11-05.md):
+  ground-truth jump vectors, early A-release rules and replay.
 
 ## Remaining fidelity gaps
 
