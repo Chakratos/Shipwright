@@ -203,6 +203,35 @@ original segment-8 address mode and direct addresses inside the recorded
 overlay-zero allocation. Other overlay segments require additional captured
 overlay mappings and are explicitly rejected, not silently guessed.
 
+The actual Goemon skeleton traversal is now reconstructed from the
+[original patched rendering routines](https://github.com/klorfmorf/Goemon64Recomp/blob/dev/patches/anime.c):
+`offset_right` refers to a child bone and `offset_left` to a sibling,
+both as signed relative offsets in 24-byte `Skeleton` records.
+
+Use `--hierarchy` to include all reachable bones in the verified rig
+manifest, preserving their original raw scale, rotation, translation and
+display-list pointers:
+
+```shell
+python tools/goemon/re/resolve_rig.py \
+    rig_manifest.json /private/local/character_file.bin \
+    --character-id 0 --file-id 31 --hierarchy --output decoded_rig.json
+```
+
+Alternatively, when the original root Skeleton file offset is already
+known, inspect it directly:
+
+```shell
+python tools/goemon/re/rig_hierarchy.py \
+    /private/local/character_file.bin --root-offset 0x200 \
+    --output original_bone_hierarchy.json
+```
+
+The example addresses and IDs are illustrative. The topology is derived
+from original pointer arithmetic and cycle-checked, not rebuilt to fit
+Link's skeleton. Animations, display-list geometry and textures still need
+their own decoders and real ROM-based validation.
+
 The resulting JSON is an original record decode. It is **not** yet a
 renderable Zelda model: a converter for original display lists, texture data,
 complete limb hierarchy and animation frame tables remains to be written.
