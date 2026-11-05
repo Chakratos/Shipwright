@@ -179,6 +179,12 @@ def reprocess(folder: Path) -> Path:
             [str(TOOLS / "memory_candidates.py"), str(raw), "--json"],
             folder, folder / "memory_candidates.json",
         )
+        parsers["player_state"] = run_parser(
+            "player_state",
+            [str(TOOLS / "player_state_fit.py"), str(raw),
+             "--output", str(folder / "player_state.json")],
+            folder,
+        )
         if task_samples > 0 and object_samples > 0 and csv.is_file():
             parsers["physics_fit"] = run_parser(
                 "physics_fit",
