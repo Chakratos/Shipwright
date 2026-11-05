@@ -38,6 +38,16 @@ class Tests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'cycle'):
             traverse_hierarchy(data,0x120)
 
+    def test_valid_root_offset_is_not_required_to_be_divisible_by_24(self):
+        original=bytearray(0x300)
+        # Original N64 binary records are four-byte aligned, but the file
+        # offset need not be divisible by the Skeleton struct size (24).
+        struct.pack_into('>Ibb9h',original,0x104,0x08001200,
+                         0,0,1,1,1,0,0,0,2,3,4)
+        rig=traverse_hierarchy(original,0x104)
+        self.assertEqual(rig['node_count'],1)
+        self.assertEqual(rig['nodes'][0]['translation_raw'],[2,3,4])
+
     def test_bad_root_alignment(self):
         with self.assertRaisesRegex(ValueError,'aligned'):
             traverse_hierarchy(fixture(),0x121)
