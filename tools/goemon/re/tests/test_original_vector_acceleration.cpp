@@ -34,5 +34,15 @@ int main() {
         {0.2f,0.0f},123,OriginalVectorAccelerationMode::ContinuousGrounded); }
     catch (const std::invalid_argument&) {rejected=true;}
     assert(rejected);
-    std::puts("OriginalVectorAcceleration: 10 measured original vectors PASS");
+    // Original recording sample 35 -> 36: 122/1024-step target-yaw
+    // change. The actual game slows below 2.8 after the raw-vector
+    // blend. The old speed-only approximation missed this transition.
+    auto sharpTurn = ContinueOriginalVectorMotion(
+        {-0.7351038455963135f, 2.7017815113067627f}, 743,
+        OriginalVectorAccelerationMode::ContinuousGrounded);
+    assert(std::hypot(sharpTurn.x - (-1.4864791631698608f),
+                      sharpTurn.z - 2.2839555740356445f) < 0.000002f);
+    assert(std::fabs(std::hypot(sharpTurn.x, sharpTurn.z) -
+                     2.7250822678786526f) < 0.000002f);
+    std::puts("OriginalVectorAcceleration: 11 measured original vectors PASS");
 }
