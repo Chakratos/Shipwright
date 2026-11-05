@@ -32,8 +32,8 @@ $Process = Start-Process -FilePath $GameExe -WorkingDirectory $WorkingDirectory 
 if ($null -eq $Process) { throw "Goemon konnte nicht gestartet werden" }
 
 $RawLog = Join-Path $Run "goemon_runtime.log"
-$outText = if (Test-Path $StdOut) { Get-Content -Raw -Encoding UTF8 $StdOut } else { "" }
-$errText = if (Test-Path $StdErr) { Get-Content -Raw -Encoding UTF8 $StdErr } else { "" }
+$outText = [string]$(if (Test-Path $StdOut) { Get-Content -Raw -Encoding UTF8 $StdOut } else { "" })
+$errText = [string]$(if (Test-Path $StdErr) { Get-Content -Raw -Encoding UTF8 $StdErr } else { "" })
 [System.IO.File]::WriteAllText($RawLog, $outText + [Environment]::NewLine + $errText, [System.Text.Encoding]::UTF8)
 
 $ToolRoot = Join-Path $Project "tools\goemon\reference_probe"
