@@ -204,6 +204,12 @@ def reprocess(folder: Path) -> Path:
                  "--output", str(folder / "yaw_fit.json")],
                 folder,
             )
+            parsers["steering_fit"] = run_parser(
+                "steering_fit",
+                [str(TOOLS / "steering_trace_fit.py"), str(csv), str(raw),
+                 "--output", str(folder / "steering_fit.json")],
+                folder,
+            )
     else:
         status["note"] = (
             "No GOEMON_REF in saved log. Check that the diagnostic mod was "
