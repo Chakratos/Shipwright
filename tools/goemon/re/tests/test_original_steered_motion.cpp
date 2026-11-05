@@ -53,6 +53,19 @@ int main() {
         air,airborne,380,false,false,6.0f,unblocked);
     assert(nextJump);
     Close(nextJump->appliedVertical,2.0f);
+    // Specialized full-speed adapter must stop once an actual sharp
+    // turn drops below 2.8; the generalized vector controller takes over.
+    OriginalSteeredFullSpeedPose sharpPose{};
+    sharpPose.SeedFullSpeedMotion(
+        {-0.7351038455963135f,2.7017815113067627f});
+    const auto sharpStep=AdvanceVerifiedOriginalSteeredFullSpeed(
+        sharpPose,ground,743,false,false,6.0f,unblocked);
+    assert(sharpStep);
+    Close(std::hypot(sharpStep->desiredPlanar.x, sharpStep->desiredPlanar.z),
+          2.7250822678786526f);
+    assert(!sharpPose.hasReferenceVelocity);
+    assert(!AdvanceVerifiedOriginalSteeredFullSpeed(
+        sharpPose,ground,740,false,false,6.0f,unblocked));
     bool invalid=false;
     try { OriginalSteeredFullSpeedPose bad{};bad.SeedFullSpeedMotion({0.8f,0.0f}); }
     catch (const std::invalid_argument&) {invalid=true;}
