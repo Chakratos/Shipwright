@@ -41,6 +41,28 @@ class Tests(unittest.TestCase):
                             (0x10c,0x910900CC)])
         self.assertEqual(proof,[])
 
+    def test_recover_opaque_original_player_f32_accesses(self):
+        code=[
+            (0x100,0x3C088020),  # lui t0 0x8020
+            (0x104,0x8D08C604),  # lw t0, g_player_1_task
+            (0x108,0x8D0A005C),  # lw t2, PlayerTask.player
+            (0x10C,0xE54C0010),  # swc1 f12, Player+0x010(t2)
+            (0x110,0xC54E0014),  # lwc1 f14, Player+0x014(t2)
+            (0x114,0xAD4B0020),  # sw t3, Player+0x020(t2)
+        ]
+        proof=trace_fields(code)
+        player=[entry for entry in proof if entry.get('object')=='opaque_player']
+        self.assertEqual([(entry['field'], entry['direction']) for entry in player], [
+            ('Player+0x010','write'),('Player+0x014','read'),('Player+0x020','write')
+        ])
+        self.assertTrue(all(entry['global']=='g_player_1_task' for entry in player))
+
+    def test_coprocessor_move_invalidates_pointer(self):
+        code=[(0x100,0x3C088020),(0x104,0x8D08C604),
+              (0x108,0x44084000),  # mfc1 t0, f8
+              (0x10c,0x910900CC)]
+        self.assertEqual(trace_fields(code),[])
+
     def test_mflo_invalidates_pointer(self):
         proof=trace_fields([(0x100,0x3C088020),(0x104,0x8D08C604),
                             (0x108,0x00004012), # mflo t0
