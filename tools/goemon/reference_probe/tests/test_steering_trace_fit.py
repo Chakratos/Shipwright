@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from steering_trace_fit import read_capture, analyze, classify, predict
+from steering_trace_fit import read_capture, analyze, classify
 
 class SteeringTraceFitTests(unittest.TestCase):
     def make_run(self, folder:Path, fail_last_task:bool=False):
