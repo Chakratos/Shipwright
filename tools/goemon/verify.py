@@ -29,7 +29,9 @@ def run_native(root: Path) -> int:
                source_dir / "test_original_motion_adapter.cpp",
                source_dir / "test_original_animation_rates.cpp",
                source_dir / "test_original_yaw.cpp",
-               source_dir / "test_original_action_phase.cpp"]
+               source_dir / "test_original_action_phase.cpp",
+               source_dir / "test_original_steering.cpp",
+               source_dir / "test_original_steered_motion.cpp"]
     for source in sources:
         if not source.is_file():
             print(f"ERROR: native test source missing: {source}", file=sys.stderr)
