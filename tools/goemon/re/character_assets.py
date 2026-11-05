@@ -73,6 +73,11 @@ def read_file_table(data: bytes) -> list[FileEntry]:
 
 def character_graphics_ids(data: bytes, entries: list[FileEntry]) -> tuple[int, int, int, int]:
     ids = struct.unpack_from(">4H", data, CHARACTER_GRAPHICS_IDS_ROM_OFFSET)
+    if len(set(ids)) != 4:
+        raise ValueError(
+            "character graphics ID table contains duplicates; values may be "
+            "runtime-populated and must be verified in a Goemon player trace"
+        )
     for index in ids:
         if index >= len(entries):
             raise ValueError(f"invalid character graphics file ID {index} (table length {len(entries)})")
