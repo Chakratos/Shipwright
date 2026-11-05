@@ -25,6 +25,19 @@ class Tests(unittest.TestCase):
         self.assertEqual(result['root_animated_skeleton']['limb_count'],2)
         self.assertEqual(result['root_animated_skeleton']['file_offset'],0x100)
 
+    def test_full_original_skeleton_hierarchy_option(self):
+        data,capture=self.fixture()
+        original=bytearray(data)
+        # A child one 24-byte Skeleton ahead of the root.
+        struct.pack_into('>b',original,0x204,1)
+        struct.pack_into('>Ibb9h',original,0x218,0x08000360,
+                         0,0,1,1,1,0,0,0,10,20,30)
+        result=decode_rig(bytes(original),capture,31,with_hierarchy=True)
+        hierarchy=result['limb_hierarchy']
+        self.assertEqual(hierarchy['node_count'],2)
+        self.assertEqual(hierarchy['nodes'][1]['parent_offset'],0x200)
+        self.assertEqual(hierarchy['nodes'][1]['translation_raw'],[10,20,30])
+
     def test_root_direct_pointer(self):
         data,capture=self.fixture()
         capture['graphics_pointer']=0xE0100100
