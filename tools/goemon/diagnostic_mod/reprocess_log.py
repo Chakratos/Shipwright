@@ -85,9 +85,29 @@ def reprocess(folder: Path) -> Path:
     # have GOEMON_REF coverage but no GOEMON_MEM after the snapshot cap.
     count = 0
     memory_by_character: dict[int, int] = {}
+    task_samples = 0
+    object_samples = 0
+    object_y_by_character: dict[int, list[float]] = {}
+    object_animation_by_character: dict[int, list[float]] = {}
     for line in text.splitlines():
         if "GOEMON_REF," in line:
             count += 1
+        if "GOEMON_TASK," in line:
+            task_samples += 1
+        object_marker = line.find("GOEMON_OBJ,")
+        if object_marker >= 0:
+            fields = line[object_marker + len("GOEMON_OBJ,"):].strip().split(",")
+            if len(fields) == 10:
+                try:
+                    ident = int(fields[1])
+                    object_y = float(fields[4])
+                    animation = float(fields[9])
+                    if (abs(object_y) < 1000000000 and abs(animation) < 1000000000:
+                        object_y_by_character.setdefault(ident, []).append(object_y)
+                        object_animation_by_character.setdefault(ident, []).append(animation)
+                        object_samples += 1
+                except ValueError:
+                    pass
         marker = line.find("GOEMON_MEM,")
         if marker >= 0:
             values = line[marker + len("GOEMON_MEM,"):].split(",", 4)
@@ -105,6 +125,16 @@ def reprocess(folder: Path) -> Path:
         "raw_player_memory_samples": sum(memory_by_character.values()),
         "raw_player_memory_samples_by_character": {
             str(key): value for key, value in sorted(memory_by_character.items())
+        },
+        "player_task_samples": task_samples,
+        "player_object_samples": object_samples,
+        "player_object_y_range_by_character": {
+            str(key): [min(values), max(values)]
+            for key, values in sorted(object_y_by_character.items())
+        },
+        "player_object_animation_range_by_character": {
+            str(key): [min(values), max(values)]
+            for key, values in sorted(object_animation_by_character.items())
         },
         "recording_armed": "GOEMON_TRACE_ARMED" in text,
         "recording_started": "GOEMON_TRACE_BEGIN" in text,
