@@ -53,7 +53,9 @@ def read_file_table(data: bytes) -> list[FileEntry]:
         if address + 8 > len(data):
             raise ValueError("file table reaches past end of ROM")
         start, end = struct.unpack_from(">II", data, address)
-        if start == 0 and end == 0:
+        # Goemon64Recomp's decompressor terminates when either of two
+        # overlapping adjacent offsets is zero (while start && end).
+        if start == 0 or end == 0:
             break
         if start & 0x80000000 or end & 0x80000000:
             raise ValueError("compressed file-table flag remains: decompressed ROM required")
