@@ -65,7 +65,15 @@ class PlayerTaskView final : public MemoryView {
     [[nodiscard]] std::uint8_t CharacterId() const { return U8(0x60); }
     [[nodiscard]] std::uint8_t ActionId() const { return U8(0xCC); }
     [[nodiscard]] std::uint32_t CameraTaskAddress() const { return U32(0x64); }
-    // Do not name unknown movement-state bytes until the original is reversed.
+    // Confirmed from genuine NG5E telemetry (2026-11-05):
+    // +0x68..0x70 are per-step X/Y/Z movement components. X/Z can remain
+    // nonzero while collision blocks root-object movement; Y matches
+    // applied model displacement on continuous original game steps.
+    [[nodiscard]] Vec3f MovementStep() const { return Vec3(0x68); }
+    // Next vertical movement component, updated by 2/3 per step in
+    // standard jumps, or clamped by early A-button release/landing.
+    [[nodiscard]] float NextVerticalStep() const { return F32(0xA4); }
+    // All other unknown fields remain opaque pending verified callsites.
 };
 
 class PlayerView final : public MemoryView {
