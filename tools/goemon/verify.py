@@ -136,6 +136,13 @@ def main(argv: list[str] | None = None) -> int:
           f"failures={len(result.failures)}, errors={len(result.errors)}")
     if not result.wasSuccessful():
         return 1
+    # The dedicated self-hosted Goemon runner must validate the authentic
+    # original ROM from its local filesystem, never from repository assets.
+    if os.environ.get("RUNNER_NAME", "").lower() == "goemon-builder" and args.native:
+        from real_rom_check import main as verify_real_rom
+        real_result = verify_real_rom([])
+        if real_result:
+            return real_result
     return run_native(root) if args.native else 0
 
 
