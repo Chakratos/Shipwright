@@ -139,9 +139,23 @@ Mit --run "C:\voller\Pfad\GoemonTraceRuns\run-..." lässt sich
 optional ein bestimmter Lauf auswählen.
 
 Die GOEMON_MEM-Auswertung trennt die beobachteten Charakter-ID-Werte.
-Unterschiedliche Feldwerte sind **noch kein Beweis für einen
-tatsächlichen Charakterwechsel**. Bei weniger als acht Speicherproben
-bleibt der Wert mit einem Hinweis im JSON stehen.
+**Alle vier Originalcharaktere in derselben Aufnahme sind erlaubt und
+ausdruecklich gewuenscht.** Der neue Report character_coverage.json
+enthaelt die Anzahl aufgezeichneter Frames, Actions, Inputs und
+Wechselfolgen je Charakter-ID. capture_summary.json enthaelt ausserdem
+die tatsaechlich vorhandenen Player-Memory-Snapshots je Charakter.
+
+Die bisherige Mod-Version 0.2 begrenzt die komplette Aufzeichnung auf
+2.400 Frames und die GOEMON_MEM-Stichproben auf 128 (jede achte
+Aufzeichnungsprobe). Falls der letzte Charakter erst nach dem Limit
+eingesetzt wurde, ist er in diesem Lauf nicht vollstaendig erfasst.
+Die Berichte zeigen das, ohne die bereits vorhandenen Daten zu
+verwerfen. Bei weniger als acht Speicherproben fuer einen Charakter
+bleibt der Wert mit Hinweis im JSON stehen.
+
+Unterschiedliche Rohdaten-Feldwerte sind allein noch kein beweisbarer
+Charakterwechsel und Waffen-/Equipment-IDs werden von dieser
+Mod-Version noch nicht direkt dekodiert.
 
 ## Technische Grenzen
 
