@@ -63,6 +63,17 @@ static void CaptureOriginalRig(u32 frame, PlayerTask *task, Object *root) {
                   (u32)root->overlay_info[0].file_id);
 }
 
+// Compare the original game's time base with the render callback sample rate.
+// These counters are defined in the original SYS_W in mnsg/include/common.h.
+static void CaptureOriginalTiming(u32 frame) {
+    recomp_printf("GOEMON_TICK,%u,%d,%d,%u,%u\n",
+                  frame,
+                  (s32)D_8008CCC0_8D8C0.frames_elapsed,
+                  (s32)D_8008CCC0_8D8C0.game_loops_count,
+                  (u32)D_8008CCC0_8D8C0.retraces_per_game_step,
+                  (u32)D_8008CCC0_8D8C0.retrace_count);
+}
+
 // Capture the opaque 0x1c0-byte original Player record exactly as laid out in
 // game memory. This is observational instrumentation, not an interpretation.
 static void CaptureOpaquePlayerRecord(u32 trace_frame, PlayerTask *task, Object *root) {
@@ -122,4 +133,5 @@ void GoemonReferenceProbe_CaptureRenderFrame(void) {
 
     CaptureOpaquePlayerRecord(trace_frame, task, root);
     CaptureOriginalRig(trace_frame, task, root);
+    CaptureOriginalTiming(trace_frame);
 }
