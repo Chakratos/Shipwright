@@ -83,6 +83,23 @@ class TaskArgumentTests(unittest.TestCase):
         self.assertEqual(r['candidates'][0]['field_accesses'][0]['global'],'argument:a0')
         self.assertEqual(r['candidates'][0]['field_accesses'][0]['direction'],'write')
 
+    def test_real_rom_character_initializer_task_accesses(self):
+        # Minimal synthetic instructions from the two confirmed functions'
+        # addressing pattern, not an original code dump.
+        for function_name in ("func_801DD5C0_5994D0", "func_801DD654_599564"):
+            with self.subTest(function_name=function_name):
+                symbols_for_function = symbols()
+                symbols_for_function['section'][0]['functions'][0]['name'] = function_name
+                binary = bytearray(synthetic_rom())
+                for idx in range(8):
+                    struct.pack_into(">I", binary, 0x40 + idx * 4, 0)
+                struct.pack_into(">I", binary, 0x40, 0xA0860060)
+                struct.pack_into(">I", binary, 0x44, 0xA08B00CC)
+                report = analyze(bytes(binary), symbols_for_function)
+                accesses = report['candidates'][0]['field_accesses']
+                writes = [entry['field'] for entry in accesses if entry['direction'] == 'write']
+                self.assertEqual(writes, ['character_id', 'action_id'])
+
     def test_unverified_function_is_not_given_task_pointer(self):
         b=bytearray(synthetic_rom())
         for i in range(8):
