@@ -148,8 +148,10 @@ Das Skript sucht den **neuesten Lauf mit Rohprotokoll** unter
 GoemonTraceRuns. Neben goemon_raw.csv, actions.json, ticks.json
 und memory_candidates.json erstellt es mit Version 0.3 die Berichte
 physics_fit.json (Sprung), horizontal_fit.json (Boden-/Luft-Tempo),
-animation_fit.json (Charakter-/Aktions-Takt) und yaw_fit.json
-(Original-Blickrichtung), sofern die nötigen Daten vorliegen,
+animation_fit.json (Charakter-/Aktions-Takt), yaw_fit.json
+(Original-Blickrichtung), steering_fit.json (187 Boden-/Luft-Lenkungen),
+vector_fit.json (261 Bewegungsvektoren) und player_state.json
+(Original-Player-State-Bytes), sofern die nötigen Daten vorliegen,
 und verpackt selbst bei einer fehlgeschlagenen Einzelanalyse
 alle Rohprotokolle in die gleichnamige run-....zip.
 
