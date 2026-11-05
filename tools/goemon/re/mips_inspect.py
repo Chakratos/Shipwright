@@ -12,6 +12,7 @@ from pathlib import Path
 import struct
 import sys
 import tomllib
+from mips_dataflow import trace_fields
 
 REGS = (
     'zero', 'at', 'v0', 'v1', 'a0', 'a1', 'a2', 'a3',
@@ -77,9 +78,10 @@ def inspect(rom: bytes, table: dict, func_name: str) -> dict:
     rom_start,vram,size,section=find_function(table,func_name)
     if rom_start<0 or rom_start+size>len(rom):
         raise ValueError('function extends outside ROM')
-    instructions=[decode(vram+o,struct.unpack_from('>I',rom,rom_start+o)[0]) for o in range(0,size,4)]
+    words=[(vram+o,struct.unpack_from('>I',rom,rom_start+o)[0]) for o in range(0,size,4)]
+    instructions=[decode(pc, word) for pc, word in words]
     return {'function':func_name,'section':section,'rom_start':f'0x{rom_start:08X}',
-            'instructions':instructions,'field_candidates':[x for x in instructions if 'candidate_field' in x],
+            'instructions':instructions,'proven_player_fields':trace_fields(words),'field_candidates':[x for x in instructions if 'candidate_field' in x],
             'direct_calls':[x['target'] for x in instructions if x['mnemonic']=='jal'],
             'limitations':['Field-offset matches have no base-register provenance.',
                            'COP1 decoding is partial; indirect calls unresolved.']}
