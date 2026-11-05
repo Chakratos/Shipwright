@@ -117,6 +117,32 @@ keine ROM oder extrahierte Grafikdateien.
 
 Die Aufnahme stoppt automatisch nach 2.400 gültigen Player-Frames.
 
+## Bereits gespeicherte Aufnahme nachträglich auswerten
+
+Falls die PowerShell-Auswertung nach dem Schließen des Spiels abbricht,
+**nicht nochmals spielen und nicht erneut das Capture starten**.
+Die Standardausgabe und Originalmessdaten sind bereits im Run-Verzeichnis.
+Stattdessen im Shipwright-Ordner:
+
+~~~powershell
+git pull --ff-only
+py -3 .\tools\goemon\diagnostic_mod\reprocess_log.py
+~~~
+
+Das Skript sucht den **neuesten Lauf mit Rohprotokoll** unter
+GoemonTraceRuns. Es erstellt goemon_raw.csv, actions.json, ticks.json
+und memory_candidates.json, sofern die jeweils nötigen Daten vorliegen,
+und verpackt selbst bei einer fehlgeschlagenen Einzelanalyse
+alle Rohprotokolle in die gleichnamige run-....zip.
+
+Mit --run "C:\voller\Pfad\GoemonTraceRuns\run-..." lässt sich
+optional ein bestimmter Lauf auswählen.
+
+Die GOEMON_MEM-Auswertung trennt die beobachteten Charakter-ID-Werte.
+Unterschiedliche Feldwerte sind **noch kein Beweis für einen
+tatsächlichen Charakterwechsel**. Bei weniger als acht Speicherproben
+bleibt der Wert mit einem Hinweis im JSON stehen.
+
 ## Technische Grenzen
 
 Dieser .nrm-Mod und der portable LLVM-Download sind noch nicht
