@@ -22,6 +22,15 @@ int main() {
         assert(std::hypot(measured.x-sample.ex,measured.z-sample.ez)<0.000002f);
         assert(std::fabs(std::hypot(measured.x,measured.z)-2.8f)<0.000002f);
     }
+    // Real original sharp turn sample 35->36 must retain the drop
+    // from 2.8 to 2.725082, rather than forcing 2.8 again.
+    const auto sharp = SteerOriginalFullSpeed(
+        {-0.7351038455963135f, 2.7017815113067627f},
+        743, OriginalSteeringPhase::GroundRun);
+    assert(std::hypot(sharp.x - (-1.4864791631698608f),
+                      sharp.z - 2.2839555740356445f) < 0.000002f);
+    assert(std::fabs(std::hypot(sharp.x,sharp.z) - 2.7250822678786526f)
+           < 0.000002f);
     OriginalSteeringPhase phase{};
     OriginalSteeringObservation o{15,15,true,true,true};
     assert(TryClassifyOriginalFullSpeedSteering(o,phase));
