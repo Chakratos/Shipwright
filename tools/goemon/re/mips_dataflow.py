@@ -57,7 +57,7 @@ def trace_fields(instructions:Iterable[tuple[int,int]])->list[dict]:
                     else:reg[rd]=value
             elif fn in (8,9):
                 reg={0:('const',0)}
-            elif rd and fn in (0,2,3,4,6,7,0x22,0x23,0x24,0x26,0x27,0x2a,0x2b):
+            elif rd and fn not in (8,9):
                 reg.pop(rd,None)
         # Drop register provenance on unmodelled I-type writes. FPU loads
         # and memory stores do not overwrite an integer-register target.
