@@ -80,6 +80,25 @@ int main() {
     Close(std::hypot(reset->desiredPlanar.x,reset->desiredPlanar.z),0.84f);
     Close(reset->desiredPlanar.x,0.13344084f);
     assert(reset->airborne);
+    // The original trial includes 93/0 and 62/62 (full-tilt) sticks.
+    // A previously unmeasured analog magnitude must not be treated
+    // as full movement nor misclassified as release.
+    auto partial = jump;
+    partial.action = 23;
+    partial.previousAction = 23;
+    partial.stickX = 35;
+    partial.stickY = 0;
+    const auto snapshot = air.previousDesiredVelocity;
+    assert(!AdvanceMeasuredOriginalVectorController(air,partial,unblocked));
+    Close(air.previousDesiredVelocity.x, snapshot.x);
+    Close(air.previousDesiredVelocity.z, snapshot.z);
+    auto diagonal = jump;
+    diagonal.action = 23;
+    diagonal.previousAction = 23;
+    diagonal.stickX = 62;
+    diagonal.stickY = 62;
+    assert(IsVerifiedOriginalFullStick(diagonal));
+    assert(!IsVerifiedOriginalFullStick(partial));
     jump.action=28;jump.previousAction=26;
     assert(!AdvanceMeasuredOriginalVectorController(air,jump,unblocked));
     std::puts("OriginalVectorController source action / jump / brake / collision: PASS");
