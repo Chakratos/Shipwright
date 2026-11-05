@@ -39,7 +39,9 @@ character-initialization callbacks are recorded in
 independently reproduced the original Windows collector's 32 MiB decompressed
 SHA-256, confirming the tested input and reference binary.
 
-The first concrete original-game symbols and their unresolved semantics are\nlisted in [RE_SOURCE_MAP.md](RE_SOURCE_MAP.md).\n\nAn existing Ship of Harkinian `RocsFeather.cpp` / `MoonJump.cpp` illustrates
+The first concrete original-game symbols and their unresolved semantics are\nlisted in [RE_SOURCE_MAP.md](RE_SOURCE_MAP.md).
+The first successful **four-character in-game trace** is analyzed in
+[REAL_GAME_TRACE_2026-11-05.md](REAL_GAME_TRACE_2026-11-05.md).\n\nAn existing Ship of Harkinian `RocsFeather.cpp` / `MoonJump.cpp` illustrates
 how player velocity is changed by hooks. **Those enhancements are not Goemon
 reference behavior** and must never be used as a substitute for it.
 
@@ -212,15 +214,20 @@ or with an explicitly configured **self-hosted** runner once available.
 The Ship CMake configuration uses `GLOB_RECURSE` for `soh/*.cpp`, so the
 trace source is picked up without changing `z_player.c` or the CMake file.
 
-**Current state:** A genuine NTSC-U Goemon ROM has now been verified,
-independently decompressed and statically analyzed. The original character
-resource directory, 1,311 file entries, four root graphics IDs, and
-two original character initialization routines and their callbacks have
-been mapped. Native C++20 code implements the **verified memory effects**
-of these original initializers, alongside the previously ported BSP
-collision queries. The uploaded Windows test log had five failures from
-one now-fixed file-table sentinel bug; the full test suite still needs
-to be rerun after the fix. The Goemon runtime probe and complete Ship
-executable have **not** been built or exercised. Player physics,
-character models and animations remain unported; no playable Goemon
-character exists yet.
+**Current state:** The genuine NTSC-U Goemon ROM has been verified,
+independently decompressed and statically analyzed; 1,311 resource entries
+and four character root graphics IDs were recovered. The first native
+Windows .nrm Goemon64Recompiled diagnostic mod was **built, installed
+and run successfully** by the user. Its real gameplay trace contains
+**1,691 updates, four character IDs, nine character changes and
+26 original numeric action states**. Horizontal root-object displacement
+reaches **2.80 original world units/update** for all four characters,
+with 237 measurements at that value. The real trace also records
+A-button jump phases and exactly 28-update character-switch phases.
+The original root object's Y coordinate does **not** expose jump height;
+diagnostic v0.3 now includes per-update PlayerTask and animated-model
+samples but has **not yet been rebuilt or run**. Native C++20 code
+implements original character-initializer memory effects and collision
+BSP queries; the complete Ship executable has **not** been built with
+playable Goemon integration. The full original movement/physics loop,
+combat, character models and animations remain unported.
