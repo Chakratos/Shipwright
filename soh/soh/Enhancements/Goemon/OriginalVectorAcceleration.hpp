@@ -5,7 +5,8 @@
 // For continuous full-stick motion:
 // ground: previous heading*(previousSpeed-0.30) + yawHeading*0.84;
 // air:    previous heading* previousSpeed      + yawHeading*0.84.
-// Normalize, then apply separately observed scalar acceleration/cap.
+// Clamp the magnitude AFTER combining vectors, not before. This exactly
+// explains measured speed decreases during sharp turns (sample 36).
 // Airborne abrupt stick turns can RESET to speed 0.84; landing and
 // partial stick magnitudes require separate original-state handling.
 #include "OriginalYaw.hpp"
@@ -46,21 +47,17 @@ enum class OriginalVectorAccelerationMode : std::uint8_t {
         previousDesiredVelocity.x, previousDesiredVelocity.z);
     if (!std::isfinite(prevSpeed) || prevSpeed > kOriginalFullRunSpeed + 0.003f)
         throw std::invalid_argument("original vector speed outside measured range");
-    float remainingSpeed, nextSpeed;
+    float remainingSpeed;
     switch (mode) {
         case OriginalVectorAccelerationMode::ContinuousGrounded:
             if (prevSpeed <= kOriginalGroundDirectionalDrag + 0.00001f)
                 throw std::invalid_argument("original ground continuation below drag threshold");
             remainingSpeed = prevSpeed - kOriginalGroundDirectionalDrag;
-            nextSpeed = std::min(kOriginalFullRunSpeed,
-                                 prevSpeed + kOriginalGroundRunAcceleration);
             break;
         case OriginalVectorAccelerationMode::ContinuousAirborne:
             if (prevSpeed <= 0.00001f)
                 throw std::invalid_argument("original air continuation begins from rest");
             remainingSpeed = prevSpeed;
-            nextSpeed = std::min(kOriginalFullRunSpeed,
-                                 prevSpeed + kOriginalAirborneAcceleration);
             break;
         default:
             throw std::invalid_argument("unknown original acceleration mode");
@@ -73,10 +70,15 @@ enum class OriginalVectorAccelerationMode : std::uint8_t {
         remainingSpeed * previousDesiredVelocity.z / prevSpeed
         + kOriginalVectorInputAcceleration * target.z;
     const float combinedLength = std::hypot(combinedX, combinedZ);
-    if (combinedLength <= 0.000001f)
+    if (!std::isfinite(combinedLength) || combinedLength <= 0.000001f)
         throw std::invalid_argument("original target cancels previous heading");
-    return {nextSpeed * combinedX / combinedLength,
-            nextSpeed * combinedZ / combinedLength};
+    // Actual NG5E rule: clamp the magnitude AFTER vector combination.
+    // A strong turn can reduce velocity below the nominal 2.8 cap,
+    // e.g. original sample 36 = 2.72508227 instead of 2.8.
+    if (combinedLength <= kOriginalFullRunSpeed)
+        return {combinedX, combinedZ};
+    const float scale = kOriginalFullRunSpeed / combinedLength;
+    return {combinedX * scale, combinedZ * scale};
 }
 
 } // namespace Goemon::Original
