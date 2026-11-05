@@ -13,15 +13,15 @@ using namespace Goemon::Original;
 
 template<std::size_t N>
 void Set16(std::array<std::uint8_t,N>& b, std::size_t at, std::uint16_t v) {
-    b.at(at)=v>>8;
-    b.at(at+1)=v&255;
+    b.at(at)=static_cast<std::uint8_t>(v>>8);
+    b.at(at+1)=static_cast<std::uint8_t>(v&255);
 }
 template<std::size_t N>
 void Set32(std::array<std::uint8_t,N>& b, std::size_t at, std::uint32_t v) {
-    b.at(at)=v>>24;
-    b.at(at+1)=v>>16;
-    b.at(at+2)=v>>8;
-    b.at(at+3)=v;
+    b.at(at)=static_cast<std::uint8_t>(v>>24);
+    b.at(at+1)=static_cast<std::uint8_t>(v>>16);
+    b.at(at+2)=static_cast<std::uint8_t>(v>>8);
+    b.at(at+3)=static_cast<std::uint8_t>(v);
 }
 
 int main() {
