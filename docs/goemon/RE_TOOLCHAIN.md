@@ -151,24 +151,24 @@ The following components have passed standalone unit tests with synthetic
 original-format data. A real Goemon ROM capture is still needed.
 
 **Native C++20 player structure views** are in
-\`soh/soh/Enhancements/Goemon/OriginalMemory.hpp\`. This portable header
+`soh/soh/Enhancements/Goemon/OriginalMemory.hpp`. This portable header
 reads the documented N64 32-bit big-endian structures without reinterpreting
 host memory or fabricating unknown physics fields. It currently exposes
 PlayerTask character ID, action ID and pointers, plus Object position,
 rotation, animation progress and graphics pointer.
 
-\`\`\`shell
+```shell
 # Test all Python tools and compile/run the native N64 memory-layout test:
 python tools/goemon/verify.py --native
-\`\`\`
+```
 
 **Original MIPS inspection** from the pinned decompressed US ROM:
 
-\`\`\`shell
+```shell
 python tools/goemon/re/mips_inspect.py /path/to/mnsg.z64 \
     /path/to/Goemon64RecompSyms/mnsg.syms.toml \
     func_801DAF54_596E64 --output original_function.json
-\`\`\`
+```
 
 Decodes selected R4300i memory, control-flow and COP1 instructions, with
 PC-addressed output and candidates for documented PlayerTask fields. Offset
@@ -176,10 +176,10 @@ matches are **not yet register-proven** and do not establish the full
 physics-update function on their own.
 
 **Original animated-rig capture**, obtained via the existing
-Goemon64Recomp probe, emits \`GOEMON_RIG\` on original character/graphics
+Goemon64Recomp probe, emits `GOEMON_RIG` on original character/graphics
 changes. It records original animation, skeleton and overlay pointers.
 
-\`\`\`shell
+```shell
 python tools/goemon/reference_probe/rig_manifest.py \
     goemon_runtime.log --output rig_manifest.json
 
@@ -191,13 +191,13 @@ python tools/goemon/re/skeleton_inspect.py \
 python tools/goemon/re/resolve_rig.py \
     rig_manifest.json /private/local/character_file.bin \
     --character-id 0 --file-id 31 --output decoded_rig.json
-\`\`\`
+```
 
 The numeric IDs and offsets in these example commands are **illustrative**.
 Use values actually recorded by the target Goemon instance; do not use
 example values to claim asset parity.
 
-\`resolve_rig.py\` compares raw runtime flags, animation pointers and
+`resolve_rig.py` compares raw runtime flags, animation pointers and
 skeleton pointers with bytes from the extracted file. It supports the
 original segment-8 address mode and direct addresses inside the recorded
 overlay-zero allocation. Other overlay segments require additional captured
