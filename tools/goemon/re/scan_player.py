@@ -18,6 +18,11 @@ from mips_dataflow import trace_fields
 
 EXPECTED_DECOMPRESSED_HEADER_CRC = (0x9CC11F4B, 0xABAA8538)
 PLAYER_ANCHORS = {0x801CB800, 0x801DAF54, 0x801DC9C8, 0x801DCA64}
+# Verified PlayerTask* first argument signatures in Goemon64Recomp/patches/functions.h.
+TASK_ARGUMENT_FUNCTIONS = {
+    'func_801CB800_587710', 'func_801DAF54_596E64',
+    'func_801DC9C8_5988D8', 'func_801DCA64_598974',
+}
 
 
 def enumerate_functions(symbols: dict, section_name: str) -> list[dict]:
@@ -65,7 +70,8 @@ def analyze(rom: bytes, symbols: dict, *, section: str = '.file_11',
     result = []
     for f in functions:
         words = extract_words(rom, f)
-        accesses = trace_fields(words)
+        seeds = {4: 'argument:a0'} if f['name'] in TASK_ARGUMENT_FUNCTIONS else None
+        accesses = trace_fields(words, initial_task_registers=seeds)
         calls = []
         for pc, word in words:
             target = jal_target(pc, word)
