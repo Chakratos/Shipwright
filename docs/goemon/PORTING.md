@@ -254,9 +254,11 @@ world units/update. The generalized movement-vector equation uses
 **0.84 target-direction acceleration**, with **0.30 subtraction of
 prior-direction magnitude only on the ground**. Across first starts,
 ground continuation, normal air continuation and airborne stick reset,
-**261/261** qualifying direction samples match within 0.001;
-**260/261** speed magnitudes match within 0.012, with the single
-real exception at capture frame 36 retained in the report.
+**261/261** qualifying direction samples and **261/261**
+speed magnitudes match within 0.012. The corrected **post-vector
+clamp** now reproduces frame 36's real 2.725082-unit sharp-turn speed
+instead of falsely forcing 2.8. Only initial movement frame 146
+differs from the nominal start at 0.6912 vs 0.7 (error <0.009).
 
 C++20 components now include source-measured ground/air acceleration
 vectors, full-speed steering, **OriginalVectorController.hpp** as a
@@ -285,3 +287,32 @@ collision geometry and ground contacts, four authentic rigs/animations,
 combat integration and Zelda/Randomizer compatibility.
 New native regression sources have been registered for local testing;
 the complete updated feature-branch Windows build remains unverified.
+
+## Progress after the first full movement-controller tests
+
+- **Exact original vector magnitude** in `OriginalVectorAcceleration.hpp`,
+  now matching 261/261 original action transitions to <0.012 units
+  with sharp-turn dips naturally reproduced. A dedicated native
+  regression covers user capture frames 35→36.
+- **Real Ship world hook:** `ZeldaWorldProbe.cpp` registers an opt-in
+  `OnPlayerUpdate` hook and queries Ship's existing
+  `BgCheck_EntityLineTest1` (wall) plus
+  `BgCheck_EntityRaycastFloor3` (floor), with no player mutation.
+  `OriginalZeldaWorldProbe.hpp` preserves original desired velocity
+  while reporting actual Zelda geometry. The first implementation is
+  observational only; a fully playable collision solver is not claimed.
+- **Original character image-catalog extraction:** The genuine
+  decompressed ROM contains 31 files bearing `PIC0000` headers,
+  with **1,810 distinct 16-byte-aligned image records**.
+  Four original character-adjacent files 289/293/297/301 contain
+  **12/10/11/12 = 45** individually identifiable graphics records.
+  `tools/goemon/re/pic0000_catalog.py` produces metadata JSON
+  from the user's own original ROM without exporting assets.
+- Geometry probe and PIC0000 parser have synthetic regression tests.
+  The standalone geometry interface and exact sharp-turn function
+  were tested locally under GCC/ASan/UBSan. A full Ship Windows build
+  and in-game execution of the new Ship geometry hook are still
+  unverified and remain a required next milestone.
+
+See [SHIP_WORLD_PROBE_2026-11-05.md](SHIP_WORLD_PROBE_2026-11-05.md)
+and [ORIGINAL_PIC0000_2026-11-05.md](ORIGINAL_PIC0000_2026-11-05.md).
