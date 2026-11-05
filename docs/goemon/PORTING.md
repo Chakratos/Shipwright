@@ -151,6 +151,7 @@ candidate traces. Required CSV columns:
 From the repository root:
 
 ```sh
+python tools/goemon/verify.py
 python -m unittest discover -s tools/goemon/tests -v
 python tools/goemon/compare_traces.py goemon_trace_normalized.csv goemon_ship_trace.csv
 ```
@@ -163,7 +164,15 @@ returns non-zero on missing source data or unacceptable error.
 - [x] Isolate project in feature branch and define original-fidelity contract.
 - [x] Install read-only Zelda player instrumentation (off by default).
 - [x] Add a frame-by-frame comparison tool and unit tests.
-- [x] Identify initial original player task, action, root-object and input structures.\n- [x] Add a reversible exploratory Goemon64Recomp render-state probe (not yet build-tested).\n- [ ] Identify the actual Goemon physics tick and movement-state routines.
+- [x] Identify initial original player task, action, root-object and input structures.
+- [x] Add a reversible exploratory Goemon64Recomp render-state probe (not yet build-tested).
+- [x] Add bounded raw Player memory capture and float-field correlation tooling.
+- [x] Add numeric action-transition inventory from original Goemon runtime traces.
+- [x] Implement an offline MIPS callsite/global-reference scanner for the decompressed ROM.
+- [x] Implement four-character original graphics-resource identification and raw extraction.
+- [x] Pin matching Goemon, decompilation, symbol and Ship source revisions.
+- [x] Create local unit tests and a one-command test runner.
+- [ ] Identify the actual Goemon physics tick and movement-state routines.
 - [ ] Instrument the original Goemon runtime, obtain synchronized captures.
 - [ ] Reconstruct and integrate the original character models and animations.
 - [ ] Port authentic player controller and character switching.
@@ -179,4 +188,7 @@ or with an explicitly configured **self-hosted** runner once available.
 The Ship CMake configuration uses `GLOB_RECURSE` for `soh/*.cpp`, so the
 trace source is picked up without changing `z_player.c` or the CMake file.
 
-**Current state: instrumentation foundation, not playable Goemon.**
+**Current state:** source-guided reverse-engineering toolchain, original
+resource identifiers, game instrumentation and tests are committed. The tools
+have **not** been tested against a real ROM, and the Ship trace has not been
+compiled. No playable Goemon controller exists yet.
