@@ -12,6 +12,7 @@ import json
 from pathlib import Path
 import sys
 from skeleton_inspect import parse_animated_skeleton, parse_skeleton
+from rig_hierarchy import traverse_hierarchy
 
 def resolve_pointer(pointer: int, overlay_base: int, file_length: int) -> int:
     if pointer == 0:
@@ -31,7 +32,7 @@ def resolve_pointer(pointer: int, overlay_base: int, file_length: int) -> int:
         raise ValueError(f'pointer 0x{pointer:08X} maps outside {file_length} bytes')
     return offset
 
-def decode_rig(binary: bytes, capture: dict, expected_file_id: int) -> dict:
+def decode_rig(binary: bytes, capture: dict, expected_file_id: int, *, with_hierarchy: bool = False) -> dict:
     if capture['overlay_zero_file_id'] != expected_file_id:
         raise ValueError('captured overlay file ID does not match extracted graphic file ID')
     graphics = capture['graphics_pointer']
@@ -49,13 +50,16 @@ def decode_rig(binary: bytes, capture: dict, expected_file_id: int) -> dict:
         raise ValueError('original skeleton pointer differs from runtime trace')
     bone_offset = resolve_pointer(capture['skeleton_pointer'], base, len(binary))
     skeleton = parse_skeleton(binary, bone_offset)
-    return {
+    result = {
         'character_id':capture['character_id'],
         'overlay_file_id':expected_file_id,
         'root_animated_skeleton':header,
         'first_skeleton':skeleton,
-        'note':'Original records decoded; full limb hierarchy, animation and display lists still need conversion.'
+        'note':'Original records decoded; animation and display-list conversion still pending.'
     }
+    if with_hierarchy:
+        result['limb_hierarchy'] = traverse_hierarchy(binary, bone_offset)
+    return result
 
 def main() -> int:
     p=argparse.ArgumentParser(description=__doc__)
@@ -64,6 +68,7 @@ def main() -> int:
     p.add_argument('--character-id',type=int,required=True)
     p.add_argument('--file-id',type=int,required=True)
     p.add_argument('--output',type=Path)
+    p.add_argument('--hierarchy',action='store_true',help='traverse original child/sibling skeletons')
     a=p.parse_args()
     try:
         records=json.loads(a.rig_manifest.read_text(encoding='utf-8'))['rig_captures']
@@ -71,7 +76,8 @@ def main() -> int:
                       r['overlay_zero_file_id']==a.file_id),None)
         if capture is None:
             raise ValueError('no matching original character/overlay capture in rig manifest')
-        result=decode_rig(a.extracted_graphics_bin.read_bytes(),capture,a.file_id)
+        result=decode_rig(a.extracted_graphics_bin.read_bytes(),capture,a.file_id,
+                          with_hierarchy=a.hierarchy)
         output=json.dumps(result,indent=2)+'\n'
         if a.output:a.output.write_text(output,encoding='utf-8')
         else:print(output,end='')
