@@ -130,26 +130,62 @@ def main(argv: list[str] | None = None) -> int:
         if args.top < 1 or not math.isfinite(args.min_r2):
             raise ValueError("invalid --top or --min-r2")
         samples = parse_log(args.log_file.read_text(encoding="utf-8", errors="replace"))
-        results = find_candidates(samples, top=args.top, min_r2=args.min_r2)
+        grouped: dict[int, list[MemorySample]] = {}
+        for sample in samples:
+            grouped.setdefault(sample.character_id, []).append(sample)
+        per_character: dict[str, dict] = {}
+        for character_id, records in sorted(grouped.items()):
+            if len(records) < 8:
+                per_character[str(character_id)] = {
+                    "samples": len(records),
+                    "candidates": {},
+                    "warning": "Too few samples (minimum 8). Raw data retained in original log.",
+                }
+                continue
+            per_character[str(character_id)] = {
+                "samples": len(records),
+                "candidates": find_candidates(records, top=args.top, min_r2=args.min_r2),
+            }
     except (OSError, ValueError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 2
 
-    if args.json:
-        print(json.dumps({
-            "samples": len(samples), "character_id": samples[0].character_id,
-            "candidates": results,
-        }, indent=2))
+    if len(per_character) == 1:
+        # Preserve the original output schema for single-character recordings.
+        character = next(iter(per_character))
+        payload = {
+            "samples": len(samples),
+            "character_id": int(character),
+            "candidates": per_character[character]["candidates"],
+        }
+        if "warning" in per_character[character]:
+            payload["warning"] = per_character[character]["warning"]
     else:
-        print(f"Memory samples: {len(samples)}; character ID: {samples[0].character_id}")
-        for axis, records in results.items():
-            print(f"Root {axis}:")
-            for r in records:
-                print(f"  {r['offset_hex']} {r['endian']:6} R2={r['r2']:.5f} "
-                      f"RMSE={r['rmse']:.5f} scale={r['scale']:.6g} "
-                      f"intercept={r['offset_value']:.6g}")
-            if not records:
-                print("  no qualifying moving float candidates")
+        payload = {
+            "samples": len(samples),
+            "character_ids": [int(key) for key in per_character],
+            "characters": per_character,
+            "warning": (
+                "Multiple character_id values observed. These are raw task fields; "
+                "verify against gameplay before treating them as genuine switches."
+            ),
+        }
+    if args.json:
+        print(json.dumps(payload, indent=2))
+    else:
+        print(f"Memory samples: {len(samples)}; observed character IDs: {', '.join(per_character)}")
+        for character, detail in per_character.items():
+            print(f"Character field {character}: {detail['samples']} memory samples")
+            if "warning" in detail:
+                print(f"  {detail['warning']}")
+            for axis, records in detail["candidates"].items():
+                print(f" Root {axis}:")
+                for record in records:
+                    print(f"  {record['offset_hex']} {record['endian']:6} R2={record['r2']:.5f} "
+                          f"RMSE={record['rmse']:.5f} scale={record['scale']:.6g} "
+                          f"intercept={record['offset_value']:.6g}")
+                if not records:
+                    print("  no qualifying moving float candidates")
     return 0
 
 
