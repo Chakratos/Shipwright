@@ -99,6 +99,12 @@ def reprocess(folder: Path) -> Path:
             folder,
         )
         if csv.is_file():
+            parsers["character_coverage"] = run_parser(
+                "character_coverage",
+                [str(TOOLS / "character_coverage.py"), str(csv),
+                 "--output", str(folder / "character_coverage.json")],
+                folder,
+            )
             parsers["actions"] = run_parser(
                 "actions",
                 [str(TOOLS / "action_transitions.py"), str(csv),
