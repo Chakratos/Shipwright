@@ -1,9 +1,9 @@
 [manifest]
 id = "chakratos_goemon_original_trace"
-version = "0.1.0"
+version = "0.2.0"
 display_name = "Goemon Original Reference Trace"
-description = "Read-only player-state and input capture for the original Mystical Ninja Starring Goemon reverse-engineering project."
-short_description = "Record original Goemon movement and character states."
+description = "Manually arm an in-game reference trace in Mod Settings. Recording begins on your first analog-stick movement and never starts automatically at the title screen."
+short_description = "In-game capture only; manually enable recording in Mod Settings."
 authors = ["Chakratos Goemon port project"]
 game_id = "mnsg"
 minimum_recomp_version = "0.1.0"
@@ -16,3 +16,11 @@ mod_filename = "goemon_original_trace"
 func_reference_syms_file = "Goemon64RecompSyms/mnsg.us.syms.toml"
 data_reference_syms_files = ["Goemon64RecompSyms/mnsg.us.datasyms.toml"]
 additional_files = []
+
+[[manifest.config_options]]
+id = "capture_enabled"
+name = "Original-Daten aufnehmen"
+description = "Im Spiel auf Aufnahme aktivieren stellen. Die Aufnahme beginnt erst bei deiner naechsten Stickbewegung. Aus stoppt die Aufnahme."
+type = "Enum"
+options = ["Aus", "Aufnahme aktivieren"]
+default = "Aus"
