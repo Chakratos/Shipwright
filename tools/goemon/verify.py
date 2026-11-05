@@ -21,7 +21,8 @@ def run_native(root: Path) -> int:
         return 2
     source_dir = root / "re" / "tests"
     sources = [source_dir / "test_original_memory.cpp",
-               source_dir / "test_original_collision.cpp"]
+               source_dir / "test_original_collision.cpp",
+               source_dir / "test_original_character_init.cpp"]
     for source in sources:
         if not source.is_file():
             print(f"ERROR: native test source missing: {source}", file=sys.stderr)
