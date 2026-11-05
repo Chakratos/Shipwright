@@ -25,6 +25,7 @@ class OriginalVectorTraceTests(unittest.TestCase):
         update=sample(2,0,15,220,1.24)
         px,pz=predict(start,update,"ground_acceleration")
         update["vx"],update["vz"]=px,pz
+        update["speed"]=math.hypot(px,pz)
         result=analyze([idle,start,update])
         self.assertEqual(result["qualified_original_transitions"],2)
         self.assertEqual(result["direction_matches_within_0_000002"],2)
@@ -37,8 +38,10 @@ class OriginalVectorTraceTests(unittest.TestCase):
         tx,tz=predict(previous,turned,"air_turn_reset")
         self.assertAlmostEqual(tx,turned["vx"])
         turned["vx"],turned["vz"]=tx,tz
+        turned["speed"]=math.hypot(tx,tz)
         ongoing=sample(2,2,23,485,1.68,93)
         ongoing["vx"],ongoing["vz"]=predict(turned,ongoing,"air_acceleration")
+        ongoing["speed"]=math.hypot(ongoing["vx"],ongoing["vz"])
         result=analyze([previous,turned,ongoing])
         self.assertEqual(result["phases"]["air_turn_reset"]["count"],1)
         self.assertEqual(result["phases"]["air_acceleration"]["count"],1)
