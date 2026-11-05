@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import shutil
 import sys
 
 
@@ -26,7 +25,10 @@ def install(root: Path, remove: bool) -> None:
 
     if not main.is_file() or not (patches / "Makefile").is_file():
         raise ValueError(f"{root} is not a Goemon64Recomp source checkout")
-    original = main.read_text(encoding="utf-8")
+    # Preserve Windows CRLF and Unix LF exactly, including mixed-line files.
+    with main.open("r", encoding="utf-8", newline="") as stream:
+        original = stream.read()
+    newline = "\\r\\n" if "\\r\\n" in original else "\\n"
     probe = source.read_bytes()
 
     if remove:
@@ -37,9 +39,10 @@ def install(root: Path, remove: bool) -> None:
             raise ValueError("Unexpected main.c patch state; refusing incomplete removal")
         if not destination.is_file() or destination.read_bytes() != probe:
             raise ValueError("Probe C source changed; refusing to delete a modified file")
-        changed = original.replace(DECLARATION + "\n", "", 1)
-        changed = changed.replace(CALL + "\n", "", 1)
-        main.write_text(changed, encoding="utf-8")
+        changed = original.replace(DECLARATION + newline, "", 1)
+        changed = changed.replace(CALL + newline, "", 1)
+        with main.open("w", encoding="utf-8", newline="") as stream:
+            stream.write(changed)
         destination.unlink()
         print("Removed Goemon reference probe")
         return
@@ -58,11 +61,12 @@ def install(root: Path, remove: bool) -> None:
     if original.count(ANCHOR_INCLUDE) != 1 or original.count(ANCHOR_CALL) != 1:
         raise ValueError("Goemon64Recomp main.c changed; cannot find unique insertion points")
 
-    changed = original.replace(ANCHOR_INCLUDE, ANCHOR_INCLUDE + "\n" + DECLARATION, 1)
-    changed = changed.replace(ANCHOR_CALL, ANCHOR_CALL + "\n" + CALL, 1)
+    changed = original.replace(ANCHOR_INCLUDE, ANCHOR_INCLUDE + newline + DECLARATION, 1)
+    changed = changed.replace(ANCHOR_CALL, ANCHOR_CALL + newline + CALL, 1)
     # Write probe first; main.c remains unmodified if source installation fails.
     destination.write_bytes(probe)
-    main.write_text(changed, encoding="utf-8")
+    with main.open("w", encoding="utf-8", newline="") as stream:
+        stream.write(changed)
     print("Installed Goemon reference probe")
 
 
