@@ -20,6 +20,10 @@ int main() {
     std::array<std::uint8_t, PlayerTaskView::kSize> task{};
     PutU32(task, 0x5C, 0x80123456);
     PutU32(task, 0x64, 0x80234567);
+    PutU32(task, 0x68, std::bit_cast<std::uint32_t>(-2.8f));
+    PutU32(task, 0x6C, std::bit_cast<std::uint32_t>(6.0f));
+    PutU32(task, 0x70, std::bit_cast<std::uint32_t>(0.0f));
+    PutU32(task, 0xA4, std::bit_cast<std::uint32_t>(5.333333f));
     task[0x60] = 3;
     task[0xCC] = 17;
     const PlayerTaskView view(task);
@@ -27,6 +31,10 @@ int main() {
     assert(view.CameraTaskAddress() == 0x80234567);
     assert(view.CharacterId() == 3);
     assert(view.ActionId() == 17);
+    assert(view.MovementStep().x == -2.8f);
+    assert(view.MovementStep().y == 6.0f);
+    assert(view.MovementStep().z == 0.0f);
+    assert(view.NextVerticalStep() == 5.333333f);
 
     std::array<std::uint8_t, ObjectView::kSize> bytes{};
     PutU32(bytes, 0x08, std::bit_cast<std::uint32_t>(-3.5f));
@@ -53,6 +61,19 @@ int main() {
     assert(threw);
 
     std::array<std::uint8_t, PlayerView::kSize> opaque{};
+    opaque[0x18] = 2; // captured non-jump original action
+    opaque[0x69] = 0; // no character-change transient
+    opaque[0x2C] = 1; // observed original action substate
+    opaque[0x31] = 4; // original byte-state sequence counter
     const PlayerView originalPlayer(opaque);
     assert(originalPlayer.Size() == 0x1C0);
+    assert(originalPlayer.ObservedJumpModeByte() == 2);
+    assert(originalPlayer.ObservedCharacterSwitchMarker() == 0);
+    assert(originalPlayer.ObservedActionPhaseByte() == 1);
+    assert(originalPlayer.ObservedSequenceCounterByte() == 4);
+    opaque[0x18] = 0;
+    opaque[0x69] = 1;
+    const PlayerView originalAirPlayer(opaque);
+    assert(originalAirPlayer.ObservedJumpModeByte() == 0);
+    assert(originalAirPlayer.ObservedCharacterSwitchMarker() == 1);
 }

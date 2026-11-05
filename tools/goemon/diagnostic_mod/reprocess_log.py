@@ -179,6 +179,56 @@ def reprocess(folder: Path) -> Path:
             [str(TOOLS / "memory_candidates.py"), str(raw), "--json"],
             folder, folder / "memory_candidates.json",
         )
+        parsers["player_state"] = run_parser(
+            "player_state",
+            [str(TOOLS / "player_state_fit.py"), str(raw),
+             "--output", str(folder / "player_state.json")],
+            folder,
+        )
+        if task_samples > 0 and csv.is_file():
+            parsers["ship_replay"] = run_parser(
+                "ship_replay",
+                [str(TOOLS / "export_motion_replay.py"), str(csv), str(raw),
+                 "--output", str(folder / "goemon_original_motion_replay.csv")],
+                folder,
+            )
+        if task_samples > 0 and object_samples > 0 and csv.is_file():
+            parsers["physics_fit"] = run_parser(
+                "physics_fit",
+                [str(TOOLS / "jump_trace_fit.py"), str(csv), str(raw),
+                 "--output", str(folder / "physics_fit.json")],
+                folder,
+            )
+            parsers["horizontal_fit"] = run_parser(
+                "horizontal_fit",
+                [str(TOOLS / "horizontal_trace_fit.py"), str(csv), str(raw),
+                 "--output", str(folder / "horizontal_fit.json")],
+                folder,
+            )
+            parsers["animation_fit"] = run_parser(
+                "animation_fit",
+                [str(TOOLS / "animation_trace_fit.py"), str(csv), str(raw),
+                 "--output", str(folder / "animation_fit.json")],
+                folder,
+            )
+            parsers["yaw_fit"] = run_parser(
+                "yaw_fit",
+                [str(TOOLS / "yaw_trace_fit.py"), str(csv), str(raw),
+                 "--output", str(folder / "yaw_fit.json")],
+                folder,
+            )
+            parsers["steering_fit"] = run_parser(
+                "steering_fit",
+                [str(TOOLS / "steering_trace_fit.py"), str(csv), str(raw),
+                 "--output", str(folder / "steering_fit.json")],
+                folder,
+            )
+            parsers["vector_fit"] = run_parser(
+                "vector_fit",
+                [str(TOOLS / "vector_trace_fit.py"), str(csv), str(raw),
+                 "--output", str(folder / "vector_fit.json")],
+                folder,
+            )
     else:
         status["note"] = (
             "No GOEMON_REF in saved log. Check that the diagnostic mod was "

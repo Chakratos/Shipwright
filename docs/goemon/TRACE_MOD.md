@@ -145,8 +145,13 @@ py -3 .\tools\goemon\diagnostic_mod\reprocess_log.py
 ~~~
 
 Das Skript sucht den **neuesten Lauf mit Rohprotokoll** unter
-GoemonTraceRuns. Es erstellt goemon_raw.csv, actions.json, ticks.json
-und memory_candidates.json, sofern die jeweils nötigen Daten vorliegen,
+GoemonTraceRuns. Neben goemon_raw.csv, actions.json, ticks.json
+und memory_candidates.json erstellt es mit Version 0.3 die Berichte
+physics_fit.json (Sprung), horizontal_fit.json (Boden-/Luft-Tempo),
+animation_fit.json (Charakter-/Aktions-Takt), yaw_fit.json
+(Original-Blickrichtung), steering_fit.json (187 Boden-/Luft-Lenkungen),
+vector_fit.json (261 Bewegungsvektoren) und player_state.json
+(Original-Player-State-Bytes), sofern die nötigen Daten vorliegen,
 und verpackt selbst bei einer fehlgeschlagenen Einzelanalyse
 alle Rohprotokolle in die gleichnamige run-....zip.
 
@@ -174,13 +179,16 @@ Mod-Version noch nicht direkt dekodiert.
 
 ## Technische Grenzen
 
-Dieser .nrm-Mod und der portable LLVM-Download sind noch nicht
-gegen deine konkrete Windows-Installation getestet. Die neue manuelle Start/Stop-Einstellung
-verwendet das Mod-Konfigurations-API des offiziellen Templates.
-Der Hook kommt aus dem offiziellen Mod-Template, ist aber noch
-**nicht** als Physik-Tick bewiesen.
-Der Output zeigt zunächst Original-Zustandsdaten, keine bereits
-verifizierte Bewegungsgleichung.
+**Die .nrm-Mod-Version 0.3 wurde auf dem Windows-PC des Nutzers
+mit Clang 18.1.8 erfolgreich kompiliert, automatisch installiert und
+in Goemon64Recompiled ausgeführt.** Die zwei realen Aufnahmen sind
+erfolgreich analysiert (1.691 bzw. 2.375 Updates).
+Die manuelle Start/Stop-Einstellung verwendet das offizielle
+Mod-Konfigurations-API. Der Hook ist weiterhin ein beobachtender
+Spielmodus-Handler; er ist nicht als Original-Physik-Callsite
+verifiziert. Originalsprung, horizontale Geschwindigkeitsstufen
+und stabile 10-Bit-Richtungen wurden numerisch aus den synchronen
+Aufnahmen rekonstruiert.
 
 Wenn Mod-Build oder Log-Aufnahme scheitern, sende das komplette
 Fehlerprotokoll. Der Aufnahmestarter legt auch bei fehlenden GOEMON_REF

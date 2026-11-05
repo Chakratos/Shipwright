@@ -41,7 +41,18 @@ SHA-256, confirming the tested input and reference binary.
 
 The first concrete original-game symbols and their unresolved semantics are\nlisted in [RE_SOURCE_MAP.md](RE_SOURCE_MAP.md).
 The first successful **four-character in-game trace** is analyzed in
-[REAL_GAME_TRACE_2026-11-05.md](REAL_GAME_TRACE_2026-11-05.md).\n\nAn existing Ship of Harkinian `RocsFeather.cpp` / `MoonJump.cpp` illustrates
+[REAL_GAME_TRACE_2026-11-05.md](REAL_GAME_TRACE_2026-11-05.md).
+The same 2,375-update trace also verifies **93/93 original
+horizontal speed transitions** and **18/18 10-bit heading samples**
+during stable movement, and identifies **48 original character/action
+animation tempos**. See
+[ORIGINAL_HORIZONTAL_2026-11-05.md](ORIGINAL_HORIZONTAL_2026-11-05.md)
+and [ORIGINAL_ANIMATION_HEADING_2026-11-05.md](ORIGINAL_ANIMATION_HEADING_2026-11-05.md).
+The second **full PlayerTask + character-model trace** resolved the
+original vertical jump vector, gravity, early-release cap and empirical
+flight trajectories. The 25/25 fully observable flat-ground jumps
+reproduce exactly in the isolated C++20 OriginalJump implementation;
+see [REAL_GAME_PHYSICS_2026-11-05.md](REAL_GAME_PHYSICS_2026-11-05.md).\n\nAn existing Ship of Harkinian `RocsFeather.cpp` / `MoonJump.cpp` illustrates
 how player velocity is changed by hooks. **Those enhancements are not Goemon
 reference behavior** and must never be used as a substitute for it.
 
@@ -214,20 +225,94 @@ or with an explicitly configured **self-hosted** runner once available.
 The Ship CMake configuration uses `GLOB_RECURSE` for `soh/*.cpp`, so the
 trace source is picked up without changing `z_player.c` or the CMake file.
 
-**Current state:** The genuine NTSC-U Goemon ROM has been verified,
-independently decompressed and statically analyzed; 1,311 resource entries
-and four character root graphics IDs were recovered. The first native
-Windows .nrm Goemon64Recompiled diagnostic mod was **built, installed
-and run successfully** by the user. Its real gameplay trace contains
-**1,691 updates, four character IDs, nine character changes and
-26 original numeric action states**. Horizontal root-object displacement
-reaches **2.80 original world units/update** for all four characters,
-with 237 measurements at that value. The real trace also records
-A-button jump phases and exactly 28-update character-switch phases.
-The original root object's Y coordinate does **not** expose jump height;
-diagnostic v0.3 now includes per-update PlayerTask and animated-model
-samples but has **not yet been rebuilt or run**. Native C++20 code
-implements original character-initializer memory effects and collision
-BSP queries; the complete Ship executable has **not** been built with
-playable Goemon integration. The full original movement/physics loop,
-combat, character models and animations remain unported.
+**Current state (2026-11-05):** A genuine NTSC-U Goemon ROM has
+been verified and source symbols, character asset roots and
+initialization routines mapped. Two functioning Windows diagnostic
+sessions captured 1,691 and 2,375 genuine Goemon game updates
+respectively. All four character IDs, jumps, combat/ability actions,
+and real character switching were observed.
+
+The original vertical movement is reconstructed from PlayerTask
++0x6C/+0xA4, including 25/25 complete grounded jump replays,
+6-unit normal impulse, gravity -2/3, A-button release cap 2,
+and an observed special 2-unit impulse. The horizontal speed
+magnitudes were checked against **93/93 original action phase
+transitions** (start 0.70, ground +0.54, air +0.84, cap 2.80,
+release 2.00 then signed -0.60). Genuine collision blocking
+shows nonzero desired velocity but zero applied displacement.
+Stable original 10-bit yaw headings matched **18/18** samples
+to better than 0.00002 degrees. The model animation trace
+revealed **48 stable positive progress rates** from 68 original
+character/action combinations.
+
+**Current additional progress:** The original controller's
+**ground and airborne direction filter** is reconstructed independently
+from the same genuine gameplay capture. At full 2.8 speed, the exact
+normalized blend uses **0.336 grounded** and **0.300 airborne**:
+**187/187** full-speed consecutive actions match within 0.000002
+world units/update. The generalized movement-vector equation uses
+**0.84 target-direction acceleration**, with **0.30 subtraction of
+prior-direction magnitude only on the ground**. Across first starts,
+ground continuation, normal air continuation and airborne stick reset,
+**261/261** qualifying direction samples and **261/261**
+speed magnitudes match within 0.012. The corrected **post-vector
+clamp** now reproduces frame 36's real 2.725082-unit sharp-turn speed
+instead of falsely forcing 2.8. Only initial movement frame 146
+differs from the nominal start at 0.6912 vs 0.7 (error <0.009).
+
+C++20 components now include source-measured ground/air acceleration
+vectors, full-speed steering, **OriginalVectorController.hpp** as a
+partial action-gated stateful movement controller, a combined
+OriginalSteeredMotion collision adapter, and existing jump and
+animation timing components. The original desired velocity remains
+separate from collision-resolved Zelda-world displacement, and
+unsupported action transitions return no inferred movement rather
+than default to Link physics.
+
+A second real-data advance is the original Player memory:
+**all 111** jump-phase snapshots show Player+0x18=0;
+**all 483** other snapshots show Player+0x18=2.
+Player+0x69 is set only during original character action 186
+(21 marked snapshots; zero outside all 545 non-switch snapshots).
+Those correlations are exposed via byte-correct PlayerView
+accessors but are **not yet labeled authoritative collision flags
+without verifying the original machine-code writers**.
+
+See [ORIGINAL_VECTOR_STEERING_2026-11-05.md](ORIGINAL_VECTOR_STEERING_2026-11-05.md)
+and [ORIGINAL_PLAYER_STATES_2026-11-05.md](ORIGINAL_PLAYER_STATES_2026-11-05.md).
+The full Ship game has **not yet been built with a playable Goemon
+character**. Remaining: original camera-to-target-yaw and partial
+stick, complete original action dispatch/weapon inventory,
+collision geometry and ground contacts, four authentic rigs/animations,
+combat integration and Zelda/Randomizer compatibility.
+New native regression sources have been registered for local testing;
+the complete updated feature-branch Windows build remains unverified.
+
+## Progress after the first full movement-controller tests
+
+- **Exact original vector magnitude** in `OriginalVectorAcceleration.hpp`,
+  now matching 261/261 original action transitions to <0.012 units
+  with sharp-turn dips naturally reproduced. A dedicated native
+  regression covers user capture frames 35→36.
+- **Real Ship world hook:** `ZeldaWorldProbe.cpp` registers an opt-in
+  `OnPlayerUpdate` hook and queries Ship's existing
+  `BgCheck_EntityLineTest1` (wall) plus
+  `BgCheck_EntityRaycastFloor3` (floor), with no player mutation.
+  `OriginalZeldaWorldProbe.hpp` preserves original desired velocity
+  while reporting actual Zelda geometry. The first implementation is
+  observational only; a fully playable collision solver is not claimed.
+- **Original character image-catalog extraction:** The genuine
+  decompressed ROM contains 31 files bearing `PIC0000` headers,
+  with **1,810 distinct 16-byte-aligned image records**.
+  Four original character-adjacent files 289/293/297/301 contain
+  **12/10/11/12 = 45** individually identifiable graphics records.
+  `tools/goemon/re/pic0000_catalog.py` produces metadata JSON
+  from the user's own original ROM without exporting assets.
+- Geometry probe and PIC0000 parser have synthetic regression tests.
+  The standalone geometry interface and exact sharp-turn function
+  were tested locally under GCC/ASan/UBSan. A full Ship Windows build
+  and in-game execution of the new Ship geometry hook are still
+  unverified and remain a required next milestone.
+
+See [SHIP_WORLD_PROBE_2026-11-05.md](SHIP_WORLD_PROBE_2026-11-05.md)
+and [ORIGINAL_PIC0000_2026-11-05.md](ORIGINAL_PIC0000_2026-11-05.md).

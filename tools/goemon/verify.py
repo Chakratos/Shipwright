@@ -23,7 +23,19 @@ def run_native(root: Path) -> int:
     sources = [source_dir / "test_original_memory.cpp",
                source_dir / "test_original_collision.cpp",
                source_dir / "test_original_character_init.cpp",
-               source_dir / "test_goemon_capture_gate.cpp"]
+               source_dir / "test_goemon_capture_gate.cpp",
+               source_dir / "test_original_jump.cpp",
+               source_dir / "test_original_horizontal.cpp",
+               source_dir / "test_original_motion_adapter.cpp",
+               source_dir / "test_original_animation_rates.cpp",
+               source_dir / "test_original_yaw.cpp",
+               source_dir / "test_original_action_phase.cpp",
+               source_dir / "test_original_steering.cpp",
+               source_dir / "test_original_steered_motion.cpp",
+               source_dir / "test_original_vector_acceleration.cpp",
+               source_dir / "test_original_vector_controller.cpp",
+               source_dir / "test_original_zelda_world_probe.cpp",
+               source_dir / "test_original_trace_replay.cpp"]
     for source in sources:
         if not source.is_file():
             print(f"ERROR: native test source missing: {source}", file=sys.stderr)

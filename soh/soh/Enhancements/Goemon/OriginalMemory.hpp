@@ -65,7 +65,15 @@ class PlayerTaskView final : public MemoryView {
     [[nodiscard]] std::uint8_t CharacterId() const { return U8(0x60); }
     [[nodiscard]] std::uint8_t ActionId() const { return U8(0xCC); }
     [[nodiscard]] std::uint32_t CameraTaskAddress() const { return U32(0x64); }
-    // Do not name unknown movement-state bytes until the original is reversed.
+    // Confirmed from genuine NG5E telemetry (2026-11-05):
+    // +0x68..0x70 are per-step X/Y/Z movement components. X/Z can remain
+    // nonzero while collision blocks root-object movement; Y matches
+    // applied model displacement on continuous original game steps.
+    [[nodiscard]] Vec3f MovementStep() const { return Vec3(0x68); }
+    // Next vertical movement component, updated by 2/3 per step in
+    // standard jumps, or clamped by early A-button release/landing.
+    [[nodiscard]] float NextVerticalStep() const { return F32(0xA4); }
+    // All other unknown fields remain opaque pending verified callsites.
 };
 
 class PlayerView final : public MemoryView {
@@ -74,6 +82,20 @@ class PlayerView final : public MemoryView {
     explicit PlayerView(std::span<const std::uint8_t> bytes) : MemoryView(bytes) {
         if (bytes.size() < kSize) throw std::invalid_argument("truncated opaque original Player");
     }
+    // These bytes are independently corroborated by the real 2026-11-05
+    // 594-snapshot reference run; source-code names are NOT proven yet.
+    // All 111 captured action 23/25/26 snapshots have 0x18=0; all
+    // 483 other snapshots have 0x18=2. This may represent an
+    // airborne/ground movement mode, not necessarily collision contact.
+    [[nodiscard]] std::uint8_t ObservedJumpModeByte() const { return U8(0x18); }
+    // +0x69 is set to 1 only during original character action 186
+    // (21 marked samples out of 49 switch-action samples, else zero).
+    // Original initializer additionally writes +0x69=1.
+    [[nodiscard]] std::uint8_t ObservedCharacterSwitchMarker() const { return U8(0x69); }
+    // Values 0/1/2 occur during original attack and action sequences;
+    // no weapon, hitbox or animation name has yet been source-proven.
+    [[nodiscard]] std::uint8_t ObservedActionPhaseByte() const { return U8(0x2C); }
+    [[nodiscard]] std::uint8_t ObservedSequenceCounterByte() const { return U8(0x31); }
 };
 
 class ObjectView final : public MemoryView {
