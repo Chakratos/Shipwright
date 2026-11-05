@@ -12,16 +12,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
+from datetime import datetime
 from pathlib import Path
 import platform
-import shutil
 import subprocess
 import sys
 import tempfile
 import zipfile
 
-from re.decompress_rom import ensure_decompressed_rom  # patched below (re is Python stdlib)
+sys.path.insert(0, str(Path(__file__).resolve().parent / "re"))
+from decompress_rom import ensure_decompressed_rom
 
 
 def run_command(command: list[str], log_file: Path, *, cwd: Path) -> dict:
@@ -53,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
 
     ship_root = Path(__file__).resolve().parents[2]
     goemon = (args.goemon or ship_root.parent / "Goemon64Recomp").resolve()
-    output = (args.output or ship_root.parent / "goemon-reference-report").resolve()
+    output_base = (args.output or ship_root.parent / "goemon-reference-reports").resolve()
     rom_path = args.rom.resolve()
     sym_path = goemon / "Goemon64RecompSyms" / "mnsg.syms.toml"
     if not sym_path.is_file():
@@ -63,25 +63,18 @@ def main(argv: list[str] | None = None) -> int:
         )
     if not rom_path.is_file():
         parser.error(f"ROM not found: {rom_path}")
-    if output == ship_root or output == goemon or output == rom_path.parent:
+    if output_base == ship_root or output_base == goemon or output_base == rom_path.parent:
         parser.error("output directory must not overlap the game checkouts or ROM directory")
 
-    from importlib.util import module_from_spec, spec_from_file_location
-    source = ship_root / "tools" / "goemon" / "re" / "decompress_rom.py"
-    spec = spec_from_file_location("_goemon_decompression", source)
-    if spec is None or spec.loader is None:
-        parser.error("original ROM decompressor missing")
-    module = module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    output.mkdir(parents=True, exist_ok=True)
+    output_base.mkdir(parents=True, exist_ok=True)
+    output = Path(tempfile.mkdtemp(prefix="run-", dir=output_base))
     # The ZIP is created after all subprocesses finish; no ROM bytes are
     # placed under the report directory, even transiently.
     results: dict[str, dict] = {}
     with tempfile.TemporaryDirectory(prefix="goemon-local-rom-") as temporary:
         temporary_rom = Path(temporary) / "mnsg.decompressed.z64"
         try:
-            data = module.ensure_decompressed_rom(rom_path.read_bytes())
+            data = ensure_decompressed_rom(rom_path.read_bytes())
         except (ValueError, OSError) as exc:
             print(f"ERROR: unsupported ROM: {exc}", file=sys.stderr)
             return 2
