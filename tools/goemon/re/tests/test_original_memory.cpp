@@ -61,6 +61,19 @@ int main() {
     assert(threw);
 
     std::array<std::uint8_t, PlayerView::kSize> opaque{};
+    opaque[0x18] = 2; // captured non-jump original action
+    opaque[0x69] = 0; // no character-change transient
+    opaque[0x2C] = 1; // observed original action substate
+    opaque[0x31] = 4; // original byte-state sequence counter
     const PlayerView originalPlayer(opaque);
     assert(originalPlayer.Size() == 0x1C0);
+    assert(originalPlayer.ObservedJumpModeByte() == 2);
+    assert(originalPlayer.ObservedCharacterSwitchMarker() == 0);
+    assert(originalPlayer.ObservedActionPhaseByte() == 1);
+    assert(originalPlayer.ObservedSequenceCounterByte() == 4);
+    opaque[0x18] = 0;
+    opaque[0x69] = 1;
+    const PlayerView originalAirPlayer(opaque);
+    assert(originalAirPlayer.ObservedJumpModeByte() == 0);
+    assert(originalAirPlayer.ObservedCharacterSwitchMarker() == 1);
 }
