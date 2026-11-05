@@ -12,7 +12,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from datetime import datetime
 from pathlib import Path
 import platform
 import subprocess
@@ -97,15 +96,6 @@ def main(argv: list[str] | None = None) -> int:
                 str(temporary_rom),
                 "--manifest", str(output / "original_character_assets.json")],
         }
-        for name in (
-            "func_801CB800_587710", "func_801DAF54_596E64",
-            "func_801DC9C8_5988D8", "func_801DCA64_598974",
-        ):
-            tasks[name] = [
-                python, str(scripts / "mips_inspect.py"),
-                str(temporary_rom), str(sym_path), name,
-                "--output", str(output / (name + ".json"))]
-
         for name, command in tasks.items():
             print(f"Analyzing {name}...")
             results[name] = run_command(
