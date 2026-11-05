@@ -1,0 +1,18 @@
+[manifest]
+id = "chakratos_goemon_original_trace"
+version = "0.1.0"
+display_name = "Goemon Original Reference Trace"
+description = "Read-only player-state and input capture for the original Mystical Ninja Starring Goemon reverse-engineering project."
+short_description = "Record original Goemon movement and character states."
+authors = ["Chakratos Goemon port project"]
+game_id = "mnsg"
+minimum_recomp_version = "0.1.0"
+dependencies = []
+native_libraries = []
+
+[inputs]
+elf_path = "build/mod.elf"
+mod_filename = "goemon_original_trace"
+func_reference_syms_file = "Goemon64RecompSyms/mnsg.us.syms.toml"
+data_reference_syms_files = ["Goemon64RecompSyms/mnsg.us.datasyms.toml"]
+additional_files = []
