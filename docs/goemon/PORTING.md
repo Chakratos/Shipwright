@@ -42,6 +42,12 @@ SHA-256, confirming the tested input and reference binary.
 The first concrete original-game symbols and their unresolved semantics are\nlisted in [RE_SOURCE_MAP.md](RE_SOURCE_MAP.md).
 The first successful **four-character in-game trace** is analyzed in
 [REAL_GAME_TRACE_2026-11-05.md](REAL_GAME_TRACE_2026-11-05.md).
+The same 2,375-update trace also verifies **93/93 original
+horizontal speed transitions** and **18/18 10-bit heading samples**
+during stable movement, and identifies **48 original character/action
+animation tempos**. See
+[ORIGINAL_HORIZONTAL_2026-11-05.md](ORIGINAL_HORIZONTAL_2026-11-05.md)
+and [ORIGINAL_ANIMATION_HEADING_2026-11-05.md](ORIGINAL_ANIMATION_HEADING_2026-11-05.md).
 The second **full PlayerTask + character-model trace** resolved the
 original vertical jump vector, gravity, early-release cap and empirical
 flight trajectories. The 25/25 fully observable flat-ground jumps
@@ -219,24 +225,33 @@ or with an explicitly configured **self-hosted** runner once available.
 The Ship CMake configuration uses `GLOB_RECURSE` for `soh/*.cpp`, so the
 trace source is picked up without changing `z_player.c` or the CMake file.
 
-**Current state:** A genuine NTSC-U Goemon ROM has been verified,
-independently decompressed, and analyzed; the original four graphics
-resource roots and two character initializers are mapped.
-Two real Windows .nrm diagnostic runs have now succeeded:
-the first captured **1,691** original updates, and the second captured
-**2,375** updates with complete PlayerTask and animated-model samples.
-Every original character ID (0..3), multiple attack action paths,
-and real character switches appear in both. The second trace recovers
-`PlayerTask+0x68/+0x6C/+0x70` original motion components,
-`+0xA4` the next vertical step, normal jump impulse **6**,
-gravity **-2/3 per update**, A-release upward cap **2**,
-full apex **30**, and a measured special initial impulse **2**.
-All **25** complete flat-ground jump trajectories reproduce within
-**0.002** world units, while two variable-ground trajectories are
-explicitly excluded from the flat-ground replay. Pure C++20 code now
-implements the empirically reconstructed jump stepping in
-`OriginalJump.hpp` and tests it without ROM or game assets.
-The complete Ship executable has **not yet been built with playable
-Goemon integration**; the original lateral controller and geometry
-response, combat/equipment, animation hierarchy, graphics and Zelda
-world/Randomizer integration remain active work.
+**Current state (2026-11-05):** A genuine NTSC-U Goemon ROM has
+been verified and source symbols, character asset roots and
+initialization routines mapped. Two functioning Windows diagnostic
+sessions captured 1,691 and 2,375 genuine Goemon game updates
+respectively. All four character IDs, jumps, combat/ability actions,
+and real character switching were observed.
+
+The original vertical movement is reconstructed from PlayerTask
++0x6C/+0xA4, including 25/25 complete grounded jump replays,
+6-unit normal impulse, gravity -2/3, A-button release cap 2,
+and an observed special 2-unit impulse. The horizontal speed
+magnitudes were checked against **93/93 original action phase
+transitions** (start 0.70, ground +0.54, air +0.84, cap 2.80,
+release 2.00 then signed -0.60). Genuine collision blocking
+shows nonzero desired velocity but zero applied displacement.
+Stable original 10-bit yaw headings matched **18/18** samples
+to better than 0.00002 degrees. The model animation trace
+revealed **48 stable positive progress rates** from 68 original
+character/action combinations.
+
+Standalone C++20 code now implements these measured speed/height
+equations, 10-bit direction conversion, a conservative observed
+animation-rate lookup, and an isolated flat-ground motion integrator
+with an explicit (unimplemented) Zelda collision-resolution callback.
+Native tests pass locally with GCC 14 under ASan/UBSan. The
+full Windows Ship of Harkinian game has **not** been built with
+playable Goemon integration; exact steering/turn interpolation,
+partial analog input, original action dispatcher, weapon identities,
+models/rigs/animations, authentic collision and Zelda/Randomizer
+compatibility remain to be implemented.
