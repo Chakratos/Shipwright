@@ -43,6 +43,20 @@ class ProbeInstallerTests(unittest.TestCase):
             self.assertEqual((patches / "main.c").read_text(encoding="utf-8"), MAIN_SOURCE)
             self.assertFalse((patches / "goemon_trace_probe.c").exists())
 
+    def test_windows_crlf_main_c_roundtrips_byte_identically(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            patches = root / "patches"
+            patches.mkdir()
+            original = MAIN_SOURCE.replace("\n", "\r\n").encode("utf-8")
+            (patches / "main.c").write_bytes(original)
+            (patches / "Makefile").write_bytes(b"C_SRCS := $(wildcard *.c)\\r\\n")
+            install(root, False)
+            patched = (patches / "main.c").read_bytes()
+            self.assertIn(b"GoemonReferenceProbe_CaptureRenderFrame();\\r\\n", patched)
+            install(root, True)
+            self.assertEqual((patches / "main.c").read_bytes(), original)
+
     def test_unknown_source_is_rejected_without_changes(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
