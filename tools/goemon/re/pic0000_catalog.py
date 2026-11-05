@@ -37,6 +37,7 @@ class PictureChunk:
     local_file_offset: int
     allocated_bytes: int
     format_marker: int
+    header_flags: int
     width: int
     height: int
     sha256: str
@@ -64,9 +65,11 @@ def catalog_chunks(data: bytes) -> list[PictureChunk]:
         end = starts[number + 1] if number + 1 < len(starts) else len(data)
         if end <= start + HEADER_SIZE or (end - start) % BLOCK_ALIGNMENT:
             raise ValueError(f"malformed 16-byte image allocation at {start:#x}")
-        reserved = data[start + 8 : start + 12]
-        if reserved != b"\x00\x00\x00\x00":
-            raise ValueError(f"unexpected PIC0000 reserved field at {start:#x}")
+        header_flags = int.from_bytes(data[start + 8 : start + 12], "big")
+        # Real NG5E uses both 0x00000000 and 0x00004000 in this
+        # header field. Their semantics require original decoder RE.
+        if header_flags not in (0, 0x4000):
+            raise ValueError(f"unexpected PIC0000 header flags at {start:#x}")
         marker = data[start + 12]
         width = int.from_bytes(data[start + 13 : start + 15], "big")
         height = int.from_bytes(data[start + 15 : start + 17], "big")
@@ -77,7 +80,8 @@ def catalog_chunks(data: bytes) -> list[PictureChunk]:
         allocated = data[start:end]
         records.append(PictureChunk(
             index=number, local_file_offset=start, allocated_bytes=len(allocated),
-            format_marker=marker, width=width, height=height,
+            format_marker=marker, header_flags=header_flags,
+            width=width, height=height,
             sha256=hashlib.sha256(allocated).hexdigest(),
         ))
     return records
@@ -100,7 +104,7 @@ def catalog_rom(data: bytes, *, all_pic_resources: bool = False) -> dict:
         entry = files[index]
         raw = image[entry.start:entry.end]
         blocks = catalog_chunks(raw)
-        total.update({chunk.format_marker: 1 for chunk in blocks})
+        total.update(chunk.format_marker for chunk in blocks)
         images.append({
             "file_id": index,
             "character_slot": (
