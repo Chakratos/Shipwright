@@ -35,57 +35,10 @@ Write-Host ""
 $Process = Start-Process -FilePath $GameExe -WorkingDirectory $WorkingDirectory -RedirectStandardOutput $StdOut -RedirectStandardError $StdErr -PassThru -Wait
 if ($null -eq $Process) { throw "Goemon konnte nicht gestartet werden" }
 
-$RawLog = Join-Path $Run "goemon_runtime.log"
-$outText = [string]$(if (Test-Path $StdOut) { Get-Content -Raw -Encoding UTF8 $StdOut } else { "" })
-$errText = [string]$(if (Test-Path $StdErr) { Get-Content -Raw -Encoding UTF8 $StdErr } else { "" })
-[System.IO.File]::WriteAllText($RawLog, $outText + [Environment]::NewLine + $errText, [System.Text.Encoding]::UTF8)
-
-$ToolRoot = Join-Path $Project "tools\goemon\reference_probe"
-function Run-Parser([string]$Name, [string[]]$Arguments, [string]$OutputName = "") {
-    $LogFile = Join-Path $Run ($Name + "_tool.log")
-    $out = & py -3 @Arguments 2>&1 | Out-String
-    $code = $LASTEXITCODE
-    [System.IO.File]::WriteAllText($LogFile, "exit=$code" + [Environment]::NewLine + $out, [System.Text.Encoding]::UTF8)
-    if ($OutputName -and $code -eq 0) {
-        $dest = Join-Path $Run $OutputName
-        [System.IO.File]::WriteAllText($dest, $out, [System.Text.Encoding]::UTF8)
-    }
-    if ($code -ne 0) { Write-Warning "Auswertung $Name ist fehlgeschlagen (Exit $code). Log im ZIP." }
+# Delegate all analysis to the same recoverable tool used for existing runs.
+# A failed individual parser is logged and NEVER discards the original trace.
+$Reprocess = Join-Path $PSScriptRoot "reprocess_log.py"
+& py -3 $Reprocess --run $Run
+if ($LASTEXITCODE -ne 0) {
+    throw "Die Aufzeichnung liegt unter $Run, aber die Auswertung wurde nicht abgeschlossen. Sie kann jederzeit separat wiederholt werden."
 }
-
-if ($outText.Contains("GOEMON_REF,") -or $errText.Contains("GOEMON_REF,")) {
-    $CSV = Join-Path $Run "goemon_raw.csv"
-    Run-Parser "goemon_csv" @((Join-Path $ToolRoot "log_to_csv.py"),$RawLog,$CSV)
-    if (Test-Path $CSV) {
-        Run-Parser "actions" @((Join-Path $ToolRoot "action_transitions.py"),$CSV,"--output",(Join-Path $Run "actions.json"))
-        Run-Parser "actions_dot" @((Join-Path $ToolRoot "action_transitions.py"),$CSV,"--format","dot","--output",(Join-Path $Run "actions.dot"))
-    }
-    Run-Parser "timing" @((Join-Path $ToolRoot "tick_analysis.py"),$RawLog,"--output",(Join-Path $Run "ticks.json"))
-    Run-Parser "memory" @((Join-Path $ToolRoot "memory_candidates.py"),$RawLog,"--json") "memory_candidates.json"
-} else {
-    if ($outText.Contains("GOEMON_TRACE_ARMED") -or $errText.Contains("GOEMON_TRACE_ARMED")) {
-        $Message = "Mod geladen und scharf geschaltet, aber Aufnahme nicht gestartet: nach Verlassen des Mod-Menues echten Charakter mit dem Stick bewegen."
-    } else {
-        $Message = "Keine Aufzeichnung erkannt: Mod-Version, Aktivierung, Einstellung und stdout-Umleitung pruefen."
-    }
-    Write-Warning $Message
-    Set-Content -Path (Join-Path $Run "ERROR.txt") -Value $Message
-}
-
-$Report = @{
-    game_exe = $GameExe
-    mod_armed = ($outText.Contains("GOEMON_TRACE_ARMED") -or $errText.Contains("GOEMON_TRACE_ARMED"))
-    recording_started = ($outText.Contains("GOEMON_TRACE_BEGIN") -or $errText.Contains("GOEMON_TRACE_BEGIN"))
-    recording_ended = ($outText.Contains("GOEMON_TRACE_END") -or $errText.Contains("GOEMON_TRACE_END"))
-    reference_samples = [regex]::Matches(($outText + $errText), "GOEMON_REF,").Count
-}
-$Report | ConvertTo-Json | Set-Content -Path (Join-Path $Run "capture_summary.json") -Encoding UTF8
-
-# Never package game ROM, extracted textures, geometry or executable binaries.
-$Zip = $Run + ".zip"
-$Extensions = @(".log", ".json", ".csv", ".dot", ".txt")
-$Files = @(Get-ChildItem $Run -File | Where-Object { $Extensions -contains $_.Extension.ToLowerInvariant() })
-if ($Files.Count -eq 0) { throw "Keine auswertbaren Dateien gefunden" }
-Compress-Archive -Path $Files.FullName -DestinationPath $Zip -CompressionLevel Optimal
-Write-Host "Fertig: $Zip" -ForegroundColor Green
-Write-Host "Bitte diese ZIP hier hochladen, nicht die ROM."
