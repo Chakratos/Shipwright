@@ -111,11 +111,26 @@ keine ROM oder extrahierte Grafikdateien.
 
 - GOEMON_REF: Original-Charakter-ID, action_id, Buttons, Sticks, gerenderte
   Position, Rotation und Animation.
-- GOEMON_MEM: stichprobenartig bis zu 128 vollständige Kopien der
-  originalen 448-Byte-Playerstruktur, ohne Assetdaten.
+- GOEMON_MEM: in Mod-Version 0.3 alle vier Updates eine vollständige
+  Kopie der originalen 448-Byte-Playerstruktur, bis zu 3.072 Proben.
+- GOEMON_TASK: pro Aufzeichnungsupdate alle originalen 240 Bytes der
+  PlayerTask-Struktur, um originale Bewegungs- und Zustandsfelder zu ermitteln.
+- GOEMON_OBJ: Position, Rotation und Animationsfortschritt des getrennten
+  Charakter-Modellobjekts, sofern es geladen ist. Dies ergänzt den bisher
+  mit GOEMON_REF protokollierten, oft vertikal unbeweglichen Render-Root.
 - GOEMON_TICK: Spielschleifen-, Frame- und Retrace-Zähler.
 
-Die Aufnahme stoppt automatisch nach 2.400 gültigen Player-Frames.
+Die Aufnahme stoppt automatisch nach 12.000 gültigen Player-Frames; ein manueller Stopp ist jederzeit möglich.
+
+Der erste echte Vier-Charakter-Trace ist bereits unter
+[REAL_GAME_TRACE_2026-11-05.md](REAL_GAME_TRACE_2026-11-05.md)
+ausgewertet: 1.691 Spiel-Updates, neun Charakterwechsel, vier
+Original-IDs, belegte Angriffs-/Sprungzustände und 2,8 Welt-Einheiten
+pro Update als beobachtete horizontale Höchstgeschwindigkeit.
+
+**Für die zusätzlichen Task- und Model-Object-Daten muss der Mod mit
+build_windows.ps1 neu gebaut und das Spiel danach neu gestartet
+werden.** Die bereits vorliegende erste Aufnahme bleibt erhalten.
 
 ## Bereits gespeicherte Aufnahme nachträglich auswerten
 
@@ -145,7 +160,7 @@ enthaelt die Anzahl aufgezeichneter Frames, Actions, Inputs und
 Wechselfolgen je Charakter-ID. capture_summary.json enthaelt ausserdem
 die tatsaechlich vorhandenen Player-Memory-Snapshots je Charakter.
 
-Die bisherige Mod-Version 0.2 begrenzt die komplette Aufzeichnung auf
+Die erste erfolgreiche Mod-Version 0.2 begrenzte die Aufzeichnung auf
 2.400 Frames und die GOEMON_MEM-Stichproben auf 128 (jede achte
 Aufzeichnungsprobe). Falls der letzte Charakter erst nach dem Limit
 eingesetzt wurde, ist er in diesem Lauf nicht vollstaendig erfasst.
