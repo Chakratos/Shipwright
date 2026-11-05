@@ -52,6 +52,9 @@ AdvanceVerifiedOriginalSteeredFullSpeed(
         return std::nullopt;
     const OriginalPlanarStep desired = SteerOriginalFullSpeed(
         state.previousDesiredVelocity, currentOriginalRootYaw, steeringPhase);
+    // The old specialized path assumed every turn stayed at full
+    // speed. Real sharp turns can dip (sample 36: 2.725082).
+    state.motion.horizontal.signedSpeed = std::hypot(desired.x, desired.z);
     OriginalMeasuredMotionInput command{};
     command.horizontalPhase = OriginalMeasuredPlanarPhase::Keep;
     command.headingX = desired.x;
@@ -63,6 +66,12 @@ AdvanceVerifiedOriginalSteeredFullSpeed(
     const OriginalMotionFrame result = AdvanceOriginalFlatGround(
         state.motion, command, std::forward<Resolve>(resolve));
     state.previousDesiredVelocity = result.desiredPlanar;
+    // Full-speed-specific observation is no longer applicable after
+    // a sharp-turn speed dip. Callers must transition to the
+    // generalized OriginalVectorController rather than force 2.8.
+    state.hasReferenceVelocity =
+        std::fabs(std::hypot(result.desiredPlanar.x, result.desiredPlanar.z)
+                  - kOriginalSteeringFullSpeed) <= 0.003f;
     return result;
 }
 
