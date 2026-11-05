@@ -235,6 +235,66 @@ in the Windows developer command prompt. Builds/tests occur exclusively
 locally or on explicitly provisioned self-hosted computers; no hosted
 GitHub Actions job is created.
 
+## Overlay-wide player-state writer discovery
+
+The new `scan_player.py` combines the pinned Goemon symbol map, actual
+instructions from the original decompressed USA ROM, and conservative MIPS
+register provenance tracking. It identifies:
+
+- Original `PlayerTask.action_id` and `character_id` reads/writes.
+- Loads of the opaque 0x1C0-byte `Player` record through
+  `PlayerTask+0x5C`, followed by reads/writes of specific offsets.
+- Four original functions with source-documented `PlayerTask*` as the first
+  argument; in these functions, MIPS `$a0` is seeded as a known pointer.
+- Direct `jal` calls to existing player-function anchors.
+
+Use it on your **own pinned, decompressed Goemon US-ROM**:
+
+```shell
+python tools/goemon/re/scan_player.py \
+    /path/to/Goemon64Recomp/mnsg.z64 \
+    /path/to/Goemon64Recomp/Goemon64RecompSyms/mnsg.syms.toml \
+    --top 100 --output /private/local/goemon_player_candidates.json
+```
+
+Input validation requires the N64 big-endian ROM signature and the specific
+Goemon64Recomp decompressed ROM header CRC. The report includes ROM SHA-256
+for reproducibility, raw original addresses and exact instruction offsets.
+No original executable code is copied into the Git repository.
+
+**Interpretation:** Priority is based on *evidenced field writes*, not
+invented movement names. A candidate containing `Player+0x010` does not
+prove that offset represents velocity. An original function receiving a
+`Player*` by an unrecognized call chain can be missed. All discovered
+fields need follow-up static or live verification before porting.
+
+## First original gameplay algorithm port
+
+`soh/soh/Enhancements/Goemon/OriginalCollision.hpp` ports two actual
+decompiled original Goemon collision queries from
+[klorfmorf/mnsg `src/27FE0.c`](https://github.com/klorfmorf/mnsg/blob/main/src/27FE0.c):
+
+- `func_80029E58_2AA58`: BSP point query with original per-tree
+  scale-dependent bounding boxes and collision-plane distances.
+- `func_8002A168_2AD68`: actor-oriented BSP query with its original
+  **10.0f lower-Y reach** and unscaled geometry.
+
+It parses original big-endian `COL_TREE` (18 bytes), `COL_NODE` (6 bytes)
+and `COL_PLANE` (20 bytes) records, and retains original solid
+`0x7FFF` versus empty `0` results. For malformed node indices, planes
+or cycles, the native port throws instead of reproducing undefined original
+memory access. The native regression test exercises both query variants,
+next-tree chaining, and malformed-data handling:
+
+```shell
+python tools/goemon/verify.py --native
+```
+
+The extracted original collision logic is **not** the complete movement
+controller, not yet wired to Zelda collision geometry, and not yet tested
+against a real Goemon level. Floating-point bit-exactness also requires
+comparison to original ROM results and matching compilation settings.
+
 ## Next runtime-dependent work
 
 1. Obtain the original Goemon physics/collision update loop from the pinned ROM.
