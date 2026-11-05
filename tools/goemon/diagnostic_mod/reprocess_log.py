@@ -80,11 +80,32 @@ def reprocess(folder: Path) -> Path:
         raise ValueError(f"Capture folder does not exist: {folder}")
     raw = ensure_raw_log(folder)
     text = raw.read_text(encoding="utf-8", errors="replace")
-    # This can include 2400 GOEMON_REF rows and max 128 full Player structures.
-    count = sum("GOEMON_REF," in line for line in text.splitlines())
+    # Original mod v0.2 captured up to 2400 reference frames and 128 raw
+    # Player snapshots. Count the latter per ID too: later characters may
+    # have GOEMON_REF coverage but no GOEMON_MEM after the snapshot cap.
+    count = 0
+    memory_by_character: dict[int, int] = {}
+    for line in text.splitlines():
+        if "GOEMON_REF," in line:
+            count += 1
+        marker = line.find("GOEMON_MEM,")
+        if marker >= 0:
+            values = line[marker + len("GOEMON_MEM,"):].split(",", 4)
+            if len(values) >= 3:
+                try:
+                    character_id = int(values[2])
+                except ValueError:
+                    continue
+                memory_by_character[character_id] = (
+                    memory_by_character.get(character_id, 0) + 1
+                )
     status: dict[str, object] = {
         "original_trace": raw.name,
         "reference_samples": count,
+        "raw_player_memory_samples": sum(memory_by_character.values()),
+        "raw_player_memory_samples_by_character": {
+            str(key): value for key, value in sorted(memory_by_character.items())
+        },
         "recording_armed": "GOEMON_TRACE_ARMED" in text,
         "recording_started": "GOEMON_TRACE_BEGIN" in text,
         "recording_ended": "GOEMON_TRACE_END" in text,
