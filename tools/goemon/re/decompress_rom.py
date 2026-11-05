@@ -119,7 +119,7 @@ def decompress_us_rom(data: bytes) -> bytes:
         raise ValueError("Goemon file table exceeds 4096 entries")
 
     # The original decompressor rounds to a power of two, then updates CRC.
-    final_size = 1 << (address - 1).bit_length()
+    final_size = max(len(data), 1 << (address - 1).bit_length())
     if final_size > MAX_ROM_SIZE:
         raise ValueError("invalid decompressed ROM size")
     if len(output) < final_size:
