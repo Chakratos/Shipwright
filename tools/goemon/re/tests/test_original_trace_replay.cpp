@@ -58,7 +58,8 @@ int main() {
     std::string bad = Source();
     const auto index = bad.find("2,1542,2,23,486,0.129,0.83,0");
     assert(index != std::string::npos);
-    bad.replace(index, 29, "2,1542,2,23,486,0.129,0.83,1");
+    bad.replace(index, std::string("2,1542,2,23,486,0.129,0.83,0").size(),
+                "2,1542,2,23,486,0.129,0.83,1");
     assert(Rejected(bad));
 
     bad = Source();
@@ -70,7 +71,8 @@ int main() {
     bad = Source();
     const auto pos = bad.find("0,100,2,13,761,-0.7351038455963135,2.7017815113067627,0");
     assert(pos != std::string::npos);
-    bad.replace(pos, 57, "0,100,2,13,761,99,0,0");
+    bad.replace(pos, std::string("0,100,2,13,761,-0.7351038455963135,2.7017815113067627,0").size(),
+                "0,100,2,13,761,99,0,0");
     assert(Rejected(bad));
 
     std::puts("OriginalTraceReplay: parsed real numeric speeds, gaps, character switches PASS");
