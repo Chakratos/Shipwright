@@ -247,8 +247,10 @@ character/action combinations.
 
 Standalone C++20 code now implements these measured speed/height
 equations, 10-bit direction conversion, a conservative observed
-animation-rate lookup, and an isolated flat-ground motion integrator
-with an explicit (unimplemented) Zelda collision-resolution callback.
+animation-rate lookup, an **observed-action phase classifier that
+rejects unknown transitions**, and an isolated flat-ground motion
+integrator with an explicit (unimplemented) Zelda collision-resolution
+callback.
 Native tests pass locally with GCC 14 under ASan/UBSan. The
 full Windows Ship of Harkinian game has **not** been built with
 playable Goemon integration; exact steering/turn interpolation,
