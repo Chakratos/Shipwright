@@ -145,6 +145,68 @@ This checks position, relative yaw, and grounded-state parity. It deliberately
 rejects missing or mismatched frame sequences. The raw render-state logs are
 **not** accepted as a physics parity reference until separately normalized.
 
+## New original-code and animation tools
+
+The following components have passed standalone unit tests with synthetic
+original-format data. A real Goemon ROM capture is still needed.
+
+**Native C++20 player structure views** are in
+\`soh/soh/Enhancements/Goemon/OriginalMemory.hpp\`. This portable header
+reads the documented N64 32-bit big-endian structures without reinterpreting
+host memory or fabricating unknown physics fields. It currently exposes
+PlayerTask character ID, action ID and pointers, plus Object position,
+rotation, animation progress and graphics pointer.
+
+\`\`\`shell
+# Test all Python tools and compile/run the native N64 memory-layout test:
+python tools/goemon/verify.py --native
+\`\`\`
+
+**Original MIPS inspection** from the pinned decompressed US ROM:
+
+\`\`\`shell
+python tools/goemon/re/mips_inspect.py /path/to/mnsg.z64 \
+    /path/to/Goemon64RecompSyms/mnsg.syms.toml \
+    func_801DAF54_596E64 --output original_function.json
+\`\`\`
+
+Decodes selected R4300i memory, control-flow and COP1 instructions, with
+PC-addressed output and candidates for documented PlayerTask fields. Offset
+matches are **not yet register-proven** and do not establish the full
+physics-update function on their own.
+
+**Original animated-rig capture**, obtained via the existing
+Goemon64Recomp probe, emits \`GOEMON_RIG\` on original character/graphics
+changes. It records original animation, skeleton and overlay pointers.
+
+\`\`\`shell
+python tools/goemon/reference_probe/rig_manifest.py \
+    goemon_runtime.log --output rig_manifest.json
+
+# Decoder of known N64 AnimatedSkeleton/Skeleton layout at a verified offset:
+python tools/goemon/re/skeleton_inspect.py \
+    /private/local/character_file.bin --type animated --offset 0x100
+
+# Resolve a captured segmented/direct pointer to the original graphic file:
+python tools/goemon/re/resolve_rig.py \
+    rig_manifest.json /private/local/character_file.bin \
+    --character-id 0 --file-id 31 --output decoded_rig.json
+\`\`\`
+
+The numeric IDs and offsets in these example commands are **illustrative**.
+Use values actually recorded by the target Goemon instance; do not use
+example values to claim asset parity.
+
+\`resolve_rig.py\` compares raw runtime flags, animation pointers and
+skeleton pointers with bytes from the extracted file. It supports the
+original segment-8 address mode and direct addresses inside the recorded
+overlay-zero allocation. Other overlay segments require additional captured
+overlay mappings and are explicitly rejected, not silently guessed.
+
+The resulting JSON is an original record decode. It is **not** yet a
+renderable Zelda model: a converter for original display lists, texture data,
+complete limb hierarchy and animation frame tables remains to be written.
+
 ## Next runtime-dependent work
 
 1. Obtain the original Goemon physics/collision update loop from the pinned ROM.
