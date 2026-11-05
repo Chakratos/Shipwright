@@ -245,15 +245,43 @@ to better than 0.00002 degrees. The model animation trace
 revealed **48 stable positive progress rates** from 68 original
 character/action combinations.
 
-Standalone C++20 code now implements these measured speed/height
-equations, 10-bit direction conversion, a conservative observed
-animation-rate lookup, an **observed-action phase classifier that
-rejects unknown transitions**, and an isolated flat-ground motion
-integrator with an explicit (unimplemented) Zelda collision-resolution
-callback.
-Native tests pass locally with GCC 14 under ASan/UBSan. The
-full Windows Ship of Harkinian game has **not** been built with
-playable Goemon integration; exact steering/turn interpolation,
-partial analog input, original action dispatcher, weapon identities,
-models/rigs/animations, authentic collision and Zelda/Randomizer
-compatibility remain to be implemented.
+**Current additional progress:** The original controller's
+**ground and airborne direction filter** is reconstructed independently
+from the same genuine gameplay capture. At full 2.8 speed, the exact
+normalized blend uses **0.336 grounded** and **0.300 airborne**:
+**187/187** full-speed consecutive actions match within 0.000002
+world units/update. The generalized movement-vector equation uses
+**0.84 target-direction acceleration**, with **0.30 subtraction of
+prior-direction magnitude only on the ground**. Across first starts,
+ground continuation, normal air continuation and airborne stick reset,
+**261/261** qualifying direction samples match within 0.001;
+**260/261** speed magnitudes match within 0.012, with the single
+real exception at capture frame 36 retained in the report.
+
+C++20 components now include source-measured ground/air acceleration
+vectors, full-speed steering, **OriginalVectorController.hpp** as a
+partial action-gated stateful movement controller, a combined
+OriginalSteeredMotion collision adapter, and existing jump and
+animation timing components. The original desired velocity remains
+separate from collision-resolved Zelda-world displacement, and
+unsupported action transitions return no inferred movement rather
+than default to Link physics.
+
+A second real-data advance is the original Player memory:
+**all 111** jump-phase snapshots show Player+0x18=0;
+**all 483** other snapshots show Player+0x18=2.
+Player+0x69 is set only during original character action 186
+(21 marked snapshots; zero outside all 545 non-switch snapshots).
+Those correlations are exposed via byte-correct PlayerView
+accessors but are **not yet labeled authoritative collision flags
+without verifying the original machine-code writers**.
+
+See [ORIGINAL_VECTOR_STEERING_2026-11-05.md](ORIGINAL_VECTOR_STEERING_2026-11-05.md)
+and [ORIGINAL_PLAYER_STATES_2026-11-05.md](ORIGINAL_PLAYER_STATES_2026-11-05.md).
+The full Ship game has **not yet been built with a playable Goemon
+character**. Remaining: original camera-to-target-yaw and partial
+stick, complete original action dispatch/weapon inventory,
+collision geometry and ground contacts, four authentic rigs/animations,
+combat integration and Zelda/Randomizer compatibility.
+New native regression sources have been registered for local testing;
+the complete updated feature-branch Windows build remains unverified.
