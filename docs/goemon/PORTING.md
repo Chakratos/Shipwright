@@ -177,6 +177,8 @@ returns non-zero on missing source data or unacceptable error.
 - [x] Capture and analyze Goemon SYS_W frame/loop/retrace counters for update-loop identification.
 - [x] Find original `COL_TREE` / `COL_NODE` / `COL_PLANE` collision code in the Goemon decompilation.
 - [x] Port original scaled-point and actor BSP queries to standalone C++20, with native tests.
+- [x] Recover full original Skeleton child/sibling topology using relative offsets (not Link bones).
+- [x] Connect original rig-pointer resolution to complete bone hierarchy export.
 - [x] Scan original `.file_11` for writes to `PlayerTask` and the opaque `Player` record.
 - [x] Seed proven MIPS `PlayerTask*` function arguments in four original entry points.
 - [x] Decode original 24-byte Skeleton and variable-pointer AnimatedSkeleton records.
