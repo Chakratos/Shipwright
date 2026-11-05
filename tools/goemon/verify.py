@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Run all local Goemon reverse-engineering tests without GitHub Actions.
 
-Add --native to compile/run the standalone original N64 memory C++20 tests.
+Add --native to compile/run original N64 memory and collision C++20 tests.
 """
 from __future__ import annotations
 
@@ -19,34 +19,41 @@ def run_native(root: Path) -> int:
     if not compiler:
         print("ERROR: no C++20 compiler found in PATH", file=sys.stderr)
         return 2
-    source = root / "re" / "tests" / "test_original_memory.cpp"
-    if not source.is_file():
-        print(f"ERROR: native test source missing: {source}", file=sys.stderr)
-        return 2
+    source_dir = root / "re" / "tests"
+    sources = [source_dir / "test_original_memory.cpp",
+               source_dir / "test_original_collision.cpp"]
+    for source in sources:
+        if not source.is_file():
+            print(f"ERROR: native test source missing: {source}", file=sys.stderr)
+            return 2
     with tempfile.TemporaryDirectory(prefix="goemon-native-test-") as temp:
-        executable = Path(temp) / ("test_original_memory.exe" if sys.platform == "win32" else "test_original_memory")
-        if Path(compiler).stem.lower() == "cl":
-            command = [
-                compiler, "/nologo", "/std:c++20", "/W4", "/WX", "/EHsc",
-                "/I" + str(root.parents[1]), str(source), "/Fe:" + str(executable),
-            ]
-        else:
-            command = [
-                compiler, "-std=c++20", "-Wall", "-Wextra", "-Werror", "-pedantic",
-                "-I", str(root.parents[1]), str(source), "-o", str(executable),
-            ]
-        for arguments in (command, [str(executable)]):
-            result = subprocess.run(arguments, check=False, timeout=120)
-            if result.returncode != 0:
-                return result.returncode
-    print("Goemon C++20 original-memory test: PASS")
+        for source in sources:
+            executable = Path(temp) / (
+                source.stem + (".exe" if sys.platform == "win32" else "")
+            )
+            if Path(compiler).stem.lower() == "cl":
+                command = [
+                    compiler, "/nologo", "/std:c++20", "/W4", "/WX", "/EHsc",
+                    "/I" + str(root.parents[1]), str(source),
+                    "/Fe:" + str(executable),
+                ]
+            else:
+                command = [
+                    compiler, "-std=c++20", "-Wall", "-Wextra", "-Werror",
+                    "-pedantic", "-I", str(root.parents[1]),
+                    str(source), "-o", str(executable),
+                ]
+            for arguments in (command, [str(executable)]):
+                result = subprocess.run(arguments, check=False, timeout=120)
+                if result.returncode != 0:
+                    return result.returncode
+            print(f"Goemon C++20 native {source.stem}: PASS")
     return 0
-
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quiet", action="store_true")
-    parser.add_argument("--native", action="store_true", help="compile/run native C++20 original-memory tests")
+    parser.add_argument("--native", action="store_true", help="compile/run native C++20 original-memory and collision tests")
     args = parser.parse_args(argv)
 
     root = Path(__file__).resolve().parent
