@@ -7,6 +7,7 @@
 #include "common.h"
 #include "modding.h"
 #include "recomputils.h"
+#include "recompconfig.h"
 
 extern void* D_801FC604_5B8514; // PlayerTask* (player one)
 extern void* D_801FC614_5B8524; // Object* player-one render root
@@ -21,7 +22,10 @@ typedef char verify_u32_pointer_layout[(sizeof(void*) == 4) ? 1 : -1];
 
 static u32 trace_frame = 0;
 static u32 trace_memory_count = 0;
-static u8 trace_done = 0;
+// State machine: 0 idle, 1 armed, 2 recording, 3 completed.
+// A completed capture cannot be restarted without relaunching the game;
+// this preserves consecutive sample IDs for the post-processing tools.
+static u8 trace_state = 0;
 static const char k_hex[] = "0123456789abcdef";
 
 static u8* ReadTaskPlayer(u8* task) {
@@ -73,25 +77,55 @@ RECOMP_HOOK_RETURN("func_80002040_2C40") void goemon_capture_mode_handler(void) 
     const CONTROLLER_W* input;
     f32 x, y, z;
 
-    if (trace_done) return;
+    // The mod's Enum setting is read at every callback. 0 = "Aus"
+    // (the manifest's default), 1 = "Aufnahme aktivieren".
+    // Crucially, the title screen does not consume any sample budget.
+    if (trace_state == 3) return;
+    if (recomp_get_config_u32("capture_enabled") == 0) {
+        if (trace_state == 2) {
+            recomp_printf("GOEMON_TRACE_END,%u,%u,manual_stop\n",
+                          trace_frame, trace_memory_count);
+            trace_state = 3;
+        } else if (trace_state == 1) {
+            recomp_printf("GOEMON_TRACE_DISARMED\n");
+            trace_state = 0;
+        }
+        return;
+    }
+
+    if (trace_state == 0) {
+        trace_state = 1;
+        recomp_printf("GOEMON_TRACE_ARMED,wait_for_player_movement\n");
+    }
+
     task = (u8*)D_801FC604_5B8514;
     root = (u8*)D_801FC614_5B8524;
     if (task == 0 || root == 0) return;
     player = ReadTaskPlayer(task);
     if (player == 0) return;
 
+    input = &D_8008CCC0_8D8C0.controller[0];
+
+    // Arming alone is not enough: the user must actively move the
+    // ORIGINAL in-game analog stick after closing the mod menu. GUI
+    // navigation and idle title scenes do not use the frame budget.
+    // Uses raw N64 input (typical range -80..80).
+    if (trace_state == 1) {
+        if (input->stick_raw_x < 15 && input->stick_raw_x > -15 &&
+            input->stick_raw_y < 15 && input->stick_raw_y > -15) {
+            return;
+        }
+        trace_state = 2;
+        recomp_printf("GOEMON_TRACE_BEGIN,2,hook=func_80002040_2C40,max_frames=%u,trigger=analog\n",
+                      (u32)GOEMON_TRACE_MAX_FRAMES);
+    }
+
     frame = trace_frame++;
     character = task[0x60];
     action = task[0xcc];
-    input = &D_8008CCC0_8D8C0.controller[0];
     x = ReadF32(root, 0x08);
     y = ReadF32(root, 0x0c);
     z = ReadF32(root, 0x10);
-
-    if (frame == 0) {
-        recomp_printf("GOEMON_TRACE_BEGIN,1,hook=func_80002040_2C40,max_frames=%u\n",
-                      (u32)GOEMON_TRACE_MAX_FRAMES);
-    }
 
     // Preserve the exact 18-column GOEMON_REF schema used by the existing
     // log_to_csv.py, action_transitions.py and memory_candidates.py.
@@ -117,8 +151,8 @@ RECOMP_HOOK_RETURN("func_80002040_2C40") void goemon_capture_mode_handler(void) 
                   (u32)D_8008CCC0_8D8C0.retrace_count);
 
     if (trace_frame >= GOEMON_TRACE_MAX_FRAMES) {
-        trace_done = 1;
-        recomp_printf("GOEMON_TRACE_END,%u,%u\n", trace_frame,
+        trace_state = 3;
+        recomp_printf("GOEMON_TRACE_END,%u,%u,frame_limit\n", trace_frame,
                       trace_memory_count);
     }
 }
