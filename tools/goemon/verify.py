@@ -6,6 +6,7 @@ Add --native to compile/run original N64 memory and collision C++20 tests.
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -14,10 +15,51 @@ import tempfile
 import unittest
 
 
+def windows_msvc() -> tuple[str, dict[str, str]] | None:
+    """Find the installed Visual Studio compiler and load its build environment."""
+    if sys.platform != "win32":
+        return None
+    compiler = shutil.which("cl.exe")
+    if compiler:
+        return compiler, dict(os.environ)
+    installer = Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"))
+    vswhere = installer / "Microsoft Visual Studio" / "Installer" / "vswhere.exe"
+    if not vswhere.is_file():
+        return None
+    result = subprocess.run(
+        [str(vswhere), "-latest", "-products", "*", "-requires",
+         "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+         "-property", "installationPath"],
+        capture_output=True, text=True, check=False, timeout=30,
+    )
+    if result.returncode != 0 or not result.stdout.strip():
+        return None
+    devcmd = Path(result.stdout.strip()) / "Common7" / "Tools" / "VsDevCmd.bat"
+    if not devcmd.is_file():
+        return None
+    result = subprocess.run(
+        ["cmd.exe", "/c", f'call "{devcmd}" -arch=x64 -host_arch=x64 >nul && set'],
+        capture_output=True, text=True, check=False, timeout=60,
+    )
+    if result.returncode != 0:
+        return None
+    environment = dict(os.environ)
+    for line in result.stdout.splitlines():
+        if "=" in line and not line.startswith("="):
+            key, value = line.split("=", 1)
+            environment[key] = value
+    compiler = shutil.which("cl.exe", path=environment.get("PATH"))
+    return (compiler, environment) if compiler else None
+
+
 def run_native(root: Path) -> int:
-    compiler = shutil.which("clang++") or shutil.which("g++") or shutil.which("c++") or shutil.which("cl")
+    msvc = windows_msvc()
+    environment = msvc[1] if msvc else dict(os.environ)
+    compiler = (msvc[0] if msvc else
+                shutil.which("clang++") or shutil.which("g++") or
+                shutil.which("c++") or shutil.which("cl"))
     if not compiler:
-        print("ERROR: no C++20 compiler found in PATH", file=sys.stderr)
+        print("ERROR: no C++20 compiler found", file=sys.stderr)
         return 2
     source_dir = root / "re" / "tests"
     sources = [source_dir / "test_original_memory.cpp",
@@ -58,7 +100,7 @@ def run_native(root: Path) -> int:
                     str(source), "-o", str(executable),
                 ]
             for arguments in (command, [str(executable)]):
-                result = subprocess.run(arguments, check=False, timeout=120)
+                result = subprocess.run(arguments, check=False, timeout=120, env=environment)
                 if result.returncode != 0:
                     return result.returncode
             print(f"Goemon C++20 native {source.stem}: PASS")
