@@ -1,10 +1,10 @@
 #pragma once
 // Measured from real NG5E Goemon64Recompiled trace, 2026-11-05.
-// At 2.8 units/update, ground and airborne original turns are exact
-// normalized blends with DISTINCT target-yaw factors.
+// Starting at 2.8 units/update, the ground/air original turn
+// applies DISTINCT target-yaw blend factors and only clamps ABOVE 2.8.\n// A sharp turn may thus leave a velocity magnitude below 2.8.
 // Applies only to verified consecutive same-character full-speed states.
 // Camera-to-target-yaw and partial analog steering remain unresolved.
-#include "OriginalYaw.hpp"
+#include "OriginalVectorAcceleration.hpp"
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
@@ -42,10 +42,18 @@ enum class OriginalSteeringPhase : std::uint8_t { GroundRun, Airborne };
     const float directionX = vx / magnitude + ratio * yaw.x;
     const float directionZ = vz / magnitude + ratio * yaw.z;
     const float length = std::hypot(directionX, directionZ);
-    if (length < 0.000001f)
+    if (length < 0.000001f || !std::isfinite(length))
         throw std::invalid_argument("original steering vector cancelled out");
-    return {kOriginalSteeringFullSpeed * directionX / length,
-            kOriginalSteeringFullSpeed * directionZ / length};
+    // Both coefficients are ratios derived from the exact original
+    // vector recurrence. Reconstruct its un-clamped magnitude; do NOT
+    // forcibly normalize a sharp turn back to 2.8 (real sample 36).
+    const float retained = phase == OriginalSteeringPhase::GroundRun
+        ? (kOriginalSteeringFullSpeed - kOriginalGroundDirectionalDrag)
+        : kOriginalSteeringFullSpeed;
+    const float resultingSpeed = std::min(
+        kOriginalSteeringFullSpeed, retained * length);
+    return {resultingSpeed * directionX / length,
+            resultingSpeed * directionZ / length};
 }
 
 struct OriginalSteeringObservation {
