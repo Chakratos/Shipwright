@@ -97,6 +97,42 @@ is `func_801DAD68_596C78`. Other observed links:
 - No original movement-physics update loop has been verified from these
   findings alone.
 
+## Verified original character initializers and update callbacks
+
+Additional inspection of the **actual ROM bytes** established a concrete
+original player-control initialization path (not merely symbol proximity):
+
+| Routine | Proven effect on original `PlayerTask` | Original update callback |
+|---|---|---|
+| `func_801DD5C0_5994D0` | `character_id = a1`, global selection = `a1 & 0xFF`, `action_id = 0xBA` | `func_801E0944_59C854` (`0x801E0944`) |
+| `func_801DD654_599564` | `character_id = a1`, global selection = `a1 & 0xFF`, `action_id = 0xBB` | `func_801E0BF8_59CB08` (`0x801E0BF8`) |
+
+Both routines load `PlayerTask.player` at offset `0x5C`, set
+`Player+0x69 = 1` and `Player+0x00 = 1` (big-endian halfword), clear
+`Player+0x30` (halfword) and the task's float fields at `0x68`,
+`0x6C`, `0x70`, `0xE8`, clear the task's `0x80` halfword, and mask
+off bit 0 of task byte `0x30`. Variant `0xBA` also clears
+`Player+0x86`, task word `0x48`, and sets task byte `0xDB = 1`.
+Both hand their callback to the common original routine at `0x8003522C`.
+
+The observed callback functions call both
+`func_801DC9C8_5988D8` and `func_801DCA64_598974`.
+This confirms a concrete connection from character initialization into
+original player handling.
+
+The **verified memory side effects only** are implemented in
+`soh/soh/Enhancements/Goemon/OriginalCharacterInit.hpp` as a standalone
+C++20 module. Its native tests passed under GCC 14 with sanitizers.
+It intentionally does **not** invoke or approximate the original callback,
+change the SoH player or claim that either initializer is a complete
+character switch. The two original action values are still numeric
+(`0xBA`/`0xBB`), not invented names.
+
+The player scanner now also recognizes these two ROM-proven
+`PlayerTask* $a0` routines, allowing it to locate their action/character
+writes in a **new** report. The baseline 23-function statistic above
+comes from the original ZIP, before this scanner enhancement.
+
 ## Collector regression, then next source of evidence
 
 The uploaded `run-_zj58ice.zip` reports **86 tests**, with
