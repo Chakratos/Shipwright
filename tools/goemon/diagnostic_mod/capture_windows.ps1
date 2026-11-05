@@ -63,9 +63,23 @@ if ($outText.Contains("GOEMON_REF,") -or $errText.Contains("GOEMON_REF,")) {
     Run-Parser "timing" @((Join-Path $ToolRoot "tick_analysis.py"),$RawLog,"--output",(Join-Path $Run "ticks.json"))
     Run-Parser "memory" @((Join-Path $ToolRoot "memory_candidates.py"),$RawLog,"--json") "memory_candidates.json"
 } else {
-    Write-Warning "Keine GOEMON_REF-Zeilen gefunden. Mod-Installation oder Protokollumleitung pruefen."
-    Set-Content -Path (Join-Path $Run "ERROR.txt") -Value "Keine GOEMON_REF-Daten. Ist die Mod installiert/aktiviert?"
+    if ($outText.Contains("GOEMON_TRACE_ARMED") -or $errText.Contains("GOEMON_TRACE_ARMED")) {
+        $Message = "Mod geladen und scharf geschaltet, aber Aufnahme nicht gestartet: nach Verlassen des Mod-Menues echten Charakter mit dem Stick bewegen."
+    } else {
+        $Message = "Keine Aufzeichnung erkannt: Mod-Version, Aktivierung, Einstellung und stdout-Umleitung pruefen."
+    }
+    Write-Warning $Message
+    Set-Content -Path (Join-Path $Run "ERROR.txt") -Value $Message
 }
+
+$Report = @{
+    game_exe = $GameExe
+    mod_armed = ($outText.Contains("GOEMON_TRACE_ARMED") -or $errText.Contains("GOEMON_TRACE_ARMED"))
+    recording_started = ($outText.Contains("GOEMON_TRACE_BEGIN") -or $errText.Contains("GOEMON_TRACE_BEGIN"))
+    recording_ended = ($outText.Contains("GOEMON_TRACE_END") -or $errText.Contains("GOEMON_TRACE_END"))
+    reference_samples = [regex]::Matches(($outText + $errText), "GOEMON_REF,").Count
+}
+$Report | ConvertTo-Json | Set-Content -Path (Join-Path $Run "capture_summary.json") -Encoding UTF8
 
 # Never package game ROM, extracted textures, geometry or executable binaries.
 $Zip = $Run + ".zip"
