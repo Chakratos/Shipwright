@@ -23,7 +23,8 @@ $ScriptsToCheck = @(
     (Join-Path $Project "tools\goemon\reference_probe\action_transitions.py"),
     (Join-Path $Project "tools\goemon\reference_probe\tick_analysis.py"),
     (Join-Path $Project "tools\goemon\reference_probe\memory_candidates.py"),
-    (Join-Path $Project "tools\goemon\reference_probe\character_coverage.py")
+    (Join-Path $Project "tools\goemon\reference_probe\character_coverage.py"),
+    (Join-Path $Project "tools\goemon\reference_probe\jump_trace_fit.py")
 )
 & py -3 -m py_compile @ScriptsToCheck
 if ($LASTEXITCODE -ne 0) {
