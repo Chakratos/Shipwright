@@ -28,7 +28,7 @@ def install(root: Path, remove: bool) -> None:
     # Preserve Windows CRLF and Unix LF exactly, including mixed-line files.
     with main.open("r", encoding="utf-8", newline="") as stream:
         original = stream.read()
-    newline = "\\r\\n" if "\\r\\n" in original else "\\n"
+    newline = "\r\n" if "\r\n" in original else "\n"
     probe = source.read_bytes()
 
     if remove:
