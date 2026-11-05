@@ -30,7 +30,8 @@ $ScriptsToCheck = @(
     (Join-Path $Project "tools\goemon\reference_probe\yaw_trace_fit.py"),
     (Join-Path $Project "tools\goemon\reference_probe\steering_trace_fit.py"),
     (Join-Path $Project "tools\goemon\reference_probe\vector_trace_fit.py"),
-    (Join-Path $Project "tools\goemon\reference_probe\player_state_fit.py")
+    (Join-Path $Project "tools\goemon\reference_probe\player_state_fit.py"),
+    (Join-Path $Project "tools\goemon\reference_probe\export_motion_replay.py")
 )
 & py -3 -m py_compile @ScriptsToCheck
 if ($LASTEXITCODE -ne 0) {
