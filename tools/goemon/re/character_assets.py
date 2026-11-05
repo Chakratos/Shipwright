@@ -8,7 +8,7 @@ Files are written only when --output-dir is explicitly provided.
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
