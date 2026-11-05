@@ -50,10 +50,10 @@ class ProbeInstallerTests(unittest.TestCase):
             patches.mkdir()
             original = MAIN_SOURCE.replace("\n", "\r\n").encode("utf-8")
             (patches / "main.c").write_bytes(original)
-            (patches / "Makefile").write_bytes(b"C_SRCS := $(wildcard *.c)\\r\\n")
+            (patches / "Makefile").write_bytes(b"C_SRCS := $(wildcard *.c)\r\n")
             install(root, False)
             patched = (patches / "main.c").read_bytes()
-            self.assertIn(b"GoemonReferenceProbe_CaptureRenderFrame();\\r\\n", patched)
+            self.assertIn(b"GoemonReferenceProbe_CaptureRenderFrame();\r\n", patched)
             install(root, True)
             self.assertEqual((patches / "main.c").read_bytes(), original)
 
