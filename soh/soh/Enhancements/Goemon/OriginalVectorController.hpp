@@ -31,9 +31,19 @@ struct OriginalVectorInput {
     float jumpImpulse = kOriginalNormalJumpImpulse;
 };
 
-[[nodiscard]] inline bool OriginalAnalogActive(const OriginalVectorInput& frame) {
-    return std::abs(static_cast<int>(frame.stickX)) >= 15 ||
-           std::abs(static_cast<int>(frame.stickY)) >= 15;
+// The captured original controller contains only neutral or full-tilt
+// stick readings (93 cardinal and 62/62 diagonal ~= 87.7 magnitude).
+// Never apply calibrated full-tilt equations to intermediate analog
+// magnitudes whose source behavior has not been measured.
+[[nodiscard]] inline bool IsVerifiedOriginalFullStick(const OriginalVectorInput& frame) {
+    const int x = static_cast<int>(frame.stickX);
+    const int y = static_cast<int>(frame.stickY);
+    const int lengthSquared = x * x + y * y;
+    return lengthSquared >= 85 * 85 && lengthSquared <= 96 * 96;
+}
+[[nodiscard]] inline bool IsOriginalNeutralStick(const OriginalVectorInput& frame) {
+    return std::abs(static_cast<int>(frame.stickX)) < 15 &&
+           std::abs(static_cast<int>(frame.stickY)) < 15;
 }
 [[nodiscard]] inline bool OriginalStickChanged(const OriginalVectorInput& frame) {
     return frame.stickX != frame.previousStickX ||
@@ -46,7 +56,10 @@ ClassifyOriginalVectorAction(const OriginalVectorInput& frame,
     if (!frame.continuousSameCharacterFrame ||
         !std::isfinite(priorDesiredSpeed))
         return std::nullopt;
-    const bool active = OriginalAnalogActive(frame);
+    const bool active = IsVerifiedOriginalFullStick(frame);
+    const bool neutral = IsOriginalNeutralStick(frame);
+    if (!active && !neutral)
+        return std::nullopt; // Unmeasured analog magnitude: never invent input law.
     if (active && frame.action == 13 && priorDesiredSpeed < 0.01f)
         return OriginalVectorAction::GroundStart;
     if (active && frame.action == 15 &&
@@ -67,10 +80,10 @@ ClassifyOriginalVectorAction(const OriginalVectorInput& frame,
          frame.previousAction == 26 || frame.previousAction == 15) &&
         !OriginalStickChanged(frame) && priorDesiredSpeed > 0.00001f)
         return OriginalVectorAction::AirContinue;
-    if (!active && frame.action == 16 && frame.previousAction == 15 &&
+    if (neutral && frame.action == 16 && frame.previousAction == 15 &&
         std::fabs(priorDesiredSpeed - kOriginalFullRunSpeed) < 0.012f)
         return OriginalVectorAction::BeginBrake;
-    if (!active && frame.action == 16 && frame.previousAction == 16 &&
+    if (neutral && frame.action == 16 && frame.previousAction == 16 &&
         priorDesiredSpeed > 0.00001f)
         return OriginalVectorAction::ContinueBrake;
     return std::nullopt;
