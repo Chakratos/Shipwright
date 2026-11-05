@@ -43,10 +43,6 @@ static s16 ReadS16(const u8* ptr, u32 off) {
     return *(const s16*)(ptr + off);
 }
 
-static u32 ReadU32(const u8* ptr, u32 off) {
-    return *(const u32*)(ptr + off);
-}
-
 static void CapturePlayerMemory(const u8* player, u32 frame, u8 character, u8 action,
                                 f32 x, f32 y, f32 z) {
     static char bytes_as_hex[0x1c0 * 2 + 1];
