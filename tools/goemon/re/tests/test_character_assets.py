@@ -23,11 +23,14 @@ def fake_decompressed_rom():
     struct.pack_into(">II", rom, 0x10, *EXPECTED_CRC)
     ids = (0, 3, 1, 2)
     struct.pack_into(">4H", rom, CHARACTER_GRAPHICS_IDS_ROM_OFFSET, *ids)
+    # Source decompressor iterates a uint32_t pointer one word at a time:
+    # each file uses adjacent start/end offsets, shared with the next file.
+    for i in range(5):
+        struct.pack_into(">I", rom, FILE_TABLE_ROM_OFFSET + 4 * i,
+                         0x600000 + i * 0x10)
     for i in range(4):
         start = 0x600000 + i * 0x10
-        end = start + 0x10
-        struct.pack_into(">II", rom, FILE_TABLE_ROM_OFFSET + 8 * i, start, end)
-        rom[start:end] = bytes([i + 1]) * 16
+        rom[start:start + 0x10] = bytes([i + 1]) * 16
     return rom
 
 
@@ -61,15 +64,15 @@ class AssetManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "duplicates"):
             make_manifest(rom)
 
-    def test_overlapping_file_ranges_are_rejected(self):
+    def test_invalid_file_offset_sequence_is_rejected(self):
         rom = fake_decompressed_rom()
-        struct.pack_into(">II", rom, FILE_TABLE_ROM_OFFSET + 8, 0x600008, 0x600020)
-        with self.assertRaisesRegex(ValueError, "overlapping"):
+        struct.pack_into(">I", rom, FILE_TABLE_ROM_OFFSET + 4 * 2, 0x600008)
+        with self.assertRaisesRegex(ValueError, "invalid file-table range"):
             read_file_table(rom)
 
     def test_sentinel_termination_matches_original(self):
         rom = fake_decompressed_rom()
-        struct.pack_into(">II", rom, FILE_TABLE_ROM_OFFSET + 4 * 8, 0, 0x7FFFFFFF)
+        struct.pack_into(">I", rom, FILE_TABLE_ROM_OFFSET + 5 * 4, 0)
         entries = read_file_table(rom)
         self.assertEqual(len(entries), 4)
 
