@@ -179,6 +179,13 @@ def reprocess(folder: Path) -> Path:
             [str(TOOLS / "memory_candidates.py"), str(raw), "--json"],
             folder, folder / "memory_candidates.json",
         )
+        if task_samples > 0 and object_samples > 0 and csv.is_file():
+            parsers["physics_fit"] = run_parser(
+                "physics_fit",
+                [str(TOOLS / "jump_trace_fit.py"), str(csv), str(raw),
+                 "--output", str(folder / "physics_fit.json")],
+                folder,
+            )
     else:
         status["note"] = (
             "No GOEMON_REF in saved log. Check that the diagnostic mod was "
