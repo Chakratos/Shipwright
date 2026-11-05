@@ -19,8 +19,9 @@ DEFAULT_ROM = Path(r"C:\actions-runner-goemon\roms\Goemon.z64")
 
 
 def check_rom(path: Path) -> None:
-    from re.decompress_rom import decompress_us_rom
-    from re.character_assets import make_manifest
+    sys.path.insert(0, str(Path(__file__).resolve().parent / "re"))
+    from decompress_rom import decompress_us_rom
+    from character_assets import make_manifest
 
     raw = path.read_bytes()
     if len(raw) != 16 * 1024 * 1024:
