@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "captured_at_utc": "2026-11-04",
+  "shipwright": {
+    "repository": "Chakratos/Shipwright",
+    "base_branch": "develop",
+    "base_commit": "d4bf6528a3bb242bc5d862e4f1ab2b6d385c157b"
+  },
+  "goemon64recomp": {
+    "repository": "klorfmorf/Goemon64Recomp",
+    "branch": "dev",
+    "commit": "6661abc439327b9ed9e235c391720f9034f61a78"
+  },
+  "submodules": {
+    "Goemon64RecompSyms": {
+      "repository": "klorfmorf/Goemon64RecompSyms",
+      "commit": "49f4e3269f05c737cb4bf698b9ef7142c92f1ac7"
+    },
+    "lib/mnsg": {
+      "repository": "klorfmorf/mnsg",
+      "commit": "be85f9018b1fb2ffa332270d6abfb9f8c3cae323"
+    }
+  },
+  "reference_binary": {
+    "game": "Mystical Ninja Starring Goemon",
+    "region": "USA",
+    "format": "decompressed big-endian z64",
+    "decompressed_crc32_header": [
+      "0x9CC11F4B",
+      "0xABAA8538"
+    ],
+    "known_addresses": {
+      "file_table_rom_offset": "0x57FD8",
+      "character_graphics_ids_rom_offset": "0x5BFF30",
+      "player_one_task_vram": "0x801FC604",
+      "player_one_root_object_vram": "0x801FC614",
+      "current_character_vram": "0x8015C5DC"
+    },
+    "note": "SHA-256 hash for an actual ROM is intentionally absent until a user-owned reference image is validated. These are decomp header CRC fields, not the file SHA-256."
+  }
+}
