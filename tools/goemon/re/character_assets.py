@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Locate original character graphics files in a USER-PROVIDED decompressed MNSG ROM.
 
-The addresses are grounded in Goemon64Recomp/dev's rom_decompression.cpp and
+The table uses overlapping pairs of 32-bit offsets (4-byte stride), as\nGoemon64Recomp/src/game/rom_decompression.cpp increments its pointer by one\nuint32_t per file. The addresses are grounded in that source and
 patches/variables.h. This is raw file extraction, not N64 model conversion.
 Files are written only when --output-dir is explicitly provided.
 """
@@ -49,7 +49,7 @@ def validate_decompressed_rom(data: bytes, *, check_crc: bool = True) -> None:
 def read_file_table(data: bytes) -> list[FileEntry]:
     entries = []
     for file_id in range(MAX_FILES):
-        address = FILE_TABLE_ROM_OFFSET + file_id * 8
+        address = FILE_TABLE_ROM_OFFSET + file_id * 4
         if address + 8 > len(data):
             raise ValueError("file table reaches past end of ROM")
         start, end = struct.unpack_from(">II", data, address)
