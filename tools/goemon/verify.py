@@ -24,7 +24,9 @@ def run_native(root: Path) -> int:
                source_dir / "test_original_collision.cpp",
                source_dir / "test_original_character_init.cpp",
                source_dir / "test_goemon_capture_gate.cpp",
-               source_dir / "test_original_jump.cpp"]
+               source_dir / "test_original_jump.cpp",
+               source_dir / "test_original_horizontal.cpp",
+               source_dir / "test_original_motion_adapter.cpp"]
     for source in sources:
         if not source.is_file():
             print(f"ERROR: native test source missing: {source}", file=sys.stderr)
