@@ -12,6 +12,7 @@
 
 extern void* D_801FC604_5B8514; // PlayerTask* (player one)
 extern void* D_801FC614_5B8524; // Object* player-one render root
+extern SYS_W D_8008CCC0_8D8C0; // original global system state; missing in pinned mnsg/common.h
 extern u32 D_8015C5DC_15D1DC; // globally selected character
 
 // No assumed host pointer size: code is compiled to MIPS o32 (32-bit).
