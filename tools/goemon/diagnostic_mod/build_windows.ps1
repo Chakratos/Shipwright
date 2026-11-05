@@ -37,8 +37,9 @@ if (-not (Test-Path $Workspace)) {
 }
 
 $Source = Join-Path $Project "tools\goemon\diagnostic_mod\src\goemon_trace.c"
+$GateHeader = Join-Path $Project "tools\goemon\diagnostic_mod\src\goemon_capture_gate.h"
 $Manifest = Join-Path $Project "tools\goemon\diagnostic_mod\mod.toml"
-if (-not (Test-Path $Source) -or -not (Test-Path $Manifest)) {
+if (-not (Test-Path $Source) -or -not (Test-Path $GateHeader) -or -not (Test-Path $Manifest)) {
     throw "Diagnose-Mod-Dateien fehlen im Feature-Branch"
 }
 
@@ -48,6 +49,7 @@ if (Test-Path $TemplateExample) {
     Remove-Item $TemplateExample
 }
 Copy-Item $Source (Join-Path $Workspace "src\goemon_trace.c") -Force
+Copy-Item $GateHeader (Join-Path $Workspace "src\goemon_capture_gate.h") -Force
 Copy-Item $Manifest (Join-Path $Workspace "mod.toml") -Force
 
 # The official mod template warns that LLVM 19.1.0 lacks the needed MIPS backend.
