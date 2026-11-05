@@ -26,6 +26,10 @@ static u32 trace_memory_count = 0;
 // A completed capture cannot be restarted without relaunching the game;
 // this preserves consecutive sample IDs for the post-processing tools.
 static u8 trace_state = 0;
+static u8 armed_has_previous_position = 0;
+static f32 armed_previous_x = 0.0f;
+static f32 armed_previous_y = 0.0f;
+static f32 armed_previous_z = 0.0f;
 static const char k_hex[] = "0123456789abcdef";
 
 static u8* ReadTaskPlayer(u8* task) {
@@ -89,11 +93,13 @@ RECOMP_HOOK_RETURN("func_80002040_2C40") void goemon_capture_mode_handler(void) 
         } else if (trace_state == 1) {
             recomp_printf("GOEMON_TRACE_DISARMED\n");
             trace_state = 0;
+            armed_has_previous_position = 0;
         }
         return;
     }
 
     if (trace_state == 0) {
+        armed_has_previous_position = 0;
         trace_state = 1;
         recomp_printf("GOEMON_TRACE_ARMED,wait_for_player_movement\n");
     }
@@ -105,27 +111,46 @@ RECOMP_HOOK_RETURN("func_80002040_2C40") void goemon_capture_mode_handler(void) 
     if (player == 0) return;
 
     input = &D_8008CCC0_8D8C0.controller[0];
+    x = ReadF32(root, 0x08);
+    y = ReadF32(root, 0x0c);
+    z = ReadF32(root, 0x10);
 
-    // Arming alone is not enough: the user must actively move the
-    // ORIGINAL in-game analog stick after closing the mod menu. GUI
-    // navigation and idle title scenes do not use the frame budget.
-    // Uses raw N64 input (typical range -80..80).
+    // Merely enabling the option in the mod menu does not start the trace.
+    // Require BOTH a real analog-stick deflection and a change in the
+    // original player's world position: this excludes menu navigation
+    // while the player is stationary or paused.
     if (trace_state == 1) {
+        f32 delta_x, delta_y, delta_z;
+        if (!armed_has_previous_position) {
+            armed_previous_x = x;
+            armed_previous_y = y;
+            armed_previous_z = z;
+            armed_has_previous_position = 1;
+            return;
+        }
+        delta_x = x - armed_previous_x;
+        delta_y = y - armed_previous_y;
+        delta_z = z - armed_previous_z;
+        armed_previous_x = x;
+        armed_previous_y = y;
+        armed_previous_z = z;
         if (input->stick_raw_x < 15 && input->stick_raw_x > -15 &&
             input->stick_raw_y < 15 && input->stick_raw_y > -15) {
             return;
         }
+        if (delta_x < 0.0625f && delta_x > -0.0625f &&
+            delta_y < 0.0625f && delta_y > -0.0625f &&
+            delta_z < 0.0625f && delta_z > -0.0625f) {
+            return;
+        }
         trace_state = 2;
-        recomp_printf("GOEMON_TRACE_BEGIN,2,hook=func_80002040_2C40,max_frames=%u,trigger=analog\n",
+        recomp_printf("GOEMON_TRACE_BEGIN,2,hook=func_80002040_2C40,max_frames=%u,trigger=player_movement\n",
                       (u32)GOEMON_TRACE_MAX_FRAMES);
     }
 
     frame = trace_frame++;
     character = task[0x60];
     action = task[0xcc];
-    x = ReadF32(root, 0x08);
-    y = ReadF32(root, 0x0c);
-    z = ReadF32(root, 0x10);
 
     // Preserve the exact 18-column GOEMON_REF schema used by the existing
     // log_to_csv.py, action_transitions.py and memory_candidates.py.
