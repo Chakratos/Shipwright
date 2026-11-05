@@ -338,3 +338,47 @@ comparison to original ROM results and matching compilation settings.
 7. Add tests against recorded ground truth, then Randomizer progression logic.
 
 No substitute movement code should be accepted as original behavior.
+
+## New verified tooling (original gameplay and graphics, 2026-11-05)
+
+Two user-run Windows Goemon64Recompiled captures have succeeded, including
+a **2,375-update** four-character session with full original PlayerTask,
+model Object and raw Player memory. The current Windows pipeline uses the
+standalone v0.3 NRM mod described in [TRACE_MOD.md](TRACE_MOD.md);
+the earlier source-patching probe is retained only for reference.
+
+The full-vector controller now reproduces **261/261** source-observed
+ground/air/braking-related movement transitions to 0.012 world units.
+The exact vector equation clamps the result **after** combining old
+velocity and target-direction impulse, explaining the previously
+unresolved frame 36 sharp-turn speed dip. See
+[ORIGINAL_VECTOR_STEERING_2026-11-05.md](ORIGINAL_VECTOR_STEERING_2026-11-05.md).
+
+New live Ship world observation: the opt-in `Goemon.ZeldaWorldProbe`
+setting makes `ZeldaWorldProbe.cpp` query the actual Ship Zelda wall
+and floor collision structures, without modifying Link. It is
+**not** a playable Goemon or a complete collision solver; see
+[SHIP_WORLD_PROBE_2026-11-05.md](SHIP_WORLD_PROBE_2026-11-05.md).
+
+New metadata-only genuine-character PIC0000 catalog:
+
+```powershell
+py -3 tools\goemon\re\pic0000_catalog.py "C:\Pfad\Goemon.z64" --all --output "C:\Pfad\pic_catalog.json"
+```
+
+It directly accepts the original owned 16 MiB US ROM, decompresses
+it in memory and catalogs **1,810** aligned picture records in **31**
+source files (45 next to the four character root IDs), without
+writing textures, ROM bytes or other copyrighted assets.
+[ORIGINAL_PIC0000_2026-11-05.md](ORIGINAL_PIC0000_2026-11-05.md).
+
+To reprocess an existing game run without replaying:
+
+```powershell
+py -3 tools\goemon\diagnostic_mod\reprocess_log.py
+```
+
+The updated native tests include the exact sharp-turn vector, a
+full-speed steering hand-off, and the abstract world-geometry probe.
+**Full Ship Windows build and in-game execution of the new Zelda
+collision hook are still pending verification.**
