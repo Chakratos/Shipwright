@@ -198,6 +198,12 @@ def reprocess(folder: Path) -> Path:
                  "--output", str(folder / "animation_fit.json")],
                 folder,
             )
+            parsers["yaw_fit"] = run_parser(
+                "yaw_fit",
+                [str(TOOLS / "yaw_trace_fit.py"), str(csv), str(raw),
+                 "--output", str(folder / "yaw_fit.json")],
+                folder,
+            )
     else:
         status["note"] = (
             "No GOEMON_REF in saved log. Check that the diagnostic mod was "
