@@ -55,6 +55,12 @@ class AssetManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "invalid character graphics file ID"):
             make_manifest(rom)
 
+    def test_runtime_populated_or_duplicate_graphics_ids_are_not_trusted(self):
+        rom = fake_decompressed_rom()
+        struct.pack_into(">4H", rom, CHARACTER_GRAPHICS_IDS_ROM_OFFSET, 0, 0, 0, 0)
+        with self.assertRaisesRegex(ValueError, "duplicates"):
+            make_manifest(rom)
+
     def test_overlapping_file_ranges_are_rejected(self):
         rom = fake_decompressed_rom()
         struct.pack_into(">II", rom, FILE_TABLE_ROM_OFFSET + 8, 0x600008, 0x600020)
