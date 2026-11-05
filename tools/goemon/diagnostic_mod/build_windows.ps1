@@ -1,6 +1,8 @@
 param(
     [string]$Workspace = "",
-    [switch]$SkipDownload
+    [string]$ModsDir = "$env:LOCALAPPDATA\Goemon64Recompiled\mods",
+    [switch]$SkipDownload,
+    [switch]$NoInstall
 )
 
 $ErrorActionPreference = "Stop"
@@ -91,7 +93,17 @@ try {
 
     Write-Host ""
     Write-Host "Fertig: $ModFile" -ForegroundColor Green
-    Write-Host "Installiere diese Datei im Mods-Menue von Goemon64Recompiled."
+    if (-not $NoInstall) {
+        if (-not (Test-Path $ModsDir -PathType Container)) {
+            throw "Mod-Verzeichnis nicht gefunden: $ModsDir"
+        }
+        $InstalledFile = Join-Path $ModsDir ([System.IO.Path]::GetFileName($ModFile))
+        Copy-Item -LiteralPath $ModFile -Destination $InstalledFile -Force
+        Write-Host "Automatisch installiert: $InstalledFile" -ForegroundColor Green
+        Write-Host "Starte Goemon neu und aktiviere die Mod im Mod-Menue."
+    } else {
+        Write-Host "Manuelle Installation: $ModFile"
+    }
 } finally {
     Pop-Location
 }
