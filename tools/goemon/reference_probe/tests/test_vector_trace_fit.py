@@ -44,16 +44,23 @@ class OriginalVectorTraceTests(unittest.TestCase):
         self.assertEqual(result["phases"]["air_acceleration"]["count"],1)
         self.assertEqual(result["direction_matches_within_0_000002"],2)
 
-    def test_speed_exception_is_not_hidden(self):
-        prev=sample(0,3,15,700,2.8)
-        cur=sample(1,3,15,620,2.725)
-        direction=predict(prev,cur,"ground_acceleration")
-        norm=math.hypot(*direction)
-        cur["vx"],cur["vz"]=tuple(v*2.725/norm for v in direction)
+    def test_sharp_turn_deceleration_sample_35_to_36(self):
+        # Actual NG5E sample 35 -> 36, character 2.
+        # Old magnitude-only model wrongly snapped speed back to 2.8.
+        prev=sample(0,2,15,865,2.8)
+        prev["vx"],prev["vz"]=-0.7351038455963135,2.7017815113067627
+        prev["speed"]=math.hypot(prev["vx"],prev["vz"])
+        cur=sample(1,2,15,743,2.7250822678786526)
+        cur["vx"],cur["vz"]=-1.4864791631698608,2.2839555740356445
+        cur["speed"]=math.hypot(cur["vx"],cur["vz"])
+        px,pz=predict(prev,cur,"ground_acceleration")
+        self.assertLess(math.hypot(px-cur["vx"],pz-cur["vz"]),0.000001)
+        self.assertLess(math.hypot(px,pz),2.8)
         result=analyze([prev,cur])
         self.assertEqual(result["direction_matches_within_0_001"],1)
-        self.assertEqual(result["speed_matches_within_0_012"],0)
-        self.assertEqual(len(result["phases"]["ground_acceleration"]["exceptions"]),1)
+        self.assertEqual(result["vector_matches_within_0_000002"],1)
+        self.assertEqual(result["speed_matches_within_0_012"],1)
+        self.assertEqual(result["phases"]["ground_acceleration"]["exceptions"],[])
 
     def test_discontinuous_actions_and_unknowns_excluded(self):
         a=sample(0,0,15,0,2.8)
