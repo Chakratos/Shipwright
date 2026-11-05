@@ -18,10 +18,14 @@ from mips_dataflow import trace_fields
 
 EXPECTED_DECOMPRESSED_HEADER_CRC = (0x9CC11F4B, 0xABAA8538)
 PLAYER_ANCHORS = {0x801CB800, 0x801DAF54, 0x801DC9C8, 0x801DCA64}
-# Verified PlayerTask* first argument signatures in Goemon64Recomp/patches/functions.h.
+# Verified PlayerTask* first argument signatures in upstream functions.h
+# plus two character initialization routines confirmed from original ROM:
+# func_801DD5C0 / func_801DD654 write character_id at 0x60($a0),
+# action_id at 0xCC($a0), and current_player_character_id global.
 TASK_ARGUMENT_FUNCTIONS = {
     'func_801CB800_587710', 'func_801DAF54_596E64',
     'func_801DC9C8_5988D8', 'func_801DCA64_598974',
+    'func_801DD5C0_5994D0', 'func_801DD654_599564',
 }
 
 
