@@ -207,6 +207,34 @@ The resulting JSON is an original record decode. It is **not** yet a
 renderable Zelda model: a converter for original display lists, texture data,
 complete limb hierarchy and animation frame tables remains to be written.
 
+### Locating original action-state writers and the simulation tick
+
+The MIPS inspection now includes `proven_player_fields`. This field is
+produced by bounded, straight-line provenance tracking: a known
+`g_player_1_task` global is loaded into a register, then its known
+`character_id` / `action_id` / player pointer fields are accessed through
+that register. Branches and unknown register writes invalidate the proof.
+The goal is to prioritize **original action writers** for decompilation.
+Computed/indirect flows can still be missed.
+
+The original Goemon-side diagnostic patch also emits `GOEMON_TICK` records
+with `frames_elapsed`, `game_loops_count`, `retraces_per_game_step`,
+and `retrace_count` from `SYS_W`. Analyze these locally:
+
+```shell
+python tools/goemon/reference_probe/tick_analysis.py \
+    goemon_runtime.log --output original_tick_summary.json
+```
+
+This identifies repeated or discontinuous loop counts. It **does not**
+establish the original physics tick until an update callsite is independently
+confirmed in the ROM disassembly.
+
+The test runner supports GCC/Clang and an MSVC `cl` installation exposed
+in the Windows developer command prompt. Builds/tests occur exclusively
+locally or on explicitly provisioned self-hosted computers; no hosted
+GitHub Actions job is created.
+
 ## Next runtime-dependent work
 
 1. Obtain the original Goemon physics/collision update loop from the pinned ROM.
