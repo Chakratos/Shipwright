@@ -25,15 +25,19 @@ DIRECTION formulas:
 
     nextDirection = unit(rawDirection)
 
-The original full-stick SPEED ramp in the tested action states:
+**Exact magnitude rule:** The game clamps the complete resulting
+vector *after* directional addition, not the old scalar speed:
 
-    groundSpeed = min(previousSpeed + 0.54, 2.80)
-    airSpeed    = min(previousSpeed + 0.84, 2.80)
+    raw = (oldSpeed - (ground ? 0.30 : 0.00))*oldUnit + 0.84*target
+    if length(raw) > 2.80: next = 2.80*unit(raw)
+    else: next = raw
 
-Thus the grounded 0.54 scalar increment results from the
-0.84 directional acceleration and the 0.30 reduction of the
-previous heading component (the full original implementation's
-ordering and geometry interactions are still being reverse-engineered).
+For straight-ahead motion this reduces to +0.54 on ground and +0.84
+in air. During sharp turns it can yield **less than 2.80**.
+Sample **35→36** turns from yaw 865 to 743, reducing speed to
+**2.7250822679**. The corrected equation reproduces the original
+vector with error below 0.0000003 world units. The earlier scalar
+clamp falsely labeled it an unexplained exception.
 
 **At the maximum velocity of 2.80**, these formulas simplify exactly to:
 
@@ -68,20 +72,19 @@ continuation and midair-stick-reset states in the same recording:
 | Source phase | Original candidate pairs | Direction within 0.001 | Speed within 0.012 |
 |---|---:|---:|---:|
 | Ground first movement, action 13 | 6 | 6 | 6 |
-| Ground continuation, action 13/15 -> 15 | 149 | 149 | 148 |
+| Ground continuation, action 13/15 -> 15 | 149 | 149 | 149 |
 | Air continuation in actions 23/25/26 | 102 | 102 | 102 |
 | Same airborne action + abrupt stick direction change | 4 | 4 | 4 |
-| **Total** | **261** | **261** | **260** |
+| **Total** | **261** | **261** | **261** |
 
 Notes:
 - One ground-start direction at sample 146 differed by a tiny
   normalized vector error of 0.000469 (still below 0.001).
-- The only scalar-speed failure was sample **36** (character 2):
-  observed speed **2.72508** instead of the standard **2.8**
-  after a substantial change of target yaw. Both actual and predicted
-  DIRECTION vectors still match at better than 0.000001.
-  **This is not silently normalized away**; the original
-  exception rule still needs investigation.
+- **261/261** original vectors and speeds now match the corrected
+  model within 0.012 world units. Of these, **260/261** complete
+  vectors match within 0.001; the one exception is first-step sample
+  146, measured at 0.6912 rather than nominal 0.7000, with the
+  original input-modifier not yet recovered.
 - Midair stick changes at samples **13, 19, 23, 27** set the
   desired vector to **0.84 * targetYaw** in the same action, with
   negligible numerical discrepancy. All four occur in character
@@ -100,7 +103,7 @@ Notes:
   preserves desired velocity when the target collision blocks motion.
 - OriginalVectorAcceleration.hpp: full-stick ground/air directional
   acceleration at any observed supported speed, 0.30 ground
-  drag, 0.84 input impulse, and the original 0.54/0.84 speed ramps.
+  drag and 0.84 input impulse, with a **post-vector 2.80 speed cap**.
 - OriginalVectorController.hpp: action-gated stateful movement
   (ground start, run, air start/continuation, midair turn reset,
   observed braking to -0.4); returns an empty result instead
