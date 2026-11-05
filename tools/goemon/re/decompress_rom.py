@@ -130,7 +130,7 @@ def decompress_us_rom(data: bytes) -> bytes:
 
 
 def ensure_decompressed_rom(data: bytes) -> bytes:
-    if len(data) > US_ROM_SIZE and data[:4] == MAGIC and (
+    if len(data) >= US_ROM_SIZE and data[:4] == MAGIC and data[0x3B:0x3F] == US_GAME_CODE and (
         _u32(data, 0x10), _u32(data, 0x14)
     ) == DECOMPRESSED_CRC:
         return data
