@@ -186,6 +186,12 @@ def reprocess(folder: Path) -> Path:
                  "--output", str(folder / "physics_fit.json")],
                 folder,
             )
+            parsers["horizontal_fit"] = run_parser(
+                "horizontal_fit",
+                [str(TOOLS / "horizontal_trace_fit.py"), str(csv), str(raw),
+                 "--output", str(folder / "horizontal_fit.json")],
+                folder,
+            )
     else:
         status["note"] = (
             "No GOEMON_REF in saved log. Check that the diagnostic mod was "
