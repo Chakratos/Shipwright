@@ -41,6 +41,12 @@ class Tests(unittest.TestCase):
                             (0x10c,0x910900CC)])
         self.assertEqual(proof,[])
 
+    def test_mflo_invalidates_pointer(self):
+        proof=trace_fields([(0x100,0x3C088020),(0x104,0x8D08C604),
+                            (0x108,0x00004012), # mflo t0
+                            (0x10c,0x910900CC)])
+        self.assertEqual(proof,[])
+
     def test_unknown_register_write_drops_proof(self):
         proof=trace_fields([(0x100,0x3C088020),(0x104,0x8D08C604),
                             (0x108,0x25080004), # addiu t0,t0,4
