@@ -6,11 +6,10 @@
 // only. Original source capsule, wall slide and fall logic remain unknown.
 #include "OriginalZeldaWorldProbe.hpp"
 
-#include <array>
+#include <initializer_list>
 #include <cmath>
 #include <optional>
 #include <stdexcept>
-#include <utility>
 
 namespace Goemon::Original {
 
@@ -88,7 +87,7 @@ template <class WallQuery, class FloorQuery>
                 if (!FiniteWorldPoint(from) || !FiniteWorldPoint(to))
                     throw std::invalid_argument("Zelda prototype envelope overflow");
                 const std::optional<WorldPoint> contact =
-                    std::forward<WallQuery>(wallQuery)(from, to);
+                    wallQuery(from, to);
                 if (contact) {
                     if (!FiniteWorldPoint(*contact))
                         throw std::invalid_argument("invalid Zelda wall contact");
@@ -102,7 +101,7 @@ template <class WallQuery, class FloorQuery>
     }
 
     const std::optional<float> floor =
-        std::forward<FloorQuery>(floorQuery)(target);
+        floorQuery(target);
     result.sampledFloorAtDestination = true;
     if (floor) {
         if (!std::isfinite(*floor))
