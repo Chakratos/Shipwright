@@ -50,10 +50,15 @@ class CharacterPackTests(unittest.TestCase):
             [c["original_root_id"] for c in metadata["characters"]],
             [288, 292, 296, 300],
         )
+        self.assertEqual([c["character_name"] for c in metadata["characters"]],
+                         ["Goemon", "Ebisumaru", "Sasuke", "Yae"])
+        self.assertEqual(len(metadata["name_evidence"]), 4)
         for c in metadata["characters"]:
             self.assertEqual(len(c["source_files"]), 4)
             self.assertEqual(len(c["picture_chunks"]), 2)
-            self.assertIsNone(c["character_name"])
+            self.assertFalse(c["rom_proven_name_string"])
+            self.assertEqual(c["name_provenance"],
+                             "external_cheat_tables_correlated_with_original_runtime")
             for file in c["source_files"]:
                 payload = files[file["archive_path"]]
                 self.assertEqual(sha256(payload).hexdigest(), file["sha256"])
