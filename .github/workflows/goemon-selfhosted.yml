@@ -86,12 +86,12 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $dest = 'C:\actions-runner-goemon\original-rom-meshes'
+          $dest = 'C:\actions-runner-goemon\original-rom-meshes-source-aligned'
           & py -3 tools\goemon\re\export_original_models.py --output-dir $dest
           if ($LASTEXITCODE -ne 0) {
             throw "Original-ROM-Mesh-Export fehlgeschlagen: $LASTEXITCODE"
           }
-          Write-Host "108 Original-Grafikabschnitte liegen lokal: $dest"
+          Write-Host "Quellzugeordnete Original-Grafikabschnitte liegen lokal: $dest"
           Write-Host "Keine ROM-, OBJ- oder Texturdateien werden hochgeladen."
 
       - name: Build original Goemon skeleton animation capture mod locally
