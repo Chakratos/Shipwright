@@ -78,5 +78,28 @@ int main() {
     assert(yJump.airborne);
     Close(probedY, 106.0f);
     Close(yJump.modelY, probedY);
+    // Native Zelda Actor's six-argument adapter receives the current
+    // source jump phase and the independent flat-ground anchor.
+    OriginalFlatGroundPose actorPose{};
+    actorPose.groundY = 40.0f;
+    OriginalMeasuredMotionInput actorCmd{};
+    actorCmd.beginJump = true;
+    actorCmd.aButtonHeld = true;
+    float receivedY = -1.0f;
+    float receivedGround = -1.0f;
+    bool receivedAirborne = false;
+    const auto withActorTerrain = [&](float x, float y, float z, float ground,
+                                      bool airborne, OriginalPlanarStep desired) {
+        Close(x, 0.0f); Close(z, 0.0f);
+        receivedY = y; receivedGround = ground;
+        receivedAirborne = airborne;
+        return desired;
+    };
+    const auto actorJump = AdvanceOriginalFlatGround(
+        actorPose, actorCmd, withActorTerrain);
+    assert(actorJump.airborne && receivedAirborne);
+    Close(receivedY, 46.0f);
+    Close(receivedGround, 40.0f);
+    Close(actorJump.modelY, receivedY);
     std::puts("OriginalMotionAdapter measured kinematics boundary: PASS");
 }
