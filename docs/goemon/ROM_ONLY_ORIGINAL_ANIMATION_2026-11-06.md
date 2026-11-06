@@ -90,3 +90,54 @@ fallback. It is NOT a prerequisite for continuing this project.
 
 No user interaction is necessary for the offline reverse-engineering
 and extraction work.
+
+## Further automatic ROM-only results (23:24 CET)
+
+The corrected `export_original_models.py` now reads 0x09 vertex data
+from **the source-mapped 0x09 bank itself**, NOT the unrelated root
+bytes. Its new local directory is
+`C:\\actions-runner-goemon\\original-rom-meshes-source-aligned`.
+
+- Goemon 786 triangles in 24 F3DEX geometry runs
+- Ebisumaru 647 triangles in 48 geometry runs
+- Sasuke 941 triangles in 53 geometry runs
+- Yae: unresolved source graphic segment mapping
+
+The old `original-rom-meshes` directory is superseded and must not be
+used as proof of correct original vertex geometry.
+
+New `original_n64_display_list_graph.py` interprets actual F3DEX
+`G_DL` call/branch instructions, following the exact original graphics
+pointer stored in each source Skeleton limb rather than relying on
+nearest-memory-address heuristics. Real ROM verification produced:
+
+| Character | Distinct original skeleton Gfx pointers | Proper G_ENDDL | Gfx roots linked to decoded mesh parts |
+| --- | ---: | ---: | ---: |
+| Goemon | 18 | 18 | 11 |
+| Ebisumaru | 35 | 35 | 31 |
+| Sasuke | 28 | 28 | 21 |
+| **Total** | **81** | **81** | **63** |
+
+Source paths:
+- `tools/goemon/re/original_n64_display_list_graph.py`
+- `tools/goemon/re/trace_original_bone_display_lists.py`
+- `tools/goemon/re/offline_animation_action_pointers.py`
+
+The linked data are saved only on the Windows PC under
+`C:\\actions-runner-goemon\\original-rom-poses\\original_recursive_gfx_links.json`.
+The automated pointer-table search examined the source main-code/data
+and character files for directly embedded animation header pointers
+(`0x07...` and player type `0x67...`). No direct references
+were found, so it **did not** establish animation action IDs or
+frame-time progression. The action-selected animation pointer may
+be calculated dynamically by the original MIPS code; that mechanism
+needs explicit disassembly/reconstruction.
+
+**Current verified result:** source-authored raw limb poses and
+consistent source-geometry ownership are extracted. The character
+animation interpolation/timeline remains unported. The current
+Ship executable still renders static original-looking models.
+
+**Do not request manual gameplay recording as a prerequisite:** the
+ROM, the original MIPS code and the decomp/recomp source are already
+available. Runtime capture is an optional validation fallback only.
