@@ -66,8 +66,7 @@ void ResetMotionAtActor(Actor* actor) {
 
 bool AllowedToStep(PlayState* play, const Player* link) {
     if (link == nullptr || !GameInteractor::IsPlayerInControl() ||
-        play->csCtx.state != CS_STATE_IDLE ||
-        !(link->actor.bgCheckFlags & BGCHECKFLAG_GROUND))
+        play->csCtx.state != CS_STATE_IDLE)
         return false;
     constexpr std::uint32_t badStates =
         PLAYER_STATE1_LOADING | PLAYER_STATE1_INPUT_DISABLED |
@@ -212,13 +211,17 @@ void SpawnWhenRequested() {
     }
     if (sActor != nullptr) return;
     Player* link = GET_PLAYER(gPlayState);
-    if (!AllowedToStep(gPlayState, link)) return;
+    if (!AllowedToStep(gPlayState, link) ||
+        !(link->actor.bgCheckFlags & BGCHECKFLAG_GROUND)) return;
     const Vec3f& p = link->actor.world.pos;
     // Category PROP is updated independently after the PLAYER category.
     // Only one prototype Actor is spawned at a time.
-    (void)Actor_Spawn(&gPlayState->actorCtx, gPlayState,
-                      static_cast<s16>(sActorId),
-                      p.x, p.y, p.z, 0, link->actor.shape.rot.y, 0, 0);
+    Actor* spawned = Actor_Spawn(&gPlayState->actorCtx, gPlayState,
+                                static_cast<s16>(sActorId),
+                                p.x, p.y, p.z, 0, link->actor.shape.rot.y, 0, 0);
+    // Actor initialization may be deferred until its object bank loads.
+    // Remember the spawned pointer immediately to prevent duplicate spawns.
+    if (spawned != nullptr) sActor = spawned;
 }
 
 void RegisterActor() {
