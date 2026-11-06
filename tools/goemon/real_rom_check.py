@@ -39,7 +39,7 @@ def locate_rom() -> Path:
 def check_rom(path: Path, *, graphics_scan: bool = False) -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parent / "re"))
     from decompress_rom import decompress_us_rom
-    from character_assets import make_manifest
+    from character_assets import make_manifest, read_file_table
     from character_id_binding import source_proven_character_graphics
 
     raw = path.read_bytes()
@@ -74,14 +74,19 @@ def check_rom(path: Path, *, graphics_scan: bool = False) -> None:
 
     if graphics_scan:
         from original_graphics_scan import scan_original_graphics_resource
-        for (slot, entry) in character_entries:
-            graphic = decoded[entry.start:entry.end]
-            report = scan_original_graphics_resource(graphic)
+        table = read_file_table(decoded)
+        for slot, (_, root_entry) in enumerate(character_entries):
+            for part in range(4):
+                entry = table[root_entry.file_id + part]
+                graphic = decoded[entry.start:entry.end]
+                report = scan_original_graphics_resource(graphic)
             # Source ROM stays on the runner; only counts and relative
             # offsets from the validated original asset are logged.
             print("GOEMON_GRAPHICS_SCAN " + json.dumps({
                 "character_id": slot,
                 "original_file_id": entry.file_id,
+                "group_part": part,
+                "starts_with_pic0000": graphic.startswith(b"PIC0000\\x1a"),
                 "character_name": manifest["character_graphics"][slot]["character_name"],
                 **report,
             }, separators=(",", ":")))
