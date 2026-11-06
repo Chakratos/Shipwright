@@ -123,4 +123,18 @@ jobs:
           Write-Host "Windows-Build bleibt lokal auf diesem PC; kein Upload nach GitHub."
           Write-Host "EXE: $exe"
           Write-Host "Ressourcen: $assets"
+          # Only the separate Goemon test installation. Archipelago stays untouched.
+          $testGame = 'C:\Users\Chakratos\Desktop\SoH Goemon Test'
+          if (Test-Path $testGame -PathType Container) {
+            try {
+              Copy-Item -LiteralPath $exe -Destination (Join-Path $testGame 'soh.exe') -Force -ErrorAction Stop
+              Copy-Item -LiteralPath $assets -Destination (Join-Path $testGame 'soh.o2r') -Force -ErrorAction Stop
+              Write-Host "Goemon-Testinstallation mit dem neuen lokalen Build aktualisiert: $testGame"
+            } catch {
+              Write-Warning "Lokaler Build erfolgreich, Testinstallation vermutlich noch geoeffnet: $_"
+              Write-Warning "Nach dem Schliessen des Spiels EXE und soh.o2r vom Runner kopieren."
+            }
+          } else {
+            Write-Host "Separate Testinstallation nicht gefunden: $testGame; fertiger Build bleibt im Runner-Verzeichnis."
+          }
 
