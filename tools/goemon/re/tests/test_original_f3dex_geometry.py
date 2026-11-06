@@ -69,7 +69,8 @@ class OriginalF3DEXGeometryTests(unittest.TestCase):
         self.assertEqual(len(result.faces), 2)
         self.assertEqual(len(result.vertices), 6)
         self.assertEqual(result.vertices[3].x, 10)
-        self.assertEqual(result.vertices[5].z, 12)
+        self.assertEqual(result.vertices[2].z, 12)
+        self.assertEqual(result.vertices[5].z, -9)
 
     def test_branch_list_not_return(self):
         raw = fixture()
