@@ -35,8 +35,8 @@ class OriginalModelExporterTests(unittest.TestCase):
             self.assertEqual(manifest["triangles"],2)
             self.assertEqual(manifest["geometry_runs"],2)
             self.assertFalse(manifest["original_animation_recovered"])
-            self.assertFalse(manifest["source_skeleton_extracted"] if
-                             "source_skeleton_extracted" in manifest else False)
+            self.assertFalse(manifest["skeletal_hierarchy_recovered"])
+            self.assertFalse(manifest["original_animation_recovered"])
             self.assertEqual(manifest["source_obj"],"all_original_parts.obj")
             self.assertEqual(len(manifest["per_display_list_objects"]),2)
             name0=manifest["per_display_list_objects"][0]["local_obj_file"]
