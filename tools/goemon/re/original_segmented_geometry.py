@@ -59,6 +59,7 @@ def _triangle_slots(word: int) -> tuple[int, int, int]:
 
 def decode_original_segmented_geometry(
     geometry_file: bytes, vertex_file: bytes, *, source_file_id: int = 291,
+    source_banks: dict[int, bytes] | None = None,
 ) -> OriginalGeometryRecovery:
     """Read only vertex-backed, in-file commands and valid triangles.
 
@@ -66,7 +67,10 @@ def decode_original_segmented_geometry(
     We recover independent gSPVertex -> triangle -> gSPEndDisplayList
     regions without falsely claiming recovered skeletal ownership.
     """
-    banks = {7: geometry_file, 9: vertex_file}
+    banks = (dict(source_banks) if source_banks is not None
+             else {7: geometry_file, 9: vertex_file})
+    if len(banks) < 2 or 7 not in banks or 9 not in banks:
+        raise ValueError("source ROM F3DEX recovery requires mapped 0x07 and 0x09 banks")
     # Only verified source-mapped gSPVertex commands identify potential
     # display-list streams. We do NOT start parsing arbitrary data as Gfx.
     starts = []
@@ -182,6 +186,29 @@ def recover_character_from_rom(rom: bytes, character: int) -> OriginalGeometryRe
     return decode_original_segmented_geometry(
         rom[gfx.start:gfx.end], rom[model.start:model.end],
         source_file_id=gfx.file_id,
+    )
+
+def recover_source_aligned_character_from_rom(
+    rom: bytes, character: int
+) -> OriginalGeometryRecovery:
+    """Use source-verified splat.yaml 0x07/0x09 banks, NOT the old root
+    assumption. The game loads genuine F3DEX commands in runtime root+3;
+    their 0x09 vertex pointers address this SAME bank, rather than root+0.
+    """
+    from source_aligned_character_assets import source_align_character_files
+    if not 0 <= character < 4:
+        raise ValueError("character outside original four")
+    aligned = source_align_character_files(rom)[character]
+    if aligned[2].source_segment != 7 or aligned[3].source_segment != 9:
+        raise ValueError("character has no verified source 0x07 and 0x09 graphics bank")
+    entries = read_file_table(rom)
+    image07 = entries[aligned[2].runtime_file_id]
+    image09 = entries[aligned[3].runtime_file_id]
+    raw07 = rom[image07.start:image07.end]
+    raw09 = rom[image09.start:image09.end]
+    return decode_original_segmented_geometry(
+        raw09, raw09, source_file_id=image09.file_id,
+        source_banks={7:raw07, 9:raw09},
     )
 
 def recovery_summary(recovery: OriginalGeometryRecovery) -> dict:
