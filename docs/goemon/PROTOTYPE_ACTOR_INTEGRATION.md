@@ -50,9 +50,10 @@ own updates.
   when a new room is entered, and is discarded on game teardown or scene
   change. Cutscenes, menus, interactions, swimming and other unsupported
   Link states suspend the experimental Actor's motion.
-- Debug trace: `frame, scene, action, measured_transition, actor position,
-  desired/applied planar deltas, wall contact, floor probe, diagnostic snap,
-  airborne`.
+- Debug trace: `frame, scene, room, raw Ship stick X/Y, provisional yaw10,
+  action, measured_transition, actor position, desired/applied planar
+  deltas, wall contact, floor probe, diagnostic snap, airborne`. Input
+  fields allow reproducing a regression from a single local capture.
 
 ## Limits / next engineering work
 
