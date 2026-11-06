@@ -28,6 +28,15 @@ Link**. Original asset data is not compiled into Ship.
    exercise the prototype.
 4. Disable the option to despawn the prototype. Re-enabling starts a new
    Actor. Inspect `goemon_prototype_actor.csv` in Ship's working folder.
+   Produce a compact numeric summary, without manual CSV inspection:
+
+   ```powershell
+   py -3 tools\goemon\analyze_actor_trace.py "goemon_prototype_actor.csv" --output "goemon_actor_report.json"
+   ```
+
+5. If the Actor stops unexpectedly, inspect
+   `goemon_prototype_actor_error.txt`. A fatal geometry error is latched;
+   **disable and re-enable** the toggle to retry (no infinite respawn loop).
 
 For a clean comparison, turn off **Live Goemon Controller Ghost**. When
 Prototype Actor is enabled, that older Ghost automatically suspends its
@@ -44,16 +53,25 @@ own updates.
   measured Goemon motion core. A temporary Ship camera/stick adapter
   chooses numeric Goemon actions; unsupported transitions are marked
   explicitly and **do not acquire fabricated original velocity**.
-- Zelda's collision context supplies wall-ray and floor-height observations
-  at the actual **jumping model Y**, not the previous grounded Y.
+- Zelda's collision context supplies **six body-sweep wall rays** at two
+  heights and three lateral offsets, plus a destination floor query.
+  Sample heights and widths are provisional, not original NG5E dimensions.
+  The adapter receives actual jumping model Y, the separate ground anchor
+  and the independently measured airborne phase.
+- When grounded, the provisional adapter rejects missing floor, steps
+  higher than 5 Zelda units and drops deeper than 12 units. It rejects
+  all planar motion on wall-ray contact. These values do **not** establish
+  original Goemon collision radius, stepping or falling mechanics.
 - The Actor survives room changes inside one scene, resets its controller
   when a new room is entered, and is discarded on game teardown or scene
   change. Cutscenes, menus, interactions, swimming and other unsupported
   Link states suspend the experimental Actor's motion.
 - Debug trace: `frame, scene, room, raw Ship stick X/Y, provisional yaw10,
   action, measured_transition, actor position, desired/applied planar
-  deltas, wall contact, floor probe, diagnostic snap, airborne`. Input
-  fields allow reproducing a regression from a single local capture.
+  deltas, wall contact, floor probe, diagnostic snap, airborne and
+  terrain_reject_code`. Input fields allow reproducing a regression from
+  a single local capture. The codes are 0=accepted, 1=wall, 2=missing
+  floor, 3=step too high, 4=drop too deep.
 
 ## Limits / next engineering work
 
@@ -64,10 +82,12 @@ Zelda-player collision cylinder, hitbox, scene-exit ownership, item use or
 Randomizer progression. It is deliberately not installed in
 `ACTORCAT_PLAYER`.
 
-The single-height Zelda wall ray, block-on-contact policy, floor snap,
-1:1 world-unit conversion, provisional analog threshold and controller
-camera yaw are **integration probes**, not a reverse engineered original
-Goemon collision/scene controller. The code does not claim they match
+The conservative six-ray Zelda envelope, block-on-contact policy, floor
+height filters, 1:1 world-unit conversion, provisional analog threshold
+and controller camera yaw are **integration probes**, not a reverse
+engineered original Goemon collision/scene controller. Falling off
+ledges, wall sliding, ceiling collisions and the real capsule radius are
+NOT implemented or validated. The code does not claim they match
 NG5E's original behavior.
 
 ### Required before the first fully playable character
