@@ -78,13 +78,9 @@ def match_pose_gfx_to_n64_mesh_runs(source_poses: dict, mesh_manifest: dict,
         "character":source_poses.get("character"),
         "source_poses":source_poses.get("structurally_valid_poses"),
         "source_mesh_runs":len(entries),
-        "total_bone_references":sum(total.values())-sum(
-            total[key] for key in (
-                "total_09_gfx_refs",
-                "exact_first_vertex_command",
-                "possible_display_list_header",
-                "unresolved_source_graphics_pointer"
-            )
+        "total_bone_references": (
+            total["null"]+total["unresolved_segment"]+
+            total["total_09_gfx_refs"]
         ),
         "distinct_09_gfx_pointers":len(gfx_index),
         "matched_exact_refs":total["exact_first_vertex_command"],
