@@ -8,7 +8,7 @@
 // Logs: goemon_live_controller_ghost.csv in Ship's working directory.
 // No Goemon ROM/assets are loaded into Ship and no synthetic trace is
 // presented as original runtime evidence.
-#include "OriginalLiveInput.hpp"
+#include "OriginalLiveFrame.hpp"
 #include "OriginalZeldaWorldProbe.hpp"
 
 #include <cmath>
@@ -43,23 +43,17 @@ using Goemon::Original::OriginalMeasuredMotionInput;
 using Goemon::Original::OriginalMeasuredPlanarPhase;
 using Goemon::Original::ShipPreviewStickKind;
 
-OriginalVectorControllerState sController;
+Goemon::Original::OriginalLiveFrameState sLive{};
 std::ofstream sLog;
 std::int32_t sScene = -1;
 std::uint64_t sFrame = 0;
-std::uint8_t sPreviousAction = 0;
-std::int16_t sPreviousStickX = 0;
-std::int16_t sPreviousStickY = 0;
 bool sInitialized = false;
 
 void ResetPreview() {
     if (sLog.is_open()) sLog.close();
-    sController = {};
+    sLive = {};
     sScene = -1;
     sFrame = 0;
-    sPreviousAction = 0;
-    sPreviousStickX = 0;
-    sPreviousStickY = 0;
     sInitialized = false;
 }
 
@@ -90,6 +84,7 @@ std::optional<float> FloorQuery(WorldPoint projected) {
 
 void RecordLiveControllerGhost() {
     if (CVarGetInteger(CVAR_GOEMON_LIVE_GHOST, 0) == 0 ||
+        CVarGetInteger(CVAR_SETTING("Goemon.PrototypeActor"), 0) != 0 ||
         gPlayState == nullptr) {
         ResetPreview();
         return;
@@ -103,14 +98,11 @@ void RecordLiveControllerGhost() {
     }
 
     if (!sInitialized || sScene != gPlayState->sceneNum) {
-        sController = {};
-        sController.motion.groundX = link->actor.world.pos.x;
-        sController.motion.groundY = link->actor.world.pos.y;
-        sController.motion.groundZ = link->actor.world.pos.z;
+        sLive = {};
+        sLive.controller.motion.groundX = link->actor.world.pos.x;
+        sLive.controller.motion.groundY = link->actor.world.pos.y;
+        sLive.controller.motion.groundZ = link->actor.world.pos.z;
         sScene = gPlayState->sceneNum;
-        sPreviousAction = 0;
-        sPreviousStickX = 0;
-        sPreviousStickY = 0;
         sInitialized = true;
         if (sLog.is_open()) sLog.close();
         sLog.open("goemon_live_controller_ghost.csv",
@@ -136,64 +128,29 @@ void RecordLiveControllerGhost() {
         static_cast<int>(pad.cur.stick_y), shipCameraYaw);
     const bool jumpPressed = (pad.press.button & BTN_A) != 0;
     const bool jumpHeld = (pad.cur.button & BTN_A) != 0;
-    const float priorSpeed = std::hypot(
-        sController.previousDesiredVelocity.x,
-        sController.previousDesiredVelocity.z);
-    const bool previouslyAirborne = sController.motion.jump.airborne;
-    const auto proposed = Goemon::Original::ComposeShipPreviewOriginalInput(
-        stick, sPreviousAction, sPreviousStickX, sPreviousStickY,
-        previouslyAirborne, jumpPressed, jumpHeld, priorSpeed);
-
     try {
-        if (jumpPressed && !previouslyAirborne)
-            Goemon::Original::BeginOriginalJump(sController.motion.jump);
-
         WorldCollisionProbe probe{};
         auto resolve = [&](float x, float z, OriginalPlanarStep desired)
             -> OriginalPlanarStep {
             probe = Goemon::Original::ProbeOriginalStepAgainstWorld(
-                WorldPoint{x, sController.motion.ModelY(), z}, desired,
+                WorldPoint{x, sLive.controller.motion.ModelY(), z}, desired,
                 WallQuery, FloorQuery);
-            // Conservative ghost-only block; NOT the original Goemon
-            // collision response. Desired velocity remains unchanged.
+            // Only a conservative diagnostic block; not source collision.
             return probe.wallHit ? OriginalPlanarStep{0.0f, 0.0f} : desired;
         };
-
-        std::optional<Goemon::Original::OriginalMotionFrame> step;
-        std::uint8_t numericAction = 0;
-        if (proposed) {
-            numericAction = proposed->action;
-            step = Goemon::Original::AdvanceMeasuredOriginalVectorController(
-                sController, *proposed, resolve);
-        }
-        const bool actionSupported = step.has_value();
-        if (step) {
-            sPreviousAction = numericAction;
-        } else {
-            // Unsupported input phases freeze horizontal motion. Vertical
-            // Goemon jump integrates independently, including idle jump.
-            sController.previousDesiredVelocity = {0.0f, 0.0f};
-            sController.hasPrior = false;
-            sController.braking = false;
-            sController.motion.horizontal.ResetForOriginalIdle();
-            OriginalMeasuredMotionInput idle{};
-            idle.horizontalPhase =
-                OriginalMeasuredPlanarPhase::SuppressWhileActionLocked;
-            idle.aButtonHeld = jumpHeld;
-            step = Goemon::Original::AdvanceOriginalFlatGround(
-                sController.motion, idle, resolve);
-            sPreviousAction = 0;
-        }
-        sPreviousStickX = stick.x;
-        sPreviousStickY = stick.y;
+        const auto driven = Goemon::Original::AdvanceOriginalLivePreview(
+            sLive, stick, jumpPressed, jumpHeld, resolve);
+        const auto numericAction = driven.action;
+        const bool actionSupported = driven.measuredTransitionSupported;
+        const std::optional<Goemon::Original::OriginalMotionFrame> step{driven.motion};
 
         // Temporary Zelda-ground alignment for the separate ghost only.
         // Never apply this diagnostic snap to the real Link/Goemon Actor.
         const auto previewFloor = Goemon::Original::PreviewGhostGroundHeight(
             probe, step->airborne);
         if (previewFloor) {
-            sController.motion.groundY = *previewFloor;
-            step->modelY = sController.motion.ModelY();
+            sLive.controller.motion.groundY = *previewFloor;
+            step->modelY = sLive.controller.motion.ModelY();
         }
 
         // Native Zelda debug ball: display our private source-driven
@@ -202,8 +159,8 @@ void RecordLiveControllerGhost() {
         // Cyan = otherwise. This is NOT an original Goemon 3D model.
         if (CVarGetInteger(CVAR_GOEMON_LIVE_GHOST_DRAW, 1) != 0) {
             DebugDisplay_AddObject(
-                sController.motion.groundX, step->modelY + 18.0f,
-                sController.motion.groundZ,
+                sLive.controller.motion.groundX, step->modelY + 18.0f,
+                sLive.controller.motion.groundZ,
                 0, 0, 0, 1.4f, 1.4f, 1.4f,
                 static_cast<std::uint8_t>(probe.wallHit ? 255 : 32),
                 static_cast<std::uint8_t>(probe.wallHit ? 56 : 208),
@@ -222,9 +179,9 @@ void RecordLiveControllerGhost() {
                  << stick.provisionalOriginalYaw10 << ','
                  << step->desiredPlanar.x << ',' << step->desiredPlanar.z << ','
                  << step->appliedPlanar.x << ',' << step->appliedPlanar.z << ','
-                 << sController.motion.groundX << ','
+                 << sLive.controller.motion.groundX << ','
                  << step->modelY << ','
-                 << sController.motion.groundZ << ','
+                 << sLive.controller.motion.groundZ << ','
                  << link->actor.world.pos.x << ','
                  << link->actor.world.pos.y << ','
                  << link->actor.world.pos.z << ','
