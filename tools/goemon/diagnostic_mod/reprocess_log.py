@@ -19,7 +19,7 @@ import zipfile
 PROJECT = Path(__file__).resolve().parents[3]
 TOOLS = PROJECT / "tools" / "goemon" / "reference_probe"
 DEFAULT_RUNS = PROJECT.parent / "GoemonTraceRuns"
-ALLOWED_SUFFIXES = frozenset({".log", ".json", ".csv", ".dot", ".txt"})
+ALLOWED_SUFFIXES = frozenset({".log", ".json", ".csv", ".dot", ".txt", ".gopa"})
 
 
 def find_run(base: Path) -> Path:
@@ -262,6 +262,15 @@ def reprocess(folder: Path) -> Path:
         parsers["original_skeletal_poses"] = run_parser(
             "original_skeletal_poses", command, folder
         )
+
+        pose_json = folder / "original_skeletal_poses.json"
+        if pose_json.is_file() and parsers["original_skeletal_poses"]["exit_code"] == 0:
+            parsers["original_pose_archive"] = run_parser(
+                "original_pose_archive",
+                [str(TOOLS / "original_pose_archive.py"), str(pose_json),
+                 "--output", str(folder / "original_skeletal_poses.gopa")],
+                folder
+            )
 
 
     (folder / "capture_summary.json").write_text(
