@@ -58,7 +58,7 @@ def package_character_files(
     names: set[str] = set()
     assets: dict[str, bytes] = {}
     characters = []
-    names = corroborated_character_names(tuple(group[0][0] for group in groups))
+    name_bindings = corroborated_character_names(tuple(group[0][0] for group in groups))
     picture_total = 0
     for slot, group in enumerate(groups):
         ids = [file_id for file_id, _ in group]
@@ -108,8 +108,8 @@ def package_character_files(
         characters.append({
             "character_slot": slot,
             "original_root_id": ids[0],
-            "character_name": names[slot]["character_name"],
-            "name_provenance": names[slot]["name_provenance"],
+            "character_name": name_bindings[slot]["character_name"],
+            "name_provenance": name_bindings[slot]["name_provenance"],
             "rom_proven_name_string": False,
             "source_files": resource_records,
             "picture_chunks": picture_records,
@@ -123,7 +123,7 @@ def package_character_files(
         "resource_file_count": 16,
         "picture_block_count": picture_total,
         "characters": characters,
-        "name_evidence": {str(k): v for k, v in names.items()},
+        "name_evidence": {str(k): v for k, v in name_bindings.items()},
         "limitations": (
             "Lossless original binary resource pack only. Character names are "
             "externally corroborated by published USA GameShark modifiers, "
