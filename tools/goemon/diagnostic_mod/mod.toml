@@ -1,8 +1,8 @@
 [manifest]
 id = "chakratos_goemon_original_trace"
-version = "0.3.0"
-display_name = "Goemon Original Reference Trace"
-description = "Manual in-game capture. Records per-frame original PlayerTask and character model positions, plus full-session Player memory. Starts only when the actual player moves."
+version = "0.4.0"
+display_name = "Goemon Original Animation & Reference Trace"
+description = "Opt-in original-game skeletal capture: real limb pointers, source display lists, per-frame animation matrices, plus original physics. Nothing is synthesized."
 short_description = "In-game capture only; manually enable recording in Mod Settings."
 authors = ["Chakratos Goemon port project"]
 game_id = "mnsg"
@@ -23,4 +23,12 @@ name = "Original-Daten aufnehmen"
 description = "Im Spiel auf Aufnahme aktivieren stellen. Die Aufnahme beginnt erst bei deiner naechsten Stickbewegung. Aus stoppt die Aufnahme."
 type = "Enum"
 options = ["Aus", "Aufnahme aktivieren"]
+default = "Aus"
+
+[[manifest.config_options]]
+id = "capture_animation"
+name = "Original-Skelettanimationen aufnehmen"
+description = "Erfasst echte Skelettglieder und Animationsmatrizen aus der Goemon64Recomp. Startet nach Stickbewegung. Maximal 1800 Spielupdates, kein ROM-Upload."
+type = "Enum"
+options = ["Aus", "Originalanimation aufnehmen"]
 default = "Aus"
