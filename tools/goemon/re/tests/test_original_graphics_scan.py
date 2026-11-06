@@ -43,6 +43,13 @@ class OriginalGraphicsScanTests(unittest.TestCase):
         self.assertEqual(scan_original_graphics_resource(d)[
             "valid_f3dex_vertex_dmas"], 0)
 
+    def test_no_unfounded_graphics_claim_from_random_or_picture_data(self):
+        data = b"PIC0000" + bytes([0x1A]) + bytes(1024)
+        report = scan_original_graphics_resource(data)
+        self.assertEqual(report["valid_f3dex_vertex_dmas"], 0)
+        self.assertEqual(report["animated_skeleton_header_candidates"], 0)
+        self.assertIn("NOT confirmed", report["interpretation"])
+
     def test_segment8_rig_header_candidate_not_auto_claimed_renderable(self):
         d = bytearray(1024)
         flags = (2 << 8) | 7
