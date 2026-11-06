@@ -186,6 +186,7 @@ void InitActor(Actor* actor, PlayState* play) {
         sLog.imbue(std::locale::classic());
         sLog << std::setprecision(9);
         sLog << "frame,scene,room,ship_stick_x,ship_stick_y,preview_yaw10,"
+                "pilot_enabled,link_x,link_y,link_z,"
                 "action,measured_transition,actor_x,actor_y,actor_z,"
                 "desired_dx,desired_dz,applied_dx,applied_dz,wall_hit,"
                 "floor_found,preview_floor_snap,airborne,terrain_reject_code\n";
@@ -274,6 +275,10 @@ void UpdateActor(Actor* actor, PlayState* play) {
                  << static_cast<int>(pad.cur.stick_x) << ','
                  << static_cast<int>(pad.cur.stick_y) << ','
                  << stick.provisionalOriginalYaw10 << ','
+                 << static_cast<int>(PilotReady(play, link)) << ','
+                 << link->actor.world.pos.x << ','
+                 << link->actor.world.pos.y << ','
+                 << link->actor.world.pos.z << ','
                  << static_cast<unsigned>(step.action) << ','
                  << static_cast<int>(step.measuredTransitionSupported) << ','
                  << actor->world.pos.x << ',' << actor->world.pos.y << ','
