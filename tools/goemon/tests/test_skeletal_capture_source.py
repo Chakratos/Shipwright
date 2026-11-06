@@ -57,6 +57,9 @@ class OriginalSkeletonCaptureTests(unittest.TestCase):
         self.assertIn("build/src/goemon_trace.o", script)
         self.assertIn("RecompModTool", script)
         self.assertIn("goemon_skeletal_capture.o", script)
+        workflow = (PROJECT / ".github/workflows/goemon-selfhosted.yml").read_text("utf-8")
+        self.assertIn("goemon_original_trace.nrm", workflow)
+        self.assertIn("original-animation-capture", workflow)
 
 if __name__ == "__main__":
     unittest.main()
