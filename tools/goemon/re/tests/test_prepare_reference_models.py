@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from import_reference_models import CHARACTERS, HEADER, MAGIC
 from prepare_reference_models import (
     REFERENCE_URLS, SOURCE_PAGES,
+    MODEL_ASSET_IDS, discover_local_archive,
     download_reference_archive, prepare_all_models,
 )
 
@@ -74,6 +75,42 @@ class PrepareReferenceModelsTests(unittest.TestCase):
                 self.assertEqual(report["character"], character)
                 self.assertTrue(report["static_geometry_only"])
                 self.assertFalse(report["original_animation_and_skeleton"])
+
+    def test_offline_browser_downloads_need_no_file_renames(self):
+        with TemporaryDirectory() as temp:
+            root = Path(temp)
+            downloads = root / "Downloads"
+            downloads.mkdir()
+            destination = root / "generated"
+            for character in CHARACTERS:
+                asset_id, internal_obj = MODEL_ASSET_IDS[character]
+                source_dir = internal_obj.rsplit("/", 1)[0]
+                archive_path = downloads / f"n64-{asset_id}-download.zip"
+                with ZipFile(archive_path, "w") as archive:
+                    archive.writestr(internal_obj, OBJ)
+                    archive.writestr(f"{source_dir}/material.mtl", MTL)
+                    archive.writestr(f"{source_dir}/original.png", PNG)
+                self.assertEqual(
+                    discover_local_archive(character, downloads), archive_path
+                )
+            with patch("prepare_reference_models.download_reference_archive",
+                       side_effect=AssertionError("offline mode must never download")):
+                result = prepare_all_models(
+                    destination, download_dir=downloads, allow_network=False
+                )
+            self.assertEqual(len(result["characters"]), 4)
+            for character in CHARACTERS:
+                self.assertTrue((destination / character / "model.gomesh").is_file())
+                self.assertTrue((destination / "source-zips" /
+                                 f"{character}.zip").is_file())
+
+    def test_offline_rejects_missing_zip_without_network(self):
+        with TemporaryDirectory() as temp:
+            with self.assertRaisesRegex(ValueError, "Goemon: ZIP missing"):
+                prepare_all_models(Path(temp) / "models", allow_network=False)
+            self.assertIsNone(
+                discover_local_archive("Yae", Path(temp) / "not-a-directory")
+            )
 
     def test_fetch_uses_character_specific_zip_and_validates_archive(self):
         with TemporaryDirectory() as temp:
