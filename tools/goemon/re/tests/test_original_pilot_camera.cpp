@@ -71,6 +71,18 @@ int main() {
     assert(!history.Restore(source)); // Do not clobber an external camera update.
     assert(!history.sourceView && !history.renderedView);
 
+    // Invalid camera input must not poison the last valid render history.
+    PilotCameraHistory cameraAfterError{};
+    const auto good = cameraAfterError.Render(source, link, actor);
+    bool failedRender = false;
+    try {
+        (void)cameraAfterError.Render(
+            good, link, {NAN, 25.0f, 194.0f});
+    } catch (const std::invalid_argument&) { failedRender = true; }
+    assert(failedRender);
+    const auto recovered = cameraAfterError.Render(good, link, actor);
+    assert(SamePilotView(recovered, good));
+
     PilotInputGate gate{};
     assert(!ShouldRouteInputToGoemon(gate));
     gate = {true, true, true, true, true};
