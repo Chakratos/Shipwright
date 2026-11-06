@@ -47,6 +47,7 @@ class OriginalOfflineBoneGfxBindingTests(unittest.TestCase):
         self.assertFalse(byptr["0x09000070"]["verified"])
         self.assertEqual(byptr["0x09000150"]["relation"],"unresolved_source_graphics_pointer")
         self.assertFalse(result["automated_limb_to_mesh_bone_animation_ready"])
+        self.assertEqual(result["character"],"Goemon")
 
     def test_does_not_lie_about_nearby_source_list(self):
         poses,meshes=self.fixture()
