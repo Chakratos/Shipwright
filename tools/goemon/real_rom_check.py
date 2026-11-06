@@ -36,7 +36,8 @@ def locate_rom() -> Path:
     return DEFAULT_ROM
 
 
-def check_rom(path: Path, *, graphics_scan: bool = False) -> None:
+def check_rom(path: Path, *, graphics_scan: bool = False,
+              segmented_scan: bool = False) -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parent / "re"))
     from decompress_rom import decompress_us_rom
     from character_assets import make_manifest, read_file_table
@@ -72,6 +73,15 @@ def check_rom(path: Path, *, graphics_scan: bool = False) -> None:
           "and four original character graphics sets.")
     print("No ROM or extracted asset bytes were uploaded or printed.")
 
+    if segmented_scan:
+        from original_segmented_scan import scan_original_character_group
+        for slot in range(4):
+            report = scan_original_character_group(decoded, slot)
+            print("GOEMON_SEGMENTED_SCAN " + json.dumps(
+                report, separators=(",", ":")))
+        print("GOEMON_SEGMENTED_SCAN COMPLETE: real NG5E ROM, 4 source-proven "
+              "character pairs 0x09/0x07; pointer linkage still needs validation.")
+
     if graphics_scan:
         from original_graphics_scan import scan_original_graphics_resource
         table = read_file_table(decoded)
@@ -97,6 +107,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rom", type=Path, default=locate_rom())
     parser.add_argument("--graphics-scan", action="store_true",
                         help="print metadata-only N64 graphics/rigger candidate counts")
+    parser.add_argument("--segmented-scan", action="store_true",
+                        help="inspect genuine per-character 0x09/0x07 banks from splat.yaml")
     args = parser.parse_args(argv)
     if not args.rom.is_file():
         print(f"REAL NG5E ROM: NOT FOUND at {args.rom}. "
@@ -104,7 +116,8 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return 2
     try:
-        check_rom(args.rom, graphics_scan=args.graphics_scan)
+        check_rom(args.rom, graphics_scan=args.graphics_scan,
+                  segmented_scan=args.segmented_scan)
     except (OSError, ValueError) as exc:
         print(f"REAL NG5E ROM: FAIL: {exc}", file=sys.stderr)
         return 1
