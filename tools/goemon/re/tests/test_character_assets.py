@@ -46,6 +46,28 @@ class AssetManifestTests(unittest.TestCase):
         self.assertEqual(manifest["character_graphics"][1]["size"], 16)
         self.assertIsNone(manifest["character_graphics"][1]["character_name"])
 
+    def test_correlated_names_only_when_real_character_roots_match(self):
+        rom = bytearray(0x610000)
+        rom[:4] = bytes.fromhex("80371240")
+        struct.pack_into(">II", rom, 0x10, *EXPECTED_CRC)
+        struct.pack_into(">4H", rom, CHARACTER_GRAPHICS_IDS_ROM_OFFSET,
+                         288, 292, 296, 300)
+        for i in range(305):
+            struct.pack_into(">I", rom, FILE_TABLE_ROM_OFFSET + 4*i,
+                             0x600000 + i*16)
+        manifest, selected = make_manifest(bytes(rom))
+        self.assertEqual(len(selected), 4)
+        self.assertEqual(
+            [c["character_name"] for c in manifest["character_graphics"]],
+            ["Goemon", "Ebisumaru", "Sasuke", "Yae"],
+        )
+        self.assertEqual(
+            [c["name_provenance"] for c in manifest["character_graphics"]],
+            ["external_cheat_tables_correlated_with_original_runtime"] * 4)
+        self.assertEqual(len(manifest["name_source_urls"]), 2)
+        self.assertTrue(all(not c["rom_proven_name_string"]
+                            for c in manifest["character_graphics"]))
+
     def test_compressed_rom_crc_is_rejected(self):
         rom = fake_decompressed_rom()
         struct.pack_into(">I", rom, 0x10, 0)
