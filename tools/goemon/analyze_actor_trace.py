@@ -32,6 +32,11 @@ def summarize_actor_trace(text: str) -> dict:
     missing = sorted(set(REQUIRED) - set(reader.fieldnames))
     if missing:
         raise ValueError("missing prototype trace columns: " + ", ".join(missing))
+    pilot_keys = {"pilot_enabled", "link_x", "link_y", "link_z"}
+    pilot_cols = set(reader.fieldnames) & pilot_keys
+    if pilot_cols and pilot_cols != pilot_keys:
+        raise ValueError("incomplete pilot telemetry columns")
+    has_pilot = pilot_cols == pilot_keys
     counts = Counter()
     actions = Counter()
     scenes = set()
@@ -39,6 +44,8 @@ def summarize_actor_trace(text: str) -> dict:
     distance_desired = 0.0
     distance_applied = 0.0
     last_frame: int | None = None
+    last_pilot_link: tuple[int, int, float, float, float] | None = None
+    link_distance_during_pilot = 0.0
     max_height = float("-inf")
     for row in reader:
         counts["frames"] += 1
@@ -60,6 +67,22 @@ def summarize_actor_trace(text: str) -> dict:
         ]
         if not all(math.isfinite(x) for x in values):
             raise ValueError(f"nonfinite Actor position or movement at frame {frame}")
+        if has_pilot:
+            pilot = int(row["pilot_enabled"])
+            if pilot not in (0, 1):
+                raise ValueError(f"invalid pilot flag at frame {frame}")
+            link_coords = tuple(float(row[key]) for key in
+                                ("link_x", "link_y", "link_z"))
+            if not all(math.isfinite(x) for x in link_coords):
+                raise ValueError(f"nonfinite Link telemetry at frame {frame}")
+            if pilot:
+                counts["pilot_frames"] += 1
+                if (last_pilot_link and last_pilot_link[:2] == (scene, room)):
+                    link_distance_during_pilot += math.dist(
+                        link_coords, last_pilot_link[2:])
+                last_pilot_link = (scene, room, *link_coords)
+            else:
+                last_pilot_link = None
         accepted = reject == 0
         if not accepted and (abs(values[5]) > 0.0001 or abs(values[6]) > 0.0001):
             raise ValueError(f"rejected terrain still moved Actor at frame {frame}")
@@ -88,7 +111,7 @@ def summarize_actor_trace(text: str) -> dict:
         rooms.add((scene, room))
     if not counts["frames"]:
         raise ValueError("prototype trace has no frames")
-    return {
+    report = {
         "schema": "goemon-prototype-actor-report-v1",
         "frames": counts["frames"],
         "measured_transitions": counts["measured_transition"],
@@ -107,6 +130,13 @@ def summarize_actor_trace(text: str) -> dict:
         "action_frames": dict(sorted(actions.items())),
         "note": "Zelda collision metrics; NOT original Goemon validation.",
     }
+    if has_pilot:
+        report["pilot_frames"] = counts["pilot_frames"]
+        report["link_distance_during_pilot_units"] = round(
+            link_distance_during_pilot, 6
+        )
+        report["pilot_telemetry_present"] = True
+    return report
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
