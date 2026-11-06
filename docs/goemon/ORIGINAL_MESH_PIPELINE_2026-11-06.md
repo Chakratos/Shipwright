@@ -43,14 +43,23 @@ Original source pages:
 
 ## Local import pipeline (no full Ship build)
 
-`tools/goemon/re/prepare_reference_models.py` downloads and caches the four
-ZIPs outside the repository. It converts source OBJ/MTL/PNG data using
-`tools/goemon/re/import_reference_models.py` into local `GOMESH01` files
-with source metadata and companion textures. No binary model or texture is
-ever added to GitHub, its Actions artifacts, or source control.
+`tools/goemon/re/prepare_reference_models.py` converts and caches source
+OBJ/MTL/PNG ZIPs locally using `tools/goemon/re/import_reference_models.py`
+into `GOMESH01` files with original source metadata and companion textures.
+No binary model or texture is ever added to GitHub, its Actions artifacts,
+or source control.
 
-One-time use is automated on the private Windows runner by a push commit
-containing **`[goemon-models]`**. It writes to:
+**Verified 2026-11-06:** The source provider rejects automated downloads
+from the Windows runner with **HTTP 403**. The downloader is not retried
+in CI. Instead, download the four archives in a normal browser from the
+source pages above into `C:\Users\Chakratos\Downloads`. Their original
+downloaded filenames do **not** need to be changed: the importer detects
+each archive by its internal original OBJ path and caches it automatically.
+
+One-time local use is automated on the private Windows runner by a push
+commit containing **`[goemon-models]`** (after browser downloads).
+The workflow passes `--download-dir "C:\Users\Chakratos\Downloads"
+--offline` and writes to:
 
 ```text
 C:\actions-runner-goemon\character-models\
@@ -70,7 +79,7 @@ C:\actions-runner-goemon\character-models\
 The import is independently runnable via:
 
 ```powershell
-py -3 tools\goemon\re\prepare_reference_models.py --output-dir "C:\actions-runner-goemon\character-models"
+py -3 tools\goemon\re\prepare_reference_models.py --output-dir "C:\actions-runner-goemon\character-models" --download-dir "C:\Users\Chakratos\Downloads" --offline
 ```
 
 `OriginalReferenceMesh.hpp` is the matching standalone C++20 reader of
