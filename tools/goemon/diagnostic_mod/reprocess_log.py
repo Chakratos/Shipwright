@@ -241,6 +241,13 @@ def reprocess(folder: Path) -> Path:
                  "--output", str(folder / "vector_fit.json")],
                 folder,
             )
+    else:
+        status["note"] = (
+            "No GOEMON_REF in saved log. Check that the diagnostic mod was "
+            "enabled, armed in-game and the player actually moved."
+        )
+        (folder / "ERROR.txt").write_text(str(status["note"]) + "\n", encoding="utf-8")
+
     # This parser handles original MNSG matrices independently of the
     # older GOEMON_REF physics logs, which may be absent when only the
     # new skeleton-capture option is enabled.
@@ -256,12 +263,6 @@ def reprocess(folder: Path) -> Path:
             "original_skeletal_poses", command, folder
         )
 
-    else:
-        status["note"] = (
-            "No GOEMON_REF in saved log. Check that the diagnostic mod was "
-            "enabled, armed in-game and the player actually moved."
-        )
-        (folder / "ERROR.txt").write_text(str(status["note"]) + "\n", encoding="utf-8")
 
     (folder / "capture_summary.json").write_text(
         json.dumps(status, indent=2, ensure_ascii=False) + "\n", encoding="utf-8",
