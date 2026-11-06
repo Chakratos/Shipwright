@@ -195,8 +195,10 @@ void RecordLiveControllerGhost() {
                 sController.motion.groundX, step->modelY + 18.0f,
                 sController.motion.groundZ,
                 0, 0, 0, 1.4f, 1.4f, 1.4f,
-                probe.wallHit ? 255 : 32, probe.wallHit ? 56 : 208,
-                probe.wallHit ? 56 : 255, 220, 2,
+                static_cast<std::uint8_t>(probe.wallHit ? 255 : 32),
+                static_cast<std::uint8_t>(probe.wallHit ? 56 : 208),
+                static_cast<std::uint8_t>(probe.wallHit ? 56 : 255),
+                static_cast<std::uint8_t>(220), 2,
                 gPlayState->state.gfxCtx);
         }
 
