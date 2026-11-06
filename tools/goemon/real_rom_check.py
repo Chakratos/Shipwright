@@ -38,7 +38,7 @@ def locate_rom() -> Path:
 
 def check_rom(path: Path, *, graphics_scan: bool = False,
               segmented_scan: bool = False, recover_geometry: bool = False,
-              source_aligned: bool = False) -> None:
+              source_aligned: bool = False, offline_rigs: bool = False) -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parent / "re"))
     from decompress_rom import decompress_us_rom
     from character_assets import make_manifest, read_file_table
@@ -73,6 +73,12 @@ def check_rom(path: Path, *, graphics_scan: bool = False,
     print("Verified original and decompressed SHA-256, real 1311-entry file table, "
           "and four original character graphics sets.")
     print("No ROM or extracted asset bytes were uploaded or printed.")
+
+    if offline_rigs:
+        from offline_original_rigs import scan_offline_original_rom
+        report = scan_offline_original_rom(decoded)
+        print("GOEMON_ROM_ONLY_RIGS " + json.dumps(report, separators=(",", ":")))
+        print("GOEMON_ROM_ONLY_RIGS COMPLETE: original ROM-only linked Skeleton structs, no gameplay recording")
 
     if source_aligned:
         from source_aligned_character_assets import analyze_source_aligned_rom
@@ -127,6 +133,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rom", type=Path, default=locate_rom())
     parser.add_argument("--graphics-scan", action="store_true",
                         help="print metadata-only N64 graphics/rigger candidate counts")
+    parser.add_argument("--offline-rigs", action="store_true",
+                        help="decode Skeleton pointer graphs directly from ROM")
     parser.add_argument("--source-aligned", action="store_true",
                         help="cross-validate actual ROM file IDs against source splat segments")
     parser.add_argument("--segmented-scan", action="store_true",
@@ -143,7 +151,8 @@ def main(argv: list[str] | None = None) -> int:
         check_rom(args.rom, graphics_scan=args.graphics_scan,
                   segmented_scan=args.segmented_scan,
                   recover_geometry=args.recover_geometry,
-                  source_aligned=args.source_aligned)
+                  source_aligned=args.source_aligned,
+                  offline_rigs=args.offline_rigs)
     except (OSError, ValueError) as exc:
         print(f"REAL NG5E ROM: FAIL: {exc}", file=sys.stderr)
         return 1
