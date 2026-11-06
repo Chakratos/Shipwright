@@ -197,7 +197,15 @@ void DrawReferenceCharacter(Actor* actor, PlayState* play) {
     const auto& character = sCharacters[slot];
     if (!character.valid) return;
 
-    OPEN_DISPS(play->state.gfxCtx);
+    // Ship's OPEN_DISPS macro redeclares the interpolation functions inside
+    // a C++ block, accidentally changing their MSVC linkage. Use the exact
+    // underlying calls with declarations from frame_interpolation.h instead.
+    GraphicsContext* __gfxCtx = play->state.gfxCtx;
+    FrameInterpolation_RecordOpenChild(__FILE__, __LINE__);
+#ifndef NDEBUG
+    Gfx* dispRefs[4];
+    Graph_OpenDisps(dispRefs, __gfxCtx, __FILE__, __LINE__);
+#endif
     Gfx_SetupDL_25Opa(play->state.gfxCtx);
     gDPPipeSync(POLY_OPA_DISP++);
     gSPClearGeometryMode(
@@ -238,7 +246,10 @@ void DrawReferenceCharacter(Actor* actor, PlayState* play) {
         }
     }
     Matrix_Pop();
-    CLOSE_DISPS(play->state.gfxCtx);
+    FrameInterpolation_RecordCloseChild();
+#ifndef NDEBUG
+    Graph_CloseDisps(dispRefs, __gfxCtx, __FILE__, __LINE__);
+#endif
 }
 
 void InitReferenceActor(Actor* actor, PlayState* play) {
