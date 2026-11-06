@@ -40,6 +40,11 @@ Link**. Original asset data is not compiled into Ship.
    py -3 tools\goemon\analyze_actor_trace.py "goemon_prototype_actor.csv" --output "goemon_actor_report.json"
    ```
 
+   New captures contain `pilot_enabled` and Link's coordinates, so the
+   report also includes `pilot_frames` and the measured
+   `link_distance_during_pilot_units`. Residual Link momentum is recorded,
+   not incorrectly labeled as an original Goemon collision failure.
+
 7. If the Actor stops unexpectedly, inspect
    `goemon_prototype_actor_error.txt`. A fatal geometry error is latched;
    **disable and re-enable** the toggle to retry (no infinite respawn loop).
@@ -85,8 +90,9 @@ own updates.
 - Debug trace: `frame, scene, room, raw Ship stick X/Y, provisional yaw10,
   action, measured_transition, actor position, desired/applied planar
   deltas, wall contact, floor probe, diagnostic snap, airborne and
-  terrain_reject_code`. Input fields allow reproducing a regression from
-  a single local capture. The codes are 0=accepted, 1=wall, 2=missing
+  terrain_reject_code`, plus `pilot_enabled` and the current Link
+  position. Input fields allow reproducing a regression from a single
+  local capture. The codes are 0=accepted, 1=wall, 2=missing
   floor, 3=step too high, 4=drop too deep.
 
 ## Limits / next engineering work
