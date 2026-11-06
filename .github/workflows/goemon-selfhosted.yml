@@ -123,6 +123,11 @@ jobs:
             if (Test-Path -LiteralPath $desktopTest -PathType Container -ErrorAction Stop) {
               Copy-Item -LiteralPath $source -Destination (Join-Path $desktopTest 'goemon_original_trace.nrm') -Force -ErrorAction Stop
               Write-Host "Original-Skelett-Capture-Mod auf dem Desktop bereitgestellt: $desktopTest"
+              $launcher = Join-Path $PWD 'tools\goemon\diagnostic_mod\Goemon_Originalanimation_aufnehmen.cmd'
+              if (Test-Path $launcher -PathType Leaf) {
+                Copy-Item -LiteralPath $launcher -Destination (Join-Path $desktopTest 'Goemon_Originalanimation_aufnehmen.cmd') -Force -ErrorAction Stop
+                Write-Host "Ein-Klick Originalanimations-Aufnahme auf dem Desktop bereitgestellt."
+              }
             }
           } catch {
             Write-Warning "Desktop-Ablage nicht zugreifbar: $_"
