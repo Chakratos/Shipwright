@@ -76,7 +76,7 @@ class SourceOriginalGeometryTests(unittest.TestCase):
         self.assertEqual(len(result.runs), 0)
 
     def test_triangle_index_scale_and_out_of_range(self):
-        self.assertEqual(_triangle_slots(0x00020406), (2,3,0))
+        self.assertEqual(_triangle_slots(0x00020406), (1,2,3))
         with self.assertRaisesRegex(ValueError, "invalid F3DEX"):
             _triangle_slots(0x00414002)
 
