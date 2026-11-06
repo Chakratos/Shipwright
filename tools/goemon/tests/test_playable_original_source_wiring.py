@@ -33,7 +33,7 @@ class PlayableOriginalModelWiringTests(unittest.TestCase):
         self.assertIn("link->actor.speedXZ = 0.0f;", source)
         self.assertIn("actor->world.pos = {\n        sOriginalMotion.controller.motion.groundX,", source)
         self.assertIn("CharacterPilotReady(play, link)", source)
-        self.assertIn("if (sPilotActive", source)
+        self.assertIn("if (!sPilotActive || sPilotRoom", source)
         self.assertIn('goemon_original_player_error.txt', source)
         self.assertIn("sPilotFaulted = true;", source)
         # Render/showcase path remains independent and explicitly opt-in.
