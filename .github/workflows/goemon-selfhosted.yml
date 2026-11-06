@@ -175,6 +175,20 @@ jobs:
           Write-Host "Original limb-to-ROM-graphics links saved locally: $out"
           Write-Host 'No original game launch, no external model downloads, no asset uploads.'
 
+      - name: Trace original N64 skeletal DisplayLists into ROM geometry
+        # Full F3DEX calls from source-authored Skeleton gfx pointers;
+        # no GUI, no capture, no screenshot, no asset uploads.
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-gfx-trace]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = 'C:\actions-runner-goemon\original-rom-poses\original_recursive_gfx_links.json'
+          & py -3 tools\goemon\re\trace_original_bone_display_lists.py --output $out
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original original ROM F3DEX child display-list linking failed: $LASTEXITCODE"
+          }
+          Write-Host "Original-animierte-Skelettglieder mit echten N64 Gfx-Spans lokal: $out"
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
