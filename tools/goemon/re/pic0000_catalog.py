@@ -92,6 +92,9 @@ def catalog_rom(data: bytes, *, all_pic_resources: bool = False) -> dict:
     validate_decompressed_rom(image)
     files = read_file_table(image)
     roots = character_graphics_ids(image, files)
+    from character_names import CHARACTER_GRAPHICS_ROOTS, corroborated_character_names
+    names = (corroborated_character_names(roots)
+             if tuple(roots) == CHARACTER_GRAPHICS_ROOTS else None)
     selected = set(root + 1 for root in roots)
     if all_pic_resources:
         selected.update(
@@ -111,7 +114,11 @@ def catalog_rom(data: bytes, *, all_pic_resources: bool = False) -> dict:
                 next((slot for slot, root in enumerate(roots)
                       if index == root + 1), None)
             ),
-            "character_name": None,
+            "character_name": (
+                names[next(slot for slot, root in enumerate(roots)
+                           if index == root + 1)]["character_name"]
+                if names and index in selected else None
+            ),
             "file_rom_offset": entry.start,
             "file_bytes": entry.size,
             "picture_count": len(blocks),
@@ -124,6 +131,7 @@ def catalog_rom(data: bytes, *, all_pic_resources: bool = False) -> dict:
         "source_file_table_offset": f"0x{FILE_TABLE_ROM_OFFSET:X}",
         "all_resources": all_pic_resources,
         "character_root_file_ids": list(roots),
+        "character_name_evidence": "USA GameShark tables, external" if names else None,
         "file_count": len(images),
         "picture_count": sum(item["picture_count"] for item in images),
         "format_marker_counts": dict(sorted(total.items())),
@@ -131,7 +139,8 @@ def catalog_rom(data: bytes, *, all_pic_resources: bool = False) -> dict:
         "limits": (
             "PIC0000 block boundary, format marker and likely image width/height "
             "only. Compression codec, textures, palettes, skeletons and "
-            "Goemon/Ebisumaru/Sasuke/Yae name-to-slot mappings unverified."
+            "Character names externally corroborated, not from original "
+            "name strings; rendering and texture codec unverified."
         ),
     }
 
