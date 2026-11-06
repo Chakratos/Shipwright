@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdio>
 using namespace Goemon::Original;
-static void Rate(int ch,int action,float expected) {
+static void Rate(std::uint8_t ch,std::uint8_t action,float expected) {
     const auto rate=LookupObservedOriginalAnimationRate(ch,action);
     assert(rate.has_value());assert(std::fabs(*rate-expected)<0.00001f);
 }
