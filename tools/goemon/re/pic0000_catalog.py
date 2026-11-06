@@ -117,7 +117,8 @@ def catalog_rom(data: bytes, *, all_pic_resources: bool = False) -> dict:
             "character_name": (
                 names[next(slot for slot, root in enumerate(roots)
                            if index == root + 1)]["character_name"]
-                if names and index in selected else None
+                if names and any(index == root + 1 for root in roots)
+                else None
             ),
             "file_rom_offset": entry.start,
             "file_bytes": entry.size,
