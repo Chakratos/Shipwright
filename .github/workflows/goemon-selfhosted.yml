@@ -99,7 +99,7 @@ jobs:
         # Builds a MIPS .nrm probe against local cached tools and decomp sources.
         # The probe writes original poses only when the player enables
         # "Original-Skelettanimationen aufnehmen" inside the original game.
-        if: \${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-animation-mod]') }}
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-animation-mod]') }}
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
