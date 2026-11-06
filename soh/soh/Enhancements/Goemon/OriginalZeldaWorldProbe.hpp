@@ -65,4 +65,14 @@ template <class WallQuery, class FloorQuery>
     return sample;
 }
 
+// Diagnostic ghost only: use the sampled Zelda floor as a temporary
+// visual ground reference. Never apply this to the actual player Actor;
+// original Goemon landing, slopes and floor snaps remain unverified.
+[[nodiscard]] inline std::optional<float> PreviewGhostGroundHeight(
+    const WorldCollisionProbe& sample, bool airborne) {
+    if (airborne || sample.wallHit || !sample.floorFound ||
+        !std::isfinite(sample.floorHeight)) return std::nullopt;
+    return sample.floorHeight;
+}
+
 } // namespace Goemon::Original
