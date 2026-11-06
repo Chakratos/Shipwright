@@ -22,6 +22,7 @@
 
 #include <stb_image.h>
 #include <libultraship/bridge/consolevariablebridge.h>
+#include "soh/frame_interpolation.h" // C linkage for OPEN_DISPS/CLOSE_DISPS
 #include "soh/ActorDB.h"
 #include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "soh/ShipInit.hpp"
