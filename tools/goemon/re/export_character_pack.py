@@ -23,6 +23,7 @@ from character_assets import (
     character_graphics_ids, read_file_table, validate_decompressed_rom,
 )
 from decompress_rom import ensure_decompressed_rom
+from character_id_binding import source_proven_character_graphics
 from pic0000_catalog import MAGIC, catalog_chunks
 
 
@@ -133,6 +134,9 @@ def from_rom(original: bytes) -> tuple[dict, dict[str, bytes]]:
     validate_decompressed_rom(image)
     table = read_file_table(image)
     roots = character_graphics_ids(image, table)
+    proven_roots = source_proven_character_graphics(image)
+    if roots != proven_roots:
+        raise ValueError("original MIPS numeric character ID -> root file mapping inconsistent")
     groups = []
     for root in roots:
         if root + 3 >= len(table):
@@ -148,6 +152,10 @@ def from_rom(original: bytes) -> tuple[dict, dict[str, bytes]]:
     )
     # Original ROM table IDs, not guessed character names.
     manifest["character_graphics_root_ids"] = list(roots)
+    manifest["numeric_character_ids_source_proven"] = True
+    manifest["proof_mips_function_ram"] = "0x801DC9C8"
+    for character_id, character in enumerate(manifest["characters"]):
+        character["original_numeric_character_id"] = character_id
     assets["manifest.json"] = (json.dumps(manifest, indent=2) + "\n").encode("utf-8")
     return manifest, assets
 
