@@ -3,9 +3,10 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <cstdint>
 #include <stdexcept>
 using namespace Goemon::Original;
-struct VectorCase { float previousX,previousZ;int yaw;float nextX,nextZ;OriginalVectorAccelerationMode mode; };
+struct VectorCase { float previousX,previousZ;std::int16_t yaw;float nextX,nextZ;OriginalVectorAccelerationMode mode; };
 int main() {
     constexpr std::array<VectorCase,10> samples{{
         {-0.743229568f,0.391420275f,848,-1.218604326f,0.647600591f,OriginalVectorAccelerationMode::ContinuousGrounded},
