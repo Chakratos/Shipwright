@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+from io import BytesIO
 import json
 from pathlib import Path
 import sys
@@ -50,11 +51,13 @@ def download_reference_archive(character: str, output: Path) -> str:
         raw = response.read(MAX_ZIP_BYTES + 1)
     if len(raw) > MAX_ZIP_BYTES or len(raw) < 30 or raw[:2] != b"PK":
         raise ValueError("external model response is not the expected small ZIP")
-    output.parent.mkdir(parents=True,exist_ok=True)
-    output.write_bytes(raw)
-    with ZipFile(output) as archive:
+    # Validate before populating the local cache, so a transient HTML or
+    # partial network response never poisons subsequent offline attempts.
+    with ZipFile(BytesIO(raw)) as archive:
         if archive.testzip() is not None:
             raise ValueError("corrupted N64 character reference ZIP")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_bytes(raw)
     return hashlib.sha256(raw).hexdigest()
 
 def prepare_all_models(destination: Path) -> dict:
