@@ -6,6 +6,7 @@
 #include "OriginalJump.hpp"
 #include <cmath>
 #include <stdexcept>
+#include <type_traits>
 
 namespace Goemon::Original {
 
@@ -63,7 +64,16 @@ template<class Resolve>
         OriginalMeasuredPlanarPhase::SuppressWhileActionLocked;
     if (!locked && std::abs(pose.horizontal.signedSpeed) > 1e-6f)
         desired = ComposeOriginalPlanarStep(pose.horizontal,input.headingX,input.headingZ);
-    OriginalPlanarStep actual = resolve(pose.groundX,pose.groundZ,desired);
+    // New Zelda-Actor boundary may also request the original model's
+    // current Y. Retain the existing 3-argument resolver contract for
+    // source-only and previously validated native regression tests.
+    OriginalPlanarStep actual{};
+    if constexpr (std::is_invocable_v<Resolve&, float, float, float,
+                                      OriginalPlanarStep>) {
+        actual = resolve(pose.groundX,pose.ModelY(),pose.groundZ,desired);
+    } else {
+        actual = resolve(pose.groundX,pose.groundZ,desired);
+    }
     if (!std::isfinite(actual.x) || !std::isfinite(actual.z))
         throw std::invalid_argument("collision returned nonfinite original position step");
     pose.groundX += actual.x;
