@@ -16,6 +16,23 @@ ORIGINAL_SHA256 = "1603be37427a33548857fc3d2e8867ede71121c353fb631b79b44f1d94845
 DECOMPRESSED_SHA256 = "e40bee20508c2e29e651dca4e47504e40f908f0a2186e34a582784bf5a64be4c"
 EXPECTED_GRAPHICS = ((288, 61440), (292, 28672), (296, 53248), (300, 53248))
 DEFAULT_ROM = Path(r"C:\actions-runner-goemon\roms\Goemon.z64")
+ROM_DIRECTORIES = (
+    DEFAULT_ROM.parent,
+    Path(r"C:\Users\Chakratos\source\repos\OOT_Goemon"),
+)
+
+
+def locate_rom() -> Path:
+    override = os.environ.get("GOEMON_ROM_PATH")
+    if override:
+        return Path(override)
+    for directory in ROM_DIRECTORIES:
+        if not directory.is_dir():
+            continue
+        for path in sorted(directory.glob("*.z64")):
+            if path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == ORIGINAL_SHA256:
+                return path
+    return DEFAULT_ROM
 
 
 def check_rom(path: Path) -> None:
@@ -53,8 +70,7 @@ def check_rom(path: Path) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--rom", type=Path,
-                        default=Path(os.environ.get("GOEMON_ROM_PATH", str(DEFAULT_ROM))))
+    parser.add_argument("--rom", type=Path, default=locate_rom())
     args = parser.parse_args(argv)
     if not args.rom.is_file():
         print(f"REAL NG5E ROM: NOT FOUND at {args.rom}. "
