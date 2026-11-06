@@ -86,10 +86,19 @@ def reprocess(folder: Path) -> Path:
     count = 0
     memory_by_character: dict[int, int] = {}
     task_samples = 0
+    original_bone_samples = 0
+    original_matrix_samples = 0
+    original_root_maps = 0
     object_samples = 0
     object_y_by_character: dict[int, list[float]] = {}
     object_animation_by_character: dict[int, list[float]] = {}
     for line in text.splitlines():
+        if "GOEMON_ANIM_BONE," in line:
+            original_bone_samples += 1
+        if "GOEMON_ANIM_MATRIX," in line:
+            original_matrix_samples += 1
+        if "GOEMON_ANIM_ROOT," in line:
+            original_root_maps += 1
         if "GOEMON_REF," in line:
             count += 1
         if "GOEMON_TASK," in line:
@@ -127,6 +136,9 @@ def reprocess(folder: Path) -> Path:
             str(key): value for key, value in sorted(memory_by_character.items())
         },
         "player_task_samples": task_samples,
+        "original_skeletal_bone_events": original_bone_samples,
+        "original_skeletal_matrix_events": original_matrix_samples,
+        "original_render_root_overlay_mappings": original_root_maps,
         "player_object_samples": object_samples,
         "player_object_y_range_by_character": {
             str(key): [min(values), max(values)]
@@ -229,6 +241,21 @@ def reprocess(folder: Path) -> Path:
                  "--output", str(folder / "vector_fit.json")],
                 folder,
             )
+    # This parser handles original MNSG matrices independently of the
+    # older GOEMON_REF physics logs, which may be absent when only the
+    # new skeleton-capture option is enabled.
+    if original_bone_samples > 0 and original_matrix_samples > 0:
+        source_meshes = Path(r"C:\actions-runner-goemon\original-rom-meshes")
+        command = [
+            str(TOOLS / "original_skeletal_poses.py"), str(raw),
+            "--output", str(folder / "original_skeletal_poses.json"),
+        ]
+        if source_meshes.is_dir():
+            command.extend(["--meshes-dir", str(source_meshes)])
+        parsers["original_skeletal_poses"] = run_parser(
+            "original_skeletal_poses", command, folder
+        )
+
     else:
         status["note"] = (
             "No GOEMON_REF in saved log. Check that the diagnostic mod was "
