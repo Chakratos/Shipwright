@@ -58,10 +58,18 @@ int main() {
 
     OriginalLiveFrameState jumpState{};
     jumpState.controller.motion.groundY = 12.0f;
-    const auto jumping = AdvanceOriginalLivePreview(jumpState, neutral, true, true, pass);
+    float sampledJumpHeight = -1.0f;
+    const auto withModelY = [&](float, float modelY, float,
+                                OriginalPlanarStep desired) {
+        sampledJumpHeight = modelY;
+        return desired;
+    };
+    const auto jumping = AdvanceOriginalLivePreview(
+        jumpState, neutral, true, true, withModelY);
     assert(!jumping.measuredTransitionSupported);
     assert(jumping.motion.airborne);
     Near(jumping.motion.modelY, 18.0f);
+    Near(sampledJumpHeight, 18.0f);
     const auto rising = AdvanceOriginalLivePreview(jumpState, neutral, false, false, pass);
     assert(rising.motion.airborne);
     assert(rising.motion.modelY > 18.0f);
