@@ -39,6 +39,10 @@
 /* Separate Goemon Actor pilot; implementation resides in OriginalPrototypeActor.cpp.
  * The default/off path leaves Player_Update input byte-for-byte unchanged. */
 void Goemon_PrototypeFilterLinkInput(PlayState* play, Player* player, Input* input);
+// Real N64 character renderer/pilot, independent of the debug-ball study.
+// These return immediately when the new player mode is disabled.
+void Goemon_ReferenceFilterLinkInput(PlayState* play, Player* player, Input* input);
+int Goemon_ReferenceShouldHideLink(PlayState* play, Player* player);
 
 // Some player animations are played at this reduced speed, for reasons yet unclear.
 // This is called "adjusted" for now.
@@ -12256,6 +12260,7 @@ void Player_Update(Actor* thisx, PlayState* play) {
         // away from Link. play->state.input[0] remains untouched for the
         // independently spawned research Actor. No effect unless enabled.
         Goemon_PrototypeFilterLinkInput(play, this, &input);
+        Goemon_ReferenceFilterLinkInput(play, this, &input);
         Player_UpdateCommon(this, play, &input);
     }
 
@@ -12440,6 +12445,14 @@ void Player_DrawGameplay(PlayState* play, Player* this, s32 lod, Gfx* cullDList,
 void Player_Draw(Actor* thisx, PlayState* play2) {
     PlayState* play = play2;
     Player* this = (Player*)thisx;
+
+    // A real local 3D Goemon character is now rendered at the Zelda
+    // player's location. Skip only Link's visual draw while that
+    // independent playable Actor is alive and fully loaded.
+    // World collision and game state continue through Player_Update.
+    if (Goemon_ReferenceShouldHideLink(play, this)) {
+        return;
+    }
 
     Vec3f pos;
     Vec3s rot;
