@@ -69,6 +69,30 @@ class OriginalSegmentedScanTests(unittest.TestCase):
         self.assertIsNone(dereference_segmented(0x07000080, {7:geometry}, 0))
         self.assertIsNone(dereference_segmented(0x80000000, {7:geometry}))
 
+    def test_plausible_skeleton_in_unknown_segment8_overlay(self):
+        model, geometry = self.fixture()
+        possible_overlay8 = bytearray(0x400)
+        flags = (3 << 8) | 15
+        struct.pack_into(">III", possible_overlay8, 0x40,
+                         flags, 0x08000200, 0x08000100)
+        # Original limb uses a source display-list in the distinct 0x07 bank.
+        struct.pack_into(">Ibb9h", possible_overlay8, 0x100,
+                         0x07000080, 1, 0,
+                         1,1,1, 0,0,0, 10,20,30)
+        struct.pack_into(">Ibb9h", possible_overlay8, 0x118,
+                         0x070000A0, 0, 0,
+                         1,1,1, 0,0,0, 40,50,60)
+        banks = {7:geometry, 9:model, 8:bytes(possible_overlay8)}
+        header = find_rig_header_candidates(bytes(possible_overlay8), banks)
+        self.assertIn(0x40, [x["header_offset"] for x in header["first_candidates"]])
+        self.assertEqual(header["first_candidates"][0]["skeleton_segment"], 8)
+        # Removing the uncertain bank invalidates the candidate; a scan
+        # must not relabel it as a source-proven ROM skeleton.
+        self.assertEqual(
+            find_rig_header_candidates(bytes(possible_overlay8),
+                                       {7:geometry,9:model})["candidate_count"], 0
+        )
+
     def test_invalid_rig_child_is_rejected(self):
         model, geometry = self.fixture()
         bad = bytearray(model)
