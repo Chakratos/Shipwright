@@ -143,6 +143,24 @@ jobs:
           }
           Write-Host 'Keine Original-ROM-, Mesh- oder Animationsdateien hochgeladen.'
 
+      - name: Export original ROM skeletal poses offline to local PC
+        # Original authored Skeleton records only; no original game launch.
+        # Activated only for an explicit one-shot commit marker.
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-offline-poses]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dest = 'C:\actions-runner-goemon\original-rom-poses'
+          & py -3 tools\goemon\re\export_offline_original_poses.py --output-dir $dest
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original ROM Skeleton-Posen konnten nicht offline extrahiert werden (Exit $LASTEXITCODE)"
+          }
+          if (-not (Test-Path (Join-Path $dest 'catalog_summary.json') -PathType Leaf)) {
+            throw 'Original ROM Posenkatalog nach Extraktion nicht vorhanden'
+          }
+          Write-Host "Original-Posen stehen lokal: $dest"
+          Write-Host 'Ohne Spielstart, ohne manuelle Aufnahme und ohne GitHub-Artifact-Upload.'
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
