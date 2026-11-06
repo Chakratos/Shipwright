@@ -61,6 +61,7 @@ class SourceROMActionPointerTests(unittest.TestCase):
         self.assertEqual(goemon["potential_animation_dispatch_tables"][0]["entries"],3)
         self.assertEqual(goemon["potential_animation_dispatch_tables"][0]["pose_indices"],[0,1,2])
         self.assertFalse(goemon["original_action_ids_proven"])
+        self.assertEqual(len(r["characters"]),3)
         self.assertTrue(r["no_runtime_capture"])
 
 if __name__=="__main__":
