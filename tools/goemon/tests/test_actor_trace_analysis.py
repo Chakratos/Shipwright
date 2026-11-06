@@ -7,11 +7,14 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from analyze_actor_trace import REQUIRED, summarize_actor_trace
 
-def make_csv(*rows: dict[str, object]) -> str:
-    columns = ",".join(REQUIRED)
+def make_csv(*rows: dict[str, object], with_pilot: bool = False) -> str:
+    fields = REQUIRED + (
+        ("pilot_enabled", "link_x", "link_y", "link_z") if with_pilot else ()
+    )
+    columns = ",".join(fields)
     payload = [columns]
     for i, updates in enumerate(rows):
-        row: dict[str, object] = {key: "0" for key in REQUIRED}
+        row: dict[str, object] = {key: "0" for key in fields}
         row.update({
             "frame": i, "scene": 1, "room": 2, "actor_y": 10,
             "floor_found": 1, "preview_floor_snap": 1,
@@ -19,7 +22,7 @@ def make_csv(*rows: dict[str, object]) -> str:
             "applied_dx": 0.7, "action": 13,
         })
         row.update(updates)
-        payload.append(",".join(str(row[key]) for key in REQUIRED))
+        payload.append(",".join(str(row[key]) for key in fields))
     return "\n".join(payload) + "\n"
 
 class ActorTraceAnalysisTests(unittest.TestCase):
@@ -59,6 +62,25 @@ class ActorTraceAnalysisTests(unittest.TestCase):
             summarize_actor_trace("frame,scene\n1,2\n")
         with self.assertRaisesRegex(ValueError, "nonfinite"):
             summarize_actor_trace(make_csv({"actor_x": "nan"}))
+
+    def test_pilot_link_drift_is_measured_not_guessed(self):
+        capture = make_csv(
+            {"pilot_enabled": 1, "link_x": 0},
+            {"pilot_enabled": 1, "link_x": 2.5},
+            {"pilot_enabled": 0, "link_x": 12},
+            {"pilot_enabled": 1, "link_x": 15},
+            with_pilot=True,
+        )
+        report = summarize_actor_trace(capture)
+        self.assertEqual(report["pilot_frames"], 3)
+        self.assertTrue(report["pilot_telemetry_present"])
+        self.assertAlmostEqual(report["link_distance_during_pilot_units"], 2.5)
+
+    def test_partial_pilot_telemetry_fails_explicitly(self):
+        capture = make_csv({}, with_pilot=True)
+        capture = capture.replace(",link_y,", ",", 1)
+        with self.assertRaisesRegex(ValueError, "incomplete pilot"):
+            summarize_actor_trace(capture)
 
     def test_reject_duplicate_frames(self):
         bad = make_csv({}, {}).replace("\n1,1,2,", "\n0,1,2,")
