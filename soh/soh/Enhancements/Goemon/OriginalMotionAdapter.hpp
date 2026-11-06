@@ -69,7 +69,14 @@ template<class Resolve>
     // source-only and previously validated native regression tests.
     OriginalPlanarStep actual{};
     if constexpr (std::is_invocable_v<Resolve&, float, float, float,
-                                      OriginalPlanarStep>) {
+                                      float, bool, OriginalPlanarStep>) {
+        // The native Actor needs both physical model Y and the original
+        // flat-floor anchor to distinguish an airborne move from a
+        // grounded floor/ledge query. Never infer this from Link state.
+        actual = resolve(pose.groundX,pose.ModelY(),pose.groundZ,
+                         pose.groundY,pose.jump.airborne,desired);
+    } else if constexpr (std::is_invocable_v<Resolve&, float, float, float,
+                                             OriginalPlanarStep>) {
         actual = resolve(pose.groundX,pose.ModelY(),pose.groundZ,desired);
     } else {
         actual = resolve(pose.groundX,pose.groundZ,desired);
