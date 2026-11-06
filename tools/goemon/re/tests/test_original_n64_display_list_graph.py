@@ -47,6 +47,7 @@ class OriginalN64DisplayListGraphTests(unittest.TestCase):
         self.assertEqual(linked["fully_terminated_source_display_lists"],1)
         self.assertEqual(linked["roots_with_confirmed_mesh_parts"],1)
         self.assertEqual(linked["matched_unique_mesh_parts"],1)
+        self.assertEqual(linked["sources"][0]["status"],"complete")
         self.assertEqual(
             linked["sources"][0]["matched_source_parts"][0]["model_part"],
             "gfx_000_at_0x000080.obj")
