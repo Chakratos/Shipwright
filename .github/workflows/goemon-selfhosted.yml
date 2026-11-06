@@ -62,14 +62,16 @@ jobs:
           }
 
       - name: Prepare original N64 model references locally
-        # Opt-in, one-time fetch of the publicly available static OBJ rips.
+        # Opt-in, local-only preparation of browser-downloaded OBJ ZIPs.
+        # Direct automated website requests return HTTP 403; never retry
+        # an unauthorized CDN download as a background job.
         # Nothing is published as a GitHub artifact or committed to git.
         if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-models]') }}
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
           $destination = 'C:\actions-runner-goemon\character-models'
-          & py -3 tools\goemon\re\prepare_reference_models.py --output-dir $destination
+          & py -3 tools\goemon\re\prepare_reference_models.py --output-dir $destination --download-dir 'C:\Users\Chakratos\Downloads' --offline
           if ($LASTEXITCODE -ne 0) {
             throw "Lokaler Originalmodell-Import fehlgeschlagen: $LASTEXITCODE"
           }
