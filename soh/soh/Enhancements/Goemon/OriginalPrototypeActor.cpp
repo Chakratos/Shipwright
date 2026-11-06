@@ -127,8 +127,10 @@ void FollowPrototypeCamera() {
 
 std::optional<WorldPoint> QueryWall(PlayState* play, WorldPoint from,
                                     WorldPoint to) {
-    Vec3f start{from.x, from.y + 10.0f, from.z};
-    Vec3f end{to.x, to.y + 10.0f, to.z};
+    // Terrain adapter already supplies the exact foot/chest ray height.
+    // Adding the legacy +10 offset here would double-count that height.
+    Vec3f start{from.x, from.y, from.z};
+    Vec3f end{to.x, to.y, to.z};
     Vec3f contact{};
     CollisionPoly* poly = nullptr;
     s32 bgId = BGCHECK_SCENE;
