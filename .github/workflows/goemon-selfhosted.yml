@@ -115,12 +115,26 @@ jobs:
           $localOut = 'C:\actions-runner-goemon\original-animation-capture'
           New-Item -ItemType Directory -Force -Path $localOut | Out-Null
           Copy-Item -LiteralPath $source -Destination (Join-Path $localOut 'goemon_original_trace.nrm') -Force
+          # Runner runs as NetworkService. The interactive user's AppData
+          # may be inaccessible, even though compilation succeeded.
+          # Stage the compiled NRM where the local user can access it.
+          $desktopTest = 'C:\Users\Chakratos\Desktop\SoH Goemon Test'
+          try {
+            if (Test-Path -LiteralPath $desktopTest -PathType Container -ErrorAction Stop) {
+              Copy-Item -LiteralPath $source -Destination (Join-Path $desktopTest 'goemon_original_trace.nrm') -Force -ErrorAction Stop
+              Write-Host "Original-Skelett-Capture-Mod auf dem Desktop bereitgestellt: $desktopTest"
+            }
+          } catch {
+            Write-Warning "Desktop-Ablage nicht zugreifbar: $_"
+          }
           $interactiveMods = 'C:\Users\Chakratos\AppData\Local\Goemon64Recompiled\mods'
-          if (Test-Path $interactiveMods -PathType Container) {
-            Copy-Item -LiteralPath $source -Destination (Join-Path $interactiveMods 'goemon_original_trace.nrm') -Force
-            Write-Host "Neuer Original-Skelett-Capture-Mod lokal installiert: $interactiveMods"
-          } else {
-            Write-Host "Nur lokaler Runner-Capture-Mod vorhanden: $localOut; Spiel-Mod-Verzeichnis nicht vorhanden."
+          try {
+            if (Test-Path -LiteralPath $interactiveMods -PathType Container -ErrorAction Stop) {
+              Copy-Item -LiteralPath $source -Destination (Join-Path $interactiveMods 'goemon_original_trace.nrm') -Force -ErrorAction Stop
+              Write-Host "Original-Skelett-Capture-Mod in Original-Goemon installiert: $interactiveMods"
+            }
+          } catch {
+            Write-Host "Runner kann private AppData nicht lesen; NRM liegt stattdessen auf dem Desktop und in $localOut"
           }
           Write-Host 'Keine Original-ROM-, Mesh- oder Animationsdateien hochgeladen.'
 
