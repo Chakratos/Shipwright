@@ -179,12 +179,20 @@ void SohMenu::AddMenuDevTools() {
             "The camera renders around the Actor instead of Link. "
             "Requires Spawn Independent Goemon Actor. "
             "Does not yet implement player interactions, combat or original Goemon camera."));
-    AddWidget(path, "Show Original N64 Character (Static Renderer)", WIDGET_CVAR_CHECKBOX)
+    AddWidget(path, "Show Original N64 Character Model", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_SETTING("Goemon.RenderReferenceCharacter"))
         .Options(CheckboxOptions().DefaultValue(false).Tooltip(
-            "NEW renderer: draw the genuine N64 character OBJ + original PNG atlas "
-            "as a separate world Actor beside Link. Requires local character-models. "
-            "Not connected to the old gold-ball prototype; not animated or player-controlled yet."));
+            "Load the real N64 character mesh and 128x128 texture locally. "
+            "With original-character control OFF, it appears beside Link for inspection. "
+            "With control ON, it becomes the visible player at Link's location."));
+    AddWidget(path, "Control Original Character (ROM Motion)", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.ControlOriginalCharacter"))
+        .Options(CheckboxOptions().DefaultValue(false).Tooltip(
+            "Play as the chosen 3D character. Uses the independently measured "
+            "original Goemon acceleration/jump kernel plus Zelda collision/camera. "
+            "Requires Show Original N64 Character Model and the local character assets. "
+            "Disable the old prototype Actor; original animation and combat are not "
+            "yet available. Zelda still owns scene progression and game state."));
     AddWidget(path, "Original N64 Character", WIDGET_CVAR_COMBOBOX)
         .CVar(CVAR_SETTING("Goemon.ReferenceCharacterSlot"))
         .Options(ComboboxOptions()
