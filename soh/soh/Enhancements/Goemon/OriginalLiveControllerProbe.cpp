@@ -123,7 +123,7 @@ void RecordLiveControllerGhost() {
                     "provisional_target_yaw10,desired_dx,desired_dz,"
                     "applied_dx,applied_dz,ghost_x,ghost_y,ghost_z,"
                     "link_x,link_y,link_z,ghost_airborne,wall_hit,"
-                    "floor_found,zelda_floor_y\n";
+                    "floor_found,zelda_floor_y,preview_floor_snap\n";
         }
     }
 
@@ -166,6 +166,7 @@ void RecordLiveControllerGhost() {
             step = Goemon::Original::AdvanceMeasuredOriginalVectorController(
                 sController, *proposed, resolve);
         }
+        const bool actionSupported = step.has_value();
         if (step) {
             sPreviousAction = numericAction;
         } else {
@@ -185,6 +186,15 @@ void RecordLiveControllerGhost() {
         }
         sPreviousStickX = stick.x;
         sPreviousStickY = stick.y;
+
+        // Temporary Zelda-ground alignment for the separate ghost only.
+        // Never apply this diagnostic snap to the real Link/Goemon Actor.
+        const auto previewFloor = Goemon::Original::PreviewGhostGroundHeight(
+            probe, step->airborne);
+        if (previewFloor) {
+            sController.motion.groundY = *previewFloor;
+            step->modelY = sController.motion.ModelY();
+        }
 
         // Native Zelda debug ball: display our private source-driven
         // ghost pose in the scene without spawning or modifying an Actor.
@@ -208,8 +218,7 @@ void RecordLiveControllerGhost() {
                  << static_cast<int>(pad.cur.stick_y) << ','
                  << static_cast<int>(stick.kind) << ','
                  << static_cast<unsigned>(numericAction) << ','
-                 << static_cast<int>(numericAction != 0 &&
-                                     sPreviousAction == numericAction) << ','
+                 << static_cast<int>(actionSupported) << ','
                  << stick.provisionalOriginalYaw10 << ','
                  << step->desiredPlanar.x << ',' << step->desiredPlanar.z << ','
                  << step->appliedPlanar.x << ',' << step->appliedPlanar.z << ','
@@ -222,7 +231,8 @@ void RecordLiveControllerGhost() {
                  << static_cast<int>(step->airborne) << ','
                  << static_cast<int>(probe.wallHit) << ','
                  << static_cast<int>(probe.floorFound) << ','
-                 << probe.floorHeight << '\n';
+                 << probe.floorHeight << ','
+                 << static_cast<int>(previewFloor.has_value()) << '\n';
         }
     } catch (const std::exception&) {
         // Never permit unsupported world geometry to mutate Ship or
