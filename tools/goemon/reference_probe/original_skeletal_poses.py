@@ -205,7 +205,9 @@ def read_original_animation_log(lines: Iterable[str]) -> dict:
     # Each unique original game update is a frame, NOT an interpolated
     # 60/120/240Hz Ship render frame.
     frames: list[dict] = []
-    for (character, action, tick), limbs in sorted(samples.items()):
+    for (character, action, tick), limbs in sorted(
+        samples.items(), key=lambda entry: (entry[0][2], entry[0][0], entry[0][1])
+    ):
         if len(limbs) > MAX_LIMBS:
             raise ValueError("too many original limbs in a game frame")
         unique = set()
