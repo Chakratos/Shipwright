@@ -189,6 +189,19 @@ jobs:
           }
           Write-Host "Original-animierte-Skelettglieder mit echten N64 Gfx-Spans lokal: $out"
 
+      - name: Find original Goemon animation action pointers in ROM
+        # Read main code data and source-verified original pose headers.
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-action-pointers]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = 'C:\actions-runner-goemon\original-rom-poses\original_action_pointer_tables.json'
+          & py -3 tools\goemon\re\offline_animation_action_pointers.py --output $out
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original Goemon animation pointer table scan failed: $LASTEXITCODE"
+          }
+          Write-Host "Original ROM animation dispatch table analysis local: $out"
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
