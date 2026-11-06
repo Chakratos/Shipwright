@@ -29,6 +29,8 @@ class CharacterNameEvidenceTests(unittest.TestCase):
             [info[i]["graphics_root_file_id"] for i in range(4)],
             [288, 292, 296, 300])
         self.assertTrue(all(not x["rom_proven_name_string"] for x in info.values()))
+        self.assertEqual([info[i]["gameshark_character_byte_address"] for i in range(4)],
+                         ["0x8015C5DF"] * 4)
 
     def test_unverified_roots_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "graphics roots differ"):
