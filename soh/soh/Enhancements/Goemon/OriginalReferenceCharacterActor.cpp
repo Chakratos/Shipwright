@@ -161,16 +161,16 @@ void LoadCharacter(int slot) {
             batch.textureTile = group.material;
             for (const auto& v : group.vertices) {
                 Vtx native{};
-                native.n.ob[0] = v.x;
-                native.n.ob[1] = v.y;
-                native.n.ob[2] = v.z;
-                native.n.flag = 0;
-                native.n.tc[0] = v.texS;
-                native.n.tc[1] = v.texT;
-                native.n.cn[0] = v.rgba[0];
-                native.n.cn[1] = v.rgba[1];
-                native.n.cn[2] = v.rgba[2];
-                native.n.cn[3] = v.rgba[3];
+                native.v.ob[0] = v.x;
+                native.v.ob[1] = v.y;
+                native.v.ob[2] = v.z;
+                native.v.flag = 0;
+                native.v.tc[0] = v.texS;
+                native.v.tc[1] = v.texT;
+                native.v.cn[0] = v.rgba[0];
+                native.v.cn[1] = v.rgba[1];
+                native.v.cn[2] = v.rgba[2];
+                native.v.cn[3] = v.rgba[3];
                 batch.vertices.push_back(native);
             }
             character.batches.push_back(std::move(batch));
