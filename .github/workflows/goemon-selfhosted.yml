@@ -5,24 +5,30 @@ on:
     branches:
       - feature/goemon-original-controller
   workflow_dispatch:
+    inputs:
+      full_build:
+        description: 'Run the full 10-minute Ship Windows build and upload the executable'
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: goemon-selfhosted-${{ github.ref }}
+  group: goemon-selfhosted-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.full_build && 'full' || 'fast' }}
   cancel-in-progress: true
 
 jobs:
   goemon-windows:
-    name: Goemon regression tests and Ship Windows build
+    name: Goemon fast regression tests (optional full Windows build)
     runs-on: [self-hosted, Windows, X64, goemon]
     timeout-minutes: 150
     steps:
       - name: Checkout with submodules
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build && 'recursive' || 'false' }}
           persist-credentials: false
 
       - name: Goemon Python and C++20 tests
@@ -45,6 +51,7 @@ jobs:
           }
 
       - name: Configure and build Ship of Harkinian
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build }}
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -77,6 +84,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Ship-C++-Build fehlgeschlagen: $LASTEXITCODE" }
 
       - name: Publish Windows executable and engine assets
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build }}
         uses: actions/upload-artifact@v4
         with:
           name: goemon-ship-windows
