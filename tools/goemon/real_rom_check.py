@@ -80,16 +80,16 @@ def check_rom(path: Path, *, graphics_scan: bool = False) -> None:
                 entry = table[root_entry.file_id + part]
                 graphic = decoded[entry.start:entry.end]
                 report = scan_original_graphics_resource(graphic)
-            # Source ROM stays on the runner; only counts and relative
-            # offsets from the validated original asset are logged.
-            print("GOEMON_GRAPHICS_SCAN " + json.dumps({
-                "character_id": slot,
-                "original_file_id": entry.file_id,
-                "group_part": part,
-                "starts_with_pic0000": graphic.startswith(b"PIC0000\\x1a"),
-                "character_name": manifest["character_graphics"][slot]["character_name"],
-                **report,
-            }, separators=(",", ":")))
+                # Only metadata from the local ROM, never source bytes.
+                print("GOEMON_GRAPHICS_SCAN " + json.dumps({
+                    "character_id": slot,
+                    "original_file_id": entry.file_id,
+                    "group_part": part,
+                    "starts_with_pic0000": graphic.startswith(
+                        bytes.fromhex("504943303030301a")),
+                    "character_name": manifest["character_graphics"][slot]["character_name"],
+                    **report,
+                }, separators=(",", ":")))
 
 
 def main(argv: list[str] | None = None) -> int:
