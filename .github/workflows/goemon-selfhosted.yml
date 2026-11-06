@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - feature/goemon-original-controller
+    paths:
+      - '.github/workflows/goemon-selfhosted.yml'
+      - 'soh/soh/Enhancements/Goemon/**'
+      - 'soh/soh/SohGui/SohMenuDevTools.cpp'
+      - 'tools/goemon/**'
   workflow_dispatch:
     inputs:
       full_build:
