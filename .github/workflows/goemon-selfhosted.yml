@@ -68,8 +68,8 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $destination = 'C:\\actions-runner-goemon\\character-models'
-          & py -3 tools\\goemon\\re\\prepare_reference_models.py --output-dir $destination
+          $destination = 'C:\actions-runner-goemon\character-models'
+          & py -3 tools\goemon\re\prepare_reference_models.py --output-dir $destination
           if ($LASTEXITCODE -ne 0) {
             throw "Lokaler Originalmodell-Import fehlgeschlagen: $LASTEXITCODE"
           }
