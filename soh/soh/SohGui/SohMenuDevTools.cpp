@@ -231,6 +231,22 @@ void SohMenu::AddMenuDevTools() {
         .WindowName("GfxDebugger##SoH")
         .HideInSearch(true)
         .Options(WindowButtonOptions().Tooltip("Enables the separate Gfx Debugger Window."));
+
+    // Goemon live-motion diagnostic. Separate from Link gameplay.
+    path.sidebarName = "Goemon";
+    path.column = SECTION_COLUMN_1;
+    AddSidebarEntry("Dev Tools", path.sidebarName, 1);
+    AddWidget(path, "Original Goemon Movement Ghost", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.LiveControllerGhost"))
+        .Options(CheckboxOptions()
+                     .DefaultValue(false)
+                     .Tooltip("Run genuine measured Goemon motion in a separate live Zelda-world diagnostic. "
+                              "Input mapping and world collision are still experimental. Saves are not modified."));
+    AddWidget(path, "Show Goemon Ghost Marker", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.LiveControllerGhostDraw"))
+        .Options(CheckboxOptions()
+                     .DefaultValue(true)
+                     .Tooltip("Show a cyan marker at the Goemon ghost position, red when blocked by a wall."));
 }
 
 } // namespace SohGui
