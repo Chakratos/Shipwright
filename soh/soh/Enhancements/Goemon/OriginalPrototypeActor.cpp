@@ -48,6 +48,7 @@ std::uint64_t sFrame = 0;
 std::ofstream sLog;
 bool sSuspended = false;
 bool sFaulted = false; // Clear only when prototype is explicitly disabled.
+Goemon::Original::PilotCameraHistory sPilotCamera{};
 
 void CloseLog() {
     if (sLog.is_open()) sLog.close();
@@ -61,6 +62,7 @@ void ClearRuntime() {
     sFrame = 0;
     sLive = {};
     sSuspended = false;
+    sPilotCamera.Reset();
 }
 
 void ResetMotionAtActor(Actor* actor) {
@@ -96,32 +98,51 @@ bool PilotReady(PlayState* play, const Player* link) {
     });
 }
 
+void SetPilotRenderView(PlayState* play,
+                        Goemon::Original::PilotCameraView camera) {
+    Vec3f eye{camera.eye.x, camera.eye.y, camera.eye.z};
+    Vec3f at{camera.lookAt.x, camera.lookAt.y, camera.lookAt.z};
+    Vec3f up = play->view.up;
+    func_800AA358(&play->view, &eye, &at, &up);
+}
+
 void FollowPrototypeCamera() {
     PlayState* play = gPlayState;
-    if (play == nullptr || gDbgCamEnabled ||
-        play->pauseCtx.state != 0 || play->csCtx.state != CS_STATE_IDLE)
+    if (play == nullptr) {
+        sPilotCamera.Reset();
         return;
+    }
+    const Goemon::Original::PilotCameraView observed{
+        {play->view.eye.x, play->view.eye.y, play->view.eye.z},
+        {play->view.lookAt.x, play->view.lookAt.y, play->view.lookAt.z}
+    };
 
+    // Never touch a separate debug camera. When normal pilot mode stops,
+    // restore only the view that this module previously translated.
+    if (gDbgCamEnabled) {
+        sPilotCamera.Reset();
+        return;
+    }
     Player* link = GET_PLAYER(play);
-    if (!PilotReady(play, link)) return;
-    // Read ONLY the already-updated vanilla camera view. This hook runs
-    // after Camera_Update but before View matrices are generated.
-    // No writes to Camera.player, Link, cutscene data or save state.
-    const View& native = play->view;
+    if (play->pauseCtx.state != 0 ||
+        play->csCtx.state != CS_STATE_IDLE || !PilotReady(play, link)) {
+        const auto restore = sPilotCamera.Restore(observed);
+        if (restore) SetPilotRenderView(play, *restore);
+        return;
+    }
     try {
-        const auto focus = Goemon::Original::TranslatePilotCamera(
-            {native.eye.x, native.eye.y, native.eye.z},
-            {native.lookAt.x, native.lookAt.y, native.lookAt.z},
+        // Ship can draw several times after a single Camera_Update.
+        // The cache detects an already translated View and starts from
+        // its saved vanilla baseline instead of accumulating offsets.
+        const auto output = sPilotCamera.Render(
+            observed,
             {link->actor.world.pos.x, link->actor.world.pos.y,
              link->actor.world.pos.z},
             {sActor->world.pos.x, sActor->world.pos.y,
              sActor->world.pos.z});
-        Vec3f eye{focus.eye.x, focus.eye.y, focus.eye.z};
-        Vec3f at{focus.lookAt.x, focus.lookAt.y, focus.lookAt.z};
-        Vec3f up = native.up;
-        func_800AA358(&play->view, &eye, &at, &up);
+        SetPilotRenderView(play, output);
     } catch (const std::exception&) {
-        // Invalid coordinates must never disrupt the vanilla camera.
+        sPilotCamera.Reset();
     }
 }
 
@@ -157,6 +178,7 @@ void InitActor(Actor* actor, PlayState* play) {
     actor->room = -1; // Continue across rooms in the same Zelda scene.
     sFrame = 0;
     sSuspended = false;
+    sPilotCamera.Reset();
     ResetMotionAtActor(actor);
     CloseLog();
     sLog.open("goemon_prototype_actor.csv", std::ios::out | std::ios::trunc);
