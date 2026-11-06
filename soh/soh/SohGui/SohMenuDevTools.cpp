@@ -141,6 +141,38 @@ void SohMenu::AddMenuDevTools() {
                      .DefaultValue(true));
     AddWidget(path, "Warp Points", WIDGET_CUSTOM).CustomFunction(WarpPointsWidget).HideInSearch(true);
 
+    // Goemon original-controller research tools (separate diagnostic ghost).
+    // Both options are off unless explicitly enabled by the player.
+    AddSidebarEntry("Dev Tools", "Goemon", 1);
+    path.sidebarName = "Goemon";
+    path.column = SECTION_COLUMN_1;
+    AddWidget(path, "Live Goemon Controller Ghost", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.LiveControllerGhost"))
+        .Options(CheckboxOptions().Tooltip(
+            "Runs the source-measured Goemon movement kernel against live Zelda geometry. "
+            "A separate diagnostic marker is drawn; Link and the save file remain untouched. "
+            "The temporary input/camera mapping is NOT the original Goemon controller."));
+    AddWidget(path, "Show Goemon Ghost Marker", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.LiveControllerGhostDraw"))
+        .Options(CheckboxOptions().DefaultValue(true).Tooltip(
+            "Cyan ghost marker, red on a diagnostic wall-ray collision. "
+            "This is NOT a Goemon 3D character model."));
+    AddWidget(path, "Capture Zelda World Geometry", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.ZeldaWorldProbe"))
+        .Options(CheckboxOptions().Tooltip(
+            "Read-only collision probes. Writes goemon_zelda_world_probe.csv."));
+    AddWidget(path, "Record Ship Player Trace", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.ShipTrace"))
+        .Options(CheckboxOptions().Tooltip(
+            "Read-only Link movement trace. Writes goemon_ship_trace.csv."));
+    AddWidget(path, "Replay Original Goemon Motion Ghost", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.OriginalTraceWorldReplay"))
+        .Options(CheckboxOptions().Tooltip(
+            "Requires a local goemon_original_motion_replay.csv in the game working directory. "
+            "Replays captured original motion against Zelda world geometry without changing Link."));
+
+    path = { "Dev Tools", "General", SECTION_COLUMN_2 };
+
     // Stats
     path.sidebarName = "Stats";
     AddSidebarEntry("Dev Tools", path.sidebarName, 1);
