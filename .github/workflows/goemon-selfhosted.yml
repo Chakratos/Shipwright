@@ -62,7 +62,7 @@ jobs:
           if (-not $vs -or -not $vsVersion) {
             throw 'Visual Studio mit MSVC und Windows SDK ist erforderlich.'
           }
-          $vsMajor = [int]($vsVersion -split '\\.')[0]
+          $vsMajor = ([version]$vsVersion).Major
           $generator = switch ($vsMajor) {
             18 { 'Visual Studio 18 2026' }
             17 { 'Visual Studio 17 2022' }
