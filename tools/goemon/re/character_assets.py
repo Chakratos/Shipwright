@@ -90,8 +90,12 @@ def make_manifest(data: bytes) -> tuple[dict, list[tuple[int, FileEntry]]]:
     validate_decompressed_rom(data)
     files = read_file_table(data)
     ids = character_graphics_ids(data, files)
-    from character_names import corroborated_character_names
-    names = corroborated_character_names(ids)
+    from character_names import CHARACTER_GRAPHICS_ROOTS, corroborated_character_names
+    # Synthetic ROM fixtures and nonstandard graphics tables are not
+    # automatically given character names. Only the corroborated NG5E
+    # order has a defensible name assignment.
+    names = (corroborated_character_names(ids)
+             if tuple(ids) == CHARACTER_GRAPHICS_ROOTS else None)
     selected = []
     characters = []
     for slot, index in enumerate(ids):
@@ -100,8 +104,8 @@ def make_manifest(data: bytes) -> tuple[dict, list[tuple[int, FileEntry]]]:
         sha = hashlib.sha256(raw).hexdigest()
         characters.append({
             "slot": slot,
-            "character_name": names[slot]["character_name"],
-            "name_provenance": names[slot]["name_provenance"],
+            "character_name": names[slot]["character_name"] if names else None,
+            "name_provenance": names[slot]["name_provenance"] if names else None,
             "rom_proven_name_string": False,
             "graphics_file_id": index,
             "rom_start": entry.start,
@@ -136,7 +140,7 @@ def make_manifest(data: bytes) -> tuple[dict, list[tuple[int, FileEntry]]]:
         "character_ids_rom_address": f"0x{CHARACTER_GRAPHICS_IDS_ROM_OFFSET:08X}",
         "file_table_count": len(files),
         "character_graphics": characters,
-        "name_source_urls": list(names[0]["name_source_urls"]),
+        "name_source_urls": list(names[0]["name_source_urls"]) if names else [],
         "note": "Names are corroborated by published USA GameShark codes and original global-ID traces; no original ROM name strings. Adjacent resource roles unverified.",
     }, selected
 
