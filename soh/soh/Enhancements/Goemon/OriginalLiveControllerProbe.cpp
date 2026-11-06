@@ -130,10 +130,10 @@ void RecordLiveControllerGhost() {
     const bool jumpHeld = (pad.cur.button & BTN_A) != 0;
     try {
         WorldCollisionProbe probe{};
-        auto resolve = [&](float x, float z, OriginalPlanarStep desired)
+        auto resolve = [&](float x, float y, float z, OriginalPlanarStep desired)
             -> OriginalPlanarStep {
             probe = Goemon::Original::ProbeOriginalStepAgainstWorld(
-                WorldPoint{x, sLive.controller.motion.ModelY(), z}, desired,
+                WorldPoint{x, y, z}, desired,
                 WallQuery, FloorQuery);
             // Only a conservative diagnostic block; not source collision.
             return probe.wallHit ? OriginalPlanarStep{0.0f, 0.0f} : desired;
