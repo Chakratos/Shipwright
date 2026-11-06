@@ -242,11 +242,18 @@ def reprocess(folder: Path) -> Path:
                 folder,
             )
     else:
-        status["note"] = (
-            "No GOEMON_REF in saved log. Check that the diagnostic mod was "
-            "enabled, armed in-game and the player actually moved."
-        )
-        (folder / "ERROR.txt").write_text(str(status["note"]) + "\n", encoding="utf-8")
+        if not original_bone_samples or not original_matrix_samples:
+            status["note"] = (
+                "No GOEMON_REF or paired GOEMON_ANIM records in the saved log. "
+                "Enable the respective original-game capture option and move."
+            )
+            (folder / "ERROR.txt").write_text(
+                str(status["note"]) + "\n", encoding="utf-8")
+        else:
+            status["note"] = (
+                "Original skeletal capture only. Legacy movement trace was "
+                "disabled, which is valid for animation export."
+            )
 
     # This parser handles original MNSG matrices independently of the
     # older GOEMON_REF physics logs, which may be absent when only the
