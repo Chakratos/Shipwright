@@ -39,6 +39,7 @@ def check_rom(path: Path) -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parent / "re"))
     from decompress_rom import decompress_us_rom
     from character_assets import make_manifest
+    from character_id_binding import source_proven_character_graphics
 
     raw = path.read_bytes()
     if len(raw) != 16 * 1024 * 1024:
@@ -53,6 +54,9 @@ def check_rom(path: Path) -> None:
         raise ValueError("decompressed ROM SHA-256 differs from real baseline")
 
     manifest, _ = make_manifest(decoded)
+    source_roots = source_proven_character_graphics(decoded)
+    if source_roots != (288, 292, 296, 300):
+        raise ValueError("original MIPS character ID -> graphics root mapping differs")
     if manifest["file_table_count"] != 1311:
         raise ValueError("actual ROM file table entry count differs from 1311")
     graphics = manifest["character_graphics"]
