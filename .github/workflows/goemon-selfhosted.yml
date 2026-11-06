@@ -103,7 +103,7 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          & "$PWD\tools\goemon\diagnostic_mod\build_windows.ps1" -SkipDownload -NoInstall
+          & "$PWD\tools\goemon\diagnostic_mod\build_windows.ps1" -NoInstall
           if ($LASTEXITCODE -ne 0) {
             throw "Original Goemon Animations-Capture-Mod Build fehlgeschlagen: $LASTEXITCODE"
           }
