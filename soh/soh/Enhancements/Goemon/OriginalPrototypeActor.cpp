@@ -149,10 +149,10 @@ void UpdateActor(Actor* actor, PlayState* play) {
 
     try {
         WorldCollisionProbe probe{};
-        auto resolve = [&](float x, float z, OriginalPlanarStep desired)
+        auto resolve = [&](float x, float y, float z, OriginalPlanarStep desired)
             -> OriginalPlanarStep {
             probe = Goemon::Original::ProbeOriginalStepAgainstWorld(
-                WorldPoint{x, sLive.controller.motion.ModelY(), z}, desired,
+                WorldPoint{x, y, z}, desired,
                 [&](WorldPoint a, WorldPoint b) { return QueryWall(play, a, b); },
                 [&](WorldPoint to) { return QueryFloor(play, to); });
             // Temporary diagnostic wall-ray block, NOT original Goemon
