@@ -21,6 +21,8 @@ import json
 from pathlib import Path
 import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from character_assets import read_file_table
 from decompress_rom import decompress_us_rom
 from offline_original_rigs import (
