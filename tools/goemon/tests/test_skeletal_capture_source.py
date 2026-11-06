@@ -56,6 +56,7 @@ class OriginalSkeletonCaptureTests(unittest.TestCase):
         self.assertIn("build/src/goemon_skeletal_capture.o", script)
         self.assertIn("build/src/goemon_trace.o", script)
         self.assertIn("RecompModTool", script)
+        self.assertIn("goemon_skeletal_capture.o", script)
 
 if __name__ == "__main__":
     unittest.main()
