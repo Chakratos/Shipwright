@@ -112,8 +112,9 @@ if (-not (Test-Path $Workspace)) {
 
 $Source = Join-Path $Project "tools\goemon\diagnostic_mod\src\goemon_trace.c"
 $GateHeader = Join-Path $Project "tools\goemon\diagnostic_mod\src\goemon_capture_gate.h"
+$SkeletalCaptureSource = Join-Path $Project "tools\goemon\diagnostic_mod\src\goemon_skeletal_capture.c"
 $Manifest = Join-Path $Project "tools\goemon\diagnostic_mod\mod.toml"
-if (-not (Test-Path $Source) -or -not (Test-Path $GateHeader) -or -not (Test-Path $Manifest)) {
+if (-not (Test-Path $Source) -or -not (Test-Path $GateHeader) -or -not (Test-Path $SkeletalCaptureSource) -or -not (Test-Path $Manifest)) {
     throw "Diagnose-Mod-Dateien fehlen im Feature-Branch"
 }
 
@@ -123,6 +124,7 @@ if (Test-Path $TemplateExample) {
     Remove-Item $TemplateExample
 }
 Copy-Item $Source (Join-Path $Workspace "src\goemon_trace.c") -Force
+Copy-Item $SkeletalCaptureSource (Join-Path $Workspace "src\goemon_skeletal_capture.c") -Force
 Copy-Item $GateHeader (Join-Path $Workspace "src\goemon_capture_gate.h") -Force
 Copy-Item $Manifest (Join-Path $Workspace "mod.toml") -Force
 
@@ -136,7 +138,7 @@ if (-not (Test-Path $Tool)) {
 Push-Location $Workspace
 try {
     # Equivalent to the official MNSGRecompModTemplate Makefile flags.
-    # One C file and no assembly sources, so make is not needed.
+    # Two C sources and no assembly, so make is not needed.
     New-Item -ItemType Directory -Force -Path (Join-Path $Workspace "build\src") | Out-Null
     Write-Host "Kompiliere Goemon Diagnose-Hook direkt mit Clang (MIPS) ..."
     Invoke-CheckedNative $ClangPath @(
@@ -153,9 +155,24 @@ try {
         "-I","mnsg/include","-I","mnsg/libultra/include","-I","mnsg/src",
         "src/goemon_trace.c","-c","-o","build/src/goemon_trace.o"
     )
+    Write-Host "Kompiliere Original-Skelett- und Animationsmatrix-Capture ..."
+    Invoke-CheckedNative $ClangPath @(
+        "-target","mips","-mips2","-mabi=32","-O2","-G0",
+        "-mno-abicalls","-mno-odd-spreg","-mno-check-zero-division",
+        "-fomit-frame-pointer","-ffast-math","-fno-unsafe-math-optimizations",
+        "-fno-builtin-memset","-Wall","-Wextra",
+        "-Wno-incompatible-library-redeclaration",
+        "-Wno-unused-parameter","-Wno-unknown-pragmas",
+        "-Wno-unused-variable","-Wno-missing-braces",
+        "-Wno-unsupported-floating-point-opt","-Werror=section",
+        "-nostdinc","-D_LANGUAGE_C","-DMIPS","-DF3DEX_GBI",
+        "-I","include","-I","include/dummy_headers",
+        "-I","mnsg/include","-I","mnsg/libultra/include","-I","mnsg/src",
+        "src/goemon_skeletal_capture.c","-c","-o","build/src/goemon_skeletal_capture.o"
+    )
     Write-Host "Linke Mod-ELF direkt mit ld.lld ..."
     Invoke-CheckedNative $LldPath @(
-        "build/src/goemon_trace.o","-nostdlib","-T","mod.ld",
+        "build/src/goemon_trace.o","build/src/goemon_skeletal_capture.o","-nostdlib","-T","mod.ld",
         "-Map","build/mod.map","--unresolved-symbols=ignore-all",
         "--emit-relocs","-e","0","--no-nmagic","-o","build/mod.elf"
     )
