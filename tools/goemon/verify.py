@@ -84,6 +84,7 @@ def run_native(root: Path) -> int:
                source_dir / "test_original_zelda_actor_terrain.cpp",
                source_dir / "test_original_live_input.cpp",
                source_dir / "test_original_live_frame.cpp",
+               source_dir / "test_original_pilot_camera.cpp",
                source_dir / "test_original_trace_replay.cpp"]
     for source in sources:
         if not source.is_file():
