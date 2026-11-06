@@ -5,6 +5,7 @@
 // Stick/camera mapping and Zelda collision response are provisional.
 // Enable only with gSettings.Goemon.PrototypeActor = 1.
 #include "OriginalLiveFrame.hpp"
+#include "OriginalPilotCamera.hpp"
 #include "OriginalZeldaActorTerrain.hpp"
 
 #include <cmath>
@@ -29,6 +30,7 @@ extern PlayState* gPlayState;
 }
 
 #define CVAR_GOEMON_PROTOTYPE_ACTOR CVAR_SETTING("Goemon.PrototypeActor")
+#define CVAR_GOEMON_PROTOTYPE_PILOT CVAR_SETTING("Goemon.PrototypePilot")
 
 namespace {
 using Goemon::Original::OriginalLiveFrameState;
@@ -80,6 +82,47 @@ bool AllowedToStep(PlayState* play, const Player* link) {
         PLAYER_STATE1_IN_WATER | PLAYER_STATE1_IN_CUTSCENE |
         PLAYER_STATE1_GETTING_ITEM;
     return !(link->stateFlags1 & badStates);
+}
+
+// Pilot is deliberately separate from spawning. With the Actor enabled
+// but Pilot disabled, Link and the research Actor retain independent input.
+bool PilotReady(PlayState* play, const Player* link) {
+    return Goemon::Original::ShouldRouteInputToGoemon({
+        CVarGetInteger(CVAR_GOEMON_PROTOTYPE_PILOT, 0) != 0,
+        CVarGetInteger(CVAR_GOEMON_PROTOTYPE_ACTOR, 0) != 0,
+        sActor != nullptr && sActor->update != nullptr && !sFaulted,
+        play != nullptr && sScene == play->sceneNum,
+        play != nullptr && AllowedToStep(play, link)
+    });
+}
+
+void FollowPrototypeCamera() {
+    PlayState* play = gPlayState;
+    if (play == nullptr || gDbgCamEnabled ||
+        play->pauseCtx.state != 0 || play->csCtx.state != CS_STATE_IDLE)
+        return;
+
+    Player* link = GET_PLAYER(play);
+    if (!PilotReady(play, link)) return;
+    // Read ONLY the already-updated vanilla camera view. This hook runs
+    // after Camera_Update but before View matrices are generated.
+    // No writes to Camera.player, Link, cutscene data or save state.
+    const View& native = play->view;
+    try {
+        const auto focus = Goemon::Original::TranslatePilotCamera(
+            {native.eye.x, native.eye.y, native.eye.z},
+            {native.lookAt.x, native.lookAt.y, native.lookAt.z},
+            {link->actor.world.pos.x, link->actor.world.pos.y,
+             link->actor.world.pos.z},
+            {sActor->world.pos.x, sActor->world.pos.y,
+             sActor->world.pos.z});
+        Vec3f eye{focus.eye.x, focus.eye.y, focus.eye.z};
+        Vec3f at{focus.lookAt.x, focus.lookAt.y, focus.lookAt.z};
+        Vec3f up = native.up;
+        func_800AA358(&play->view, &eye, &at, &up);
+    } catch (const std::exception&) {
+        // Invalid coordinates must never disrupt the vanilla camera.
+    }
 }
 
 std::optional<WorldPoint> QueryWall(PlayState* play, WorldPoint from,
@@ -269,8 +312,18 @@ void RegisterActor() {
     auto& entry = ActorDB::Instance->AddEntry(init);
     sActorId = entry.entry.id;
     COND_HOOK(OnPlayerUpdate, true, SpawnWhenRequested);
+    COND_HOOK(OnPlayDrawBegin, true, FollowPrototypeCamera);
     COND_HOOK(OnPlayDestroy, true, ClearRuntime);
 }
 } // namespace
+
+// Called only on the local input copy inside Player_Update; original
+// play->state.input[] stays untouched so the separate Actor still receives
+// the full gamepad. Pilot off -> vanilla behavior without modification.
+extern "C" void Goemon_PrototypeFilterLinkInput(
+    PlayState* play, Player* link, Input* input) {
+    if (input == nullptr || !PilotReady(play, link)) return;
+    *input = {};
+}
 
 static RegisterShipInitFunc registerPrototypeActor(RegisterActor);
