@@ -61,5 +61,22 @@ int main() {
     auto noMove=AdvanceOriginalFlatGround(p,cmd,unobstructed);
     Close(noMove.desiredPlanar.x,0.0f);
     Close(p.horizontal.signedSpeed,0.70f);
+    // A 4-argument Zelda resolver receives the current airborne model Y,
+    // while the legacy 3-argument source-only resolver still works above.
+    OriginalFlatGroundPose yPose{};
+    yPose.groundY = 100.0f;
+    OriginalMeasuredMotionInput yCmd{};
+    yCmd.beginJump = true;
+    yCmd.aButtonHeld = true;
+    float probedY = -1.0f;
+    const auto withHeight = [&](float x, float y, float z, OriginalPlanarStep delta) {
+        Close(x, 0.0f); Close(z, 0.0f);
+        probedY = y;
+        return delta;
+    };
+    auto yJump = AdvanceOriginalFlatGround(yPose,yCmd,withHeight);
+    assert(yJump.airborne);
+    Close(probedY, 106.0f);
+    Close(yJump.modelY, probedY);
     std::puts("OriginalMotionAdapter measured kinematics boundary: PASS");
 }
