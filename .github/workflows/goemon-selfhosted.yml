@@ -78,6 +78,22 @@ jobs:
           Write-Host "Vier lokale Goemon-Meshes vorbereitet: $destination"
           Write-Host 'Keine Modell- oder Texturdateien werden hochgeladen.'
 
+      - name: Export owned original N64 character geometry locally
+        # This decodes source-ROM F3DEX vertex data into independent OBJ
+        # parts for rig linking. No copyrighted bytes are uploaded to GitHub.
+        # Keep this work outside the checkout and separate Goemon test game.
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-rom-export]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dest = 'C:\actions-runner-goemon\original-rom-meshes'
+          & py -3 tools\goemon\re\export_original_models.py --output-dir $dest
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original-ROM-Mesh-Export fehlgeschlagen: $LASTEXITCODE"
+          }
+          Write-Host "108 Original-Grafikabschnitte liegen lokal: $dest"
+          Write-Host "Keine ROM-, OBJ- oder Texturdateien werden hochgeladen."
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
