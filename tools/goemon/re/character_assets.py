@@ -90,6 +90,8 @@ def make_manifest(data: bytes) -> tuple[dict, list[tuple[int, FileEntry]]]:
     validate_decompressed_rom(data)
     files = read_file_table(data)
     ids = character_graphics_ids(data, files)
+    from character_names import corroborated_character_names
+    names = corroborated_character_names(ids)
     selected = []
     characters = []
     for slot, index in enumerate(ids):
@@ -98,7 +100,9 @@ def make_manifest(data: bytes) -> tuple[dict, list[tuple[int, FileEntry]]]:
         sha = hashlib.sha256(raw).hexdigest()
         characters.append({
             "slot": slot,
-            "character_name": None,  # Character slot mapping must be verified in-game.
+            "character_name": names[slot]["character_name"],
+            "name_provenance": names[slot]["name_provenance"],
+            "rom_proven_name_string": False,
             "graphics_file_id": index,
             "rom_start": entry.start,
             "rom_end": entry.end,
@@ -132,7 +136,8 @@ def make_manifest(data: bytes) -> tuple[dict, list[tuple[int, FileEntry]]]:
         "character_ids_rom_address": f"0x{CHARACTER_GRAPHICS_IDS_ROM_OFFSET:08X}",
         "file_table_count": len(files),
         "character_graphics": characters,
-        "note": "Adjacent resources are candidates only; model/texture/animation roles unverified.",
+        "name_source_urls": list(names[0]["name_source_urls"]),
+        "note": "Names are corroborated by published USA GameShark codes and original global-ID traces; no original ROM name strings. Adjacent resource roles unverified.",
     }, selected
 
 
