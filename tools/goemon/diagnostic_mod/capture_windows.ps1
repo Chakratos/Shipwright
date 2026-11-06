@@ -28,6 +28,7 @@ $ScriptsToCheck = @(
     (Join-Path $Project "tools\goemon\reference_probe\horizontal_trace_fit.py"),
     (Join-Path $Project "tools\goemon\reference_probe\animation_trace_fit.py"),
     (Join-Path $Project "tools\goemon\reference_probe\original_skeletal_poses.py"),
+    (Join-Path $Project "tools\goemon\reference_probe\original_pose_archive.py"),
     (Join-Path $Project "tools\goemon\reference_probe\yaw_trace_fit.py"),
     (Join-Path $Project "tools\goemon\reference_probe\steering_trace_fit.py"),
     (Join-Path $Project "tools\goemon\reference_probe\vector_trace_fit.py"),
