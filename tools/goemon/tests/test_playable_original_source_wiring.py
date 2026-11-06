@@ -20,6 +20,7 @@ class PlayableOriginalModelWiringTests(unittest.TestCase):
         self.assertIn("AdvanceOriginalLivePreview(", source)
         self.assertIn("MapShipInputForOriginalPlayable(", source)
         self.assertIn("ProbeConservativeZeldaTerrain(", source)
+        self.assertIn('#include "OriginalZeldaActorTerrain.hpp"', source)
         self.assertIn("BgCheck_EntityLineTest1(", source)
         self.assertIn("BgCheck_EntityRaycastFloor3(", source)
         self.assertNotIn("DebugDisplay_AddObject", source)
