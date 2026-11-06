@@ -40,6 +40,7 @@ int sActorId = -1;
 Actor* sActor = nullptr;
 OriginalLiveFrameState sLive{};
 std::int32_t sScene = -1;
+std::int32_t sRoom = -1;
 std::uint64_t sFrame = 0;
 std::ofstream sLog;
 bool sSuspended = false;
@@ -52,6 +53,7 @@ void ClearRuntime() {
     CloseLog();
     sActor = nullptr;
     sScene = -1;
+    sRoom = -1;
     sFrame = 0;
     sLive = {};
     sSuspended = false;
@@ -104,6 +106,8 @@ std::optional<float> QueryFloor(PlayState* play, WorldPoint to) {
 void InitActor(Actor* actor, PlayState* play) {
     sActor = actor;
     sScene = play->sceneNum;
+    sRoom = play->roomCtx.curRoom.num;
+    actor->room = -1; // Continue across rooms in the same Zelda scene.
     sFrame = 0;
     sSuspended = false;
     ResetMotionAtActor(actor);
@@ -134,6 +138,12 @@ void UpdateActor(Actor* actor, PlayState* play) {
         // cutscene/interaction/unsupported traversal state.
         sSuspended = true;
         return;
+    }
+    if (sRoom != play->roomCtx.curRoom.num) {
+        // Same scene, different room: preserve the Actor but reinitialize
+        // its motion before sampling a newly active collision mesh.
+        sRoom = play->roomCtx.curRoom.num;
+        sSuspended = true;
     }
     if (sSuspended) {
         ResetMotionAtActor(actor);
@@ -168,9 +178,13 @@ void UpdateActor(Actor* actor, PlayState* play) {
         const auto& pose = sLive.controller.motion;
         actor->prevPos = actor->world.pos;
         actor->world.pos = {pose.groundX, pose.ModelY(), pose.groundZ};
-        actor->world.rot.y = static_cast<s16>(
-            static_cast<std::uint16_t>(stick.provisionalOriginalYaw10) << 6);
-        actor->shape.rot.y = actor->world.rot.y;
+        if (stick.kind == Goemon::Original::ShipPreviewStickKind::Full) {
+            // Only an actual directional stick input updates facing.
+            // The yaw conversion remains a temporary Ship preview.
+            actor->world.rot.y = static_cast<s16>(
+                static_cast<std::uint16_t>(stick.provisionalOriginalYaw10) << 6);
+            actor->shape.rot.y = actor->world.rot.y;
+        }
         Actor_SetFocus(actor, 18.0f);
 
         // Native debug marker is deliberately not presented as a Goemon mesh.
