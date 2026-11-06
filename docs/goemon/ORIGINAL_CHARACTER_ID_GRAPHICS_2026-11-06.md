@@ -29,22 +29,44 @@ Critical original MIPS instructions (addresses inside function):
 The exact original table at CPU address `0x80204020` (decompressed
 file offset `0x5BFF30`) contains four big-endian u16 IDs.
 
-| Original numeric character ID | Original graphics root file ID |
-|---:|---:|
-| 0 | 288 |
-| 1 | 292 |
-| 2 | 296 |
-| 3 | 300 |
+| Original numeric character ID | Corroborated name | Original graphics root file ID |
+|---:|---|---:|
+| 0 | Goemon | 288 |
+| 1 | Ebisumaru | 292 |
+| 2 | Sasuke | 296 |
+| 3 | Yae | 300 |
 
 **This mapping is now directly source-proven.** It is not derived merely
 from the order of four asset files or from guessed character names.
 The first root file IDs each begin a four-resource group; the +1 files
 contain the already catalogued 45 PIC0000 blocks.
 
-**What remains unproven:** Which numeric ID corresponds to the names
-Goemon, Ebisumaru, Sasuke and Yae still requires authoritative runtime
-UI/character evidence. The table establishes numeric ID → source
-graphics group, not the identity or skeleton rendering pipeline.
+## Character name binding (external evidence + original runtime correlation)
+
+The original Goemon trace records the global selected-character variable
+`D_8015C5DC_15D1DC` (N64 big-endian u32 at `0x8015C5DC`) and the
+`PlayerTask.character_id` at `+0x60`. The verified four-character,
+1,691-frame runtime trace observed **0 mismatches** between them.
+
+Two published USA GameShark tables identify the selected character
+modifier at **`8015C5DF 00XX`**, which writes the low byte of that same
+global u32, and give the names exactly as in the table above:
+
+- [GameGenie: Mystical Ninja Starring Goemon USA](https://gamegenie.com/cheats/gameshark/n64/mystical_ninja_goemon.html)
+- [Almar's Guides: N64 USA Action Replay character modifiers](https://almarsguides.com/retro/walkthroughs/n64/games/mysticalninjastarringgoemon/actionreplay/)
+
+Thus the source-verified numeric PlayerTask ID → graphics file root
+can be joined to the externally corroborated ID → character name.
+**Important provenance boundary:** the numeric ID→file table is proven
+by original ROM machine instructions, while the name labels come from
+published cheat tables, not from strings decoded directly from the ROM.
+Original mesh/rig, palettes and animation decoders are still missing.
+
+`tools/goemon/re/character_names.py` preserves these two kinds of
+evidence separately. The private character asset pack, graphics manifest
+and PIC0000 catalog now label each character slot with that provenance.
+Generic/synthetic ROM fixtures remain unnamed unless their graphics
+roots match the corroborated NG5E table.
 
 ## Automated checks added
 
@@ -60,6 +82,8 @@ graphics group, not the identity or skeleton rendering pipeline.
   includes no guessed character name, and no copyrighted assets enter
   the repository or CI artifacts.
 
-Next: obtain a verified ID→name assignment, recover original skeleton
-root pointers and texture/display-list decoding, and connect the
-runtime-generated private asset pack to Ship's resource subsystem.
+Next: recover original skeleton root pointers and texture/display-list
+decoding, and connect runtime-generated private graphic assets to Ship's
+resource subsystem. Verify the externally assigned character names via
+direct on-screen character-switch capture if additional independent
+ROM-internal confirmation is desired.
