@@ -157,6 +157,13 @@ void SohMenu::AddMenuDevTools() {
         .Options(CheckboxOptions().DefaultValue(true).Tooltip(
             "Cyan ghost marker, red on a diagnostic wall-ray collision. "
             "This is NOT a Goemon 3D character model."));
+    AddWidget(path, "Spawn Independent Goemon Actor (Prototype)", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.PrototypeActor"))
+        .Options(CheckboxOptions().DefaultValue(false).Tooltip(
+            "Spawns an independent Actor with measured Goemon motion from the original NG5E ROM. "
+            "A gold marker replaces the not-yet-decoded character model. "
+            "Link and saves are not modified; input adaptation and collisions are provisional. "
+            "This is an experimental integration stage, not the finished Goemon port."));
     AddWidget(path, "Capture Zelda World Geometry", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_SETTING("Goemon.ZeldaWorldProbe"))
         .Options(CheckboxOptions().Tooltip(
