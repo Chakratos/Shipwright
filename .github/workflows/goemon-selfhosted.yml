@@ -94,15 +94,16 @@ jobs:
           & $cmake --build build\goemon-ci --config Release --target soh --parallel 8
           if ($LASTEXITCODE -ne 0) { throw "Ship-C++-Build fehlgeschlagen: $LASTEXITCODE" }
 
-      - name: Publish Windows executable and engine assets
+      - name: Verify local executable and engine assets
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: goemon-ship-windows
-          path: |
-            x64/Release/soh.exe
-            build/goemon-ci/soh/soh.o2r
-          if-no-files-found: error
-          retention-days: 7
-          compression-level: 2
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Join-Path $PWD 'x64\Release\soh.exe'
+          $assets = Join-Path $PWD 'build\goemon-ci\soh\soh.o2r'
+          if (-not (Test-Path $exe -PathType Leaf)) { throw "Lokale Ship-EXE nicht gefunden: $exe" }
+          if (-not (Test-Path $assets -PathType Leaf)) { throw "Lokale Ship-Ressourcen nicht gefunden: $assets" }
+          Write-Host "Windows-Build bleibt lokal auf diesem PC; kein Upload nach GitHub."
+          Write-Host "EXE: $exe"
+          Write-Host "Ressourcen: $assets"
 
