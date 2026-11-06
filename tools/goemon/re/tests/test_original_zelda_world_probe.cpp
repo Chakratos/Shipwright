@@ -31,6 +31,20 @@ int main() {
     assert(!unobstructed.wallHit && unobstructed.floorFound);
     Close(unobstructed.floorHeight, 10.0f);
     Close(unobstructed.to.x, 3.8f);
+    // The ghost may follow validated Zelda floor probes while grounded.
+    // This policy must never be mistaken for original Goemon collision.
+    const auto onFloor = PreviewGhostGroundHeight(unobstructed, false);
+    assert(onFloor); Close(*onFloor, 10.0f);
+    assert(!PreviewGhostGroundHeight(unobstructed, true));
+    auto blockedFloor = unobstructed;
+    blockedFloor.wallHit = true;
+    assert(!PreviewGhostGroundHeight(blockedFloor, false));
+    auto missingFloor = unobstructed;
+    missingFloor.floorFound = false;
+    assert(!PreviewGhostGroundHeight(missingFloor, false));
+    auto invalidFloor = unobstructed;
+    invalidFloor.floorHeight = NAN;
+    assert(!PreviewGhostGroundHeight(invalidFloor, false));
     // Even on collision, original desired world movement is unchanged.
     const auto blocked = ProbeOriginalStepAgainstWorld(
         {1.0f, 10.0f, 3.0f}, {2.8f, 0.0f},
