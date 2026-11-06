@@ -32,6 +32,13 @@ static const std::map<int32_t, const char*> debugSaveFileModes = {
     { 2, "Maxed" },
 };
 
+static const std::map<int32_t, const char*> goemonReferenceCharacterSlots = {
+    { 0, "Goemon" },
+    { 1, "Ebisumaru" },
+    { 2, "Sasuke" },
+    { 3, "Yae" },
+};
+
 void SohMenu::AddMenuDevTools() {
     // Add Dev Tools Menu
     AddMenuEntry("Dev Tools", CVAR_SETTING("Menu.DevToolsSidebarSection"));
@@ -172,6 +179,19 @@ void SohMenu::AddMenuDevTools() {
             "The camera renders around the Actor instead of Link. "
             "Requires Spawn Independent Goemon Actor. "
             "Does not yet implement player interactions, combat or original Goemon camera."));
+    AddWidget(path, "Show Original N64 Character (Static Renderer)", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.RenderReferenceCharacter"))
+        .Options(CheckboxOptions().DefaultValue(false).Tooltip(
+            "NEW renderer: draw the genuine N64 character OBJ + original PNG atlas "
+            "as a separate world Actor beside Link. Requires local character-models. "
+            "Not connected to the old gold-ball prototype; not animated or player-controlled yet."));
+    AddWidget(path, "Original N64 Character", WIDGET_CVAR_COMBOBOX)
+        .CVar(CVAR_SETTING("Goemon.ReferenceCharacterSlot"))
+        .Options(ComboboxOptions()
+                     .ComboMap(goemonReferenceCharacterSlots)
+                     .DefaultIndex(0)
+                     .Tooltip("Select Goemon, Ebisumaru, Sasuke or Yae for the original model renderer."));
+
     AddWidget(path, "Capture Zelda World Geometry", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_SETTING("Goemon.ZeldaWorldProbe"))
         .Options(CheckboxOptions().Tooltip(
