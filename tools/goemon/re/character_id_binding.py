@@ -59,13 +59,19 @@ def main(argv: list[str] | None = None) -> int:
         from decompress_rom import ensure_decompressed_rom
         image = ensure_decompressed_rom(args.original_us_rom.read_bytes())
         roots = source_proven_character_graphics(image)
+        from character_names import corroborated_character_names
+        names = corroborated_character_names(roots)
         print(json.dumps({
             "source": "original NG5E MIPS func_801DC9C8",
             "proof": "a1 low byte indexes 16-bit table at 0x80204020",
             "numeric_character_id_to_graphics_file_id": {
                 str(index): root for index, root in enumerate(roots)
             },
-            "name_mapping": None,
+            "name_mapping": {str(i): item["character_name"]
+                             for i, item in names.items()},
+            "name_mapping_provenance": "external USA GameShark tables + original captured global ID",
+            "rom_proven_name_string": False,
+            "name_source_urls": list(names[0]["name_source_urls"]),
         }, indent=2))
     except (OSError, ValueError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
