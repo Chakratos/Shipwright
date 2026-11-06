@@ -4,7 +4,7 @@
 No externally-ripped geometry is used: vertex bytes and triangle indices come
 from the OWNED NG5E ROM via actual F3DEX gSPVertex/gSP1Triangle instructions.
 No ROM, OBJ, textures or 3D files are uploaded or committed to GitHub.
-The 0x07 display-list spans are not yet mapped to original skeleton limbs.
+The source-verified 0x09 display-list spans are not yet mapped to original skeleton limbs.
 """
 from __future__ import annotations
 import argparse
@@ -20,7 +20,7 @@ from character_names import CHARACTER_NAMES
 from decompress_rom import decompress_us_rom
 from original_f3dex_geometry import N64Mesh, mesh_to_obj
 from original_segmented_geometry import (
-    OriginalGeometryRecovery, recover_character_from_rom, recovery_summary,
+    OriginalGeometryRecovery, recover_source_aligned_character_from_rom, recovery_summary,
 )
 
 def verify_owned_rom(data: bytes) -> None:
@@ -108,7 +108,10 @@ def export_owned_original_rom(rom: bytes, output_dir: Path) -> dict:
     target.mkdir(parents=True, exist_ok=True)
     characters = []
     for i, name in enumerate(CHARACTER_NAMES):
-        recovered = recover_character_from_rom(decoded, i)
+        recovered = (
+            recover_source_aligned_character_from_rom(decoded, i)
+            if i < 3 else OriginalGeometryRecovery(None, (), 0, 303)
+        )
         summary = write_original_character(recovered, name, target)
         characters.append({
             "id": i, "name": name, "triangles": summary["triangles"],
@@ -118,10 +121,12 @@ def export_owned_original_rom(rom: bytes, output_dir: Path) -> dict:
               f"{summary['triangles']} source-ROM triangles, "
               f"{summary['geometry_runs']} separate Gfx runs")
     result = {
-        "schema": "ng5e-source-rom-geometry-v1",
+        "schema": "ng5e-source-rom-geometry-v2-splat-aligned",
         "data_origin": "local hash-verified original NG5E ROM",
         "source_hash_sha256": hashlib.sha256(rom).hexdigest(),
         "characters": characters,
+        "source_bank_alignment_verified": True,
+        "legacy_wrong_bank_geometry_rejected": True,
         "source_animation_extracted": False,
         "source_skeleton_extracted": False,
         "asset_upload_performed": False,
