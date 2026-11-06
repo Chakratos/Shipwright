@@ -164,6 +164,14 @@ void SohMenu::AddMenuDevTools() {
             "A gold marker replaces the not-yet-decoded character model. "
             "Link and saves are not modified; input adaptation and collisions are provisional. "
             "This is an experimental integration stage, not the finished Goemon port."));
+    AddWidget(path, "Pilot Goemon Actor (Freeze Link Input)", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.PrototypePilot"))
+        .Options(CheckboxOptions().DefaultValue(false).Tooltip(
+            "Experimental: route local player input away from Link while the "
+            "independent Goemon Actor receives the unmodified gamepad. "
+            "The camera renders around the Actor instead of Link. "
+            "Requires Spawn Independent Goemon Actor. "
+            "Does not yet implement player interactions, combat or original Goemon camera."));
     AddWidget(path, "Capture Zelda World Geometry", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_SETTING("Goemon.ZeldaWorldProbe"))
         .Options(CheckboxOptions().Tooltip(
