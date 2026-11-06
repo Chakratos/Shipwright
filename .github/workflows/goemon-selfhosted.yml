@@ -8,6 +8,7 @@ on:
       - '.github/workflows/goemon-selfhosted.yml'
       - 'soh/soh/Enhancements/Goemon/**'
       - 'soh/soh/SohGui/SohMenuDevTools.cpp'
+      - 'soh/src/overlays/actors/ovl_player_actor/z_player.c'
       - 'tools/goemon/**'
   workflow_dispatch:
     inputs:
@@ -33,6 +34,9 @@ jobs:
       - name: Checkout with submodules
         uses: actions/checkout@v4
         with:
+          # Preserve incremental CMake output across self-hosted runs:
+          # a full build should only compile changed sources next time.
+          clean: false
           submodules: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build && 'recursive' || 'false' }}
           persist-credentials: false
 
