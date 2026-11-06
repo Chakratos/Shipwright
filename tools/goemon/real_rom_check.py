@@ -37,7 +37,8 @@ def locate_rom() -> Path:
 
 
 def check_rom(path: Path, *, graphics_scan: bool = False,
-              segmented_scan: bool = False, recover_geometry: bool = False) -> None:
+              segmented_scan: bool = False, recover_geometry: bool = False,
+              source_aligned: bool = False) -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parent / "re"))
     from decompress_rom import decompress_us_rom
     from character_assets import make_manifest, read_file_table
@@ -72,6 +73,13 @@ def check_rom(path: Path, *, graphics_scan: bool = False,
     print("Verified original and decompressed SHA-256, real 1311-entry file table, "
           "and four original character graphics sets.")
     print("No ROM or extracted asset bytes were uploaded or printed.")
+
+    if source_aligned:
+        from source_aligned_character_assets import analyze_source_aligned_rom
+        report = analyze_source_aligned_rom(decoded)
+        print("GOEMON_SOURCE_ALIGNED " + json.dumps(report, separators=(",", ":")))
+        print("GOEMON_SOURCE_ALIGNED COMPLETE: splat file labels aligned to ROM table, "
+              "no manual in-game capture, no ROM bytes printed")
 
     if segmented_scan:
         from original_segmented_scan import scan_original_character_group
@@ -119,6 +127,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rom", type=Path, default=locate_rom())
     parser.add_argument("--graphics-scan", action="store_true",
                         help="print metadata-only N64 graphics/rigger candidate counts")
+    parser.add_argument("--source-aligned", action="store_true",
+                        help="cross-validate actual ROM file IDs against source splat segments")
     parser.add_argument("--segmented-scan", action="store_true",
                         help="inspect genuine per-character 0x09/0x07 banks from splat.yaml")
     parser.add_argument("--recover-geometry", action="store_true",
@@ -132,7 +142,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         check_rom(args.rom, graphics_scan=args.graphics_scan,
                   segmented_scan=args.segmented_scan,
-                  recover_geometry=args.recover_geometry)
+                  recover_geometry=args.recover_geometry,
+                  source_aligned=args.source_aligned)
     except (OSError, ValueError) as exc:
         print(f"REAL NG5E ROM: FAIL: {exc}", file=sys.stderr)
         return 1
