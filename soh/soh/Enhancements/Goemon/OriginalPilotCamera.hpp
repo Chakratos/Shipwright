@@ -5,6 +5,7 @@
 // reproduce the original Goemon camera, collision or animation.
 #include "OriginalZeldaWorldProbe.hpp"
 
+#include <optional>
 #include <stdexcept>
 
 namespace Goemon::Original {
@@ -37,6 +38,50 @@ struct PilotCameraView {
         throw std::invalid_argument("prototype camera offset overflow");
     return view;
 }
+
+// At high render rates there can be multiple Play_Draw calls for one
+// Camera_Update. Never add the Actor translation on top of our own
+// previously translated View: that would make the camera drift away.
+[[nodiscard]] inline bool SamePilotView(const PilotCameraView& a,
+                                       const PilotCameraView& b) {
+    return a.eye.x == b.eye.x && a.eye.y == b.eye.y &&
+           a.eye.z == b.eye.z && a.lookAt.x == b.lookAt.x &&
+           a.lookAt.y == b.lookAt.y && a.lookAt.z == b.lookAt.z;
+}
+
+struct PilotCameraHistory {
+    std::optional<PilotCameraView> sourceView;
+    std::optional<PilotCameraView> renderedView;
+
+    [[nodiscard]] PilotCameraView Render(PilotCameraView observed,
+                                        WorldPoint link, WorldPoint actor) {
+        const PilotCameraView source =
+            renderedView && sourceView && SamePilotView(observed, *renderedView)
+                ? *sourceView : observed;
+        const PilotCameraView output =
+            TranslatePilotCamera(source.eye, source.lookAt, link, actor);
+        sourceView = source;
+        renderedView = output;
+        return output;
+    }
+
+    // Restore the last known vanilla view only when nobody else has
+    // overwritten it since our last render. Avoid touching debug cam.
+    [[nodiscard]] std::optional<PilotCameraView> Restore(
+        PilotCameraView observed) {
+        std::optional<PilotCameraView> restored;
+        if (renderedView && sourceView && SamePilotView(observed, *renderedView))
+            restored = sourceView;
+        sourceView.reset();
+        renderedView.reset();
+        return restored;
+    }
+
+    void Reset() {
+        sourceView.reset();
+        renderedView.reset();
+    }
+};
 
 struct PilotInputGate {
     bool pilotEnabled = false;
