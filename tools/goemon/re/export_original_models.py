@@ -13,6 +13,9 @@ import json
 from pathlib import Path
 import sys
 
+# real_rom_check.py is one directory above this source-only decoder.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 from character_names import CHARACTER_NAMES
 from decompress_rom import decompress_us_rom
 from original_f3dex_geometry import N64Mesh, mesh_to_obj
