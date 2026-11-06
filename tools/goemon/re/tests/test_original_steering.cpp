@@ -3,9 +3,10 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
+#include <cstdint>
 #include <stdexcept>
 using namespace Goemon::Original;
-struct Case {float px,pz;int yaw;float ex,ez;OriginalSteeringPhase phase;};
+struct Case {float px,pz;std::int16_t yaw;float ex,ez;OriginalSteeringPhase phase;};
 int main() {
     constexpr std::array<Case,8> samples{{
         { 2.6648952961f, 0.8592632413f, 187, 2.6419339180f,0.9274619222f,OriginalSteeringPhase::Airborne},
