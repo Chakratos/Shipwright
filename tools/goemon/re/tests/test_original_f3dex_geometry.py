@@ -115,10 +115,10 @@ class OriginalF3DEXGeometryTests(unittest.TestCase):
         gfx(raw, 0x48, 0xBF, triangle(0,1,2))
         with self.assertRaisesRegex(ValueError, "budget"):
             decode_f3dex(bytes(raw), LIST_ADDR, max_commands=1)
-        gfx(raw, 0x50, 0x06, LIST_ADDR)
+        gfx(raw, 0x50, 0x06, LIST_ADDR, lower=1 << 16)
         with self.assertRaisesRegex(ValueError, "budget"):
             decode_f3dex(bytes(raw), LIST_ADDR, max_commands=30)
-        with self.assertRaisesRegex(ValueError, "out-of-bounds"):
+        with self.assertRaisesRegex(ValueError, "outside original resource"):
             decode_f3dex(bytes(raw)[:0x50], LIST_ADDR)
 
     def test_unknown_material_command_is_recorded_not_reinterpreted(self):
