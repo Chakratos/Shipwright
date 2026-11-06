@@ -32,6 +32,7 @@ extern PlayState* gPlayState;
 }
 
 #define CVAR_GOEMON_LIVE_GHOST CVAR_SETTING("Goemon.LiveControllerGhost")
+#define CVAR_GOEMON_LIVE_GHOST_DRAW CVAR_SETTING("Goemon.LiveControllerGhostDraw")
 
 namespace {
 using Goemon::Original::OriginalPlanarStep;
@@ -184,6 +185,21 @@ void RecordLiveControllerGhost() {
         }
         sPreviousStickX = stick.x;
         sPreviousStickY = stick.y;
+
+        // Native Zelda debug ball: display our private source-driven
+        // ghost pose in the scene without spawning or modifying an Actor.
+        // Red = the diagnostic Zelda wall ray blocked this update.
+        // Cyan = otherwise. This is NOT an original Goemon 3D model.
+        if (CVarGetInteger(CVAR_GOEMON_LIVE_GHOST_DRAW, 1) != 0) {
+            DebugDisplay_AddObject(
+                sController.motion.groundX, step->modelY + 18.0f,
+                sController.motion.groundZ,
+                0, 0, 0, 1.4f, 1.4f, 1.4f,
+                probe.wallHit ? 255 : 32, probe.wallHit ? 56 : 208,
+                probe.wallHit ? 56 : 255, 220, 2,
+                gPlayState->state.gfxCtx);
+        }
+
         if (sLog.is_open()) {
             sLog << sFrame++ << ',' << sScene << ','
                  << static_cast<int>(pad.cur.stick_x) << ','
