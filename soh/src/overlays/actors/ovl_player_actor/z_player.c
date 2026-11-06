@@ -36,6 +36,10 @@
 #include <assert.h>
 #include <libultraship/bridge/consolevariablebridge.h>
 
+/* Separate Goemon Actor pilot; implementation resides in OriginalPrototypeActor.cpp.
+ * The default/off path leaves Player_Update input byte-for-byte unchanged. */
+void Goemon_PrototypeFilterLinkInput(PlayState* play, Player* player, Input* input);
+
 // Some player animations are played at this reduced speed, for reasons yet unclear.
 // This is called "adjusted" for now.
 #define PLAYER_ANIM_ADJUSTED_SPEED (2.0f / 3.0f)
@@ -12248,6 +12252,10 @@ void Player_Update(Actor* thisx, PlayState* play) {
             }
         }
 
+        // Goemon prototype pilot: route only this LOCAL vanilla input copy
+        // away from Link. play->state.input[0] remains untouched for the
+        // independently spawned research Actor. No effect unless enabled.
+        Goemon_PrototypeFilterLinkInput(play, this, &input);
         Player_UpdateCommon(this, play, &input);
     }
 
