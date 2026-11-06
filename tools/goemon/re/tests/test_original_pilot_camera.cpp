@@ -42,6 +42,35 @@ int main() {
     } catch (const std::invalid_argument&) { invalid = true; }
     assert(invalid);
 
+    // Camera draw may execute multiple times without a camera update.
+    // Repeated pilot draws must NOT accumulate translations.
+    PilotCameraHistory history{};
+    const PilotCameraView source{
+        {0.0f, 80.0f, -120.0f},
+        {0.0f, 30.0f, 0.0f}
+    };
+    const WorldPoint link{100.0f, 20.0f, 200.0f};
+    const WorldPoint actor{122.0f, 25.0f, 194.0f};
+    const auto first = history.Render(source, link, actor);
+    const auto repeat = history.Render(first, link, actor);
+    assert(SamePilotView(first, repeat));
+    const auto changedActor = history.Render(
+        repeat, link, {130.0f, 25.0f, 194.0f});
+    Close(changedActor.eye.x, 30.0f); // Not 22+30!
+    const auto restored = history.Restore(changedActor);
+    assert(restored && SamePilotView(*restored, source));
+    const auto fresh = history.Render(source, link, actor);
+    assert(SamePilotView(fresh, first));
+    const PilotCameraView externallyUpdated{
+        {5.0f, 90.0f, -90.0f},
+        {5.0f, 40.0f, 30.0f}
+    };
+    const auto afterCameraUpdate = history.Render(externallyUpdated, link, actor);
+    Close(afterCameraUpdate.eye.x, 27.0f);
+    Close(afterCameraUpdate.lookAt.z, 24.0f);
+    assert(!history.Restore(source)); // Do not clobber an external camera update.
+    assert(!history.sourceView && !history.renderedView);
+
     PilotInputGate gate{};
     assert(!ShouldRouteInputToGoemon(gate));
     gate = {true, true, true, true, true};
