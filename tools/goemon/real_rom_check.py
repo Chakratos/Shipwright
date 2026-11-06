@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import sys
@@ -35,7 +36,7 @@ def locate_rom() -> Path:
     return DEFAULT_ROM
 
 
-def check_rom(path: Path) -> None:
+def check_rom(path: Path, *, graphics_scan: bool = False) -> None:
     sys.path.insert(0, str(Path(__file__).resolve().parent / "re"))
     from decompress_rom import decompress_us_rom
     from character_assets import make_manifest
@@ -53,7 +54,7 @@ def check_rom(path: Path) -> None:
     if hashlib.sha256(decoded).hexdigest() != DECOMPRESSED_SHA256:
         raise ValueError("decompressed ROM SHA-256 differs from real baseline")
 
-    manifest, _ = make_manifest(decoded)
+    manifest, character_entries = make_manifest(decoded)
     source_roots = source_proven_character_graphics(decoded)
     if source_roots != (288, 292, 296, 300):
         raise ValueError("original MIPS character ID -> graphics root mapping differs")
@@ -71,10 +72,26 @@ def check_rom(path: Path) -> None:
           "and four original character graphics sets.")
     print("No ROM or extracted asset bytes were uploaded or printed.")
 
+    if graphics_scan:
+        from original_graphics_scan import scan_original_graphics_resource
+        for (slot, entry) in character_entries:
+            graphic = decoded[entry.start:entry.end]
+            report = scan_original_graphics_resource(graphic)
+            # Source ROM stays on the runner; only counts and relative
+            # offsets from the validated original asset are logged.
+            print("GOEMON_GRAPHICS_SCAN " + json.dumps({
+                "character_id": slot,
+                "original_file_id": entry.file_id,
+                "character_name": manifest["character_graphics"][slot]["character_name"],
+                **report,
+            }, separators=(",", ":")))
+
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rom", type=Path, default=locate_rom())
+    parser.add_argument("--graphics-scan", action="store_true",
+                        help="print metadata-only N64 graphics/rigger candidate counts")
     args = parser.parse_args(argv)
     if not args.rom.is_file():
         print(f"REAL NG5E ROM: NOT FOUND at {args.rom}. "
@@ -82,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
               file=sys.stderr)
         return 2
     try:
-        check_rom(args.rom)
+        check_rom(args.rom, graphics_scan=args.graphics_scan)
     except (OSError, ValueError) as exc:
         print(f"REAL NG5E ROM: FAIL: {exc}", file=sys.stderr)
         return 1
