@@ -35,6 +35,15 @@ class PilotSourceWiringTests(unittest.TestCase):
         self.assertIn("sPilotCamera.Render(", source)
         self.assertIn("sPilotCamera.Restore(", source)
 
+    def test_actor_logs_pilot_and_link_without_repositioning_link(self):
+        source = ACTOR.read_text(encoding="utf-8")
+        self.assertIn("pilot_enabled,link_x,link_y,link_z", source)
+        self.assertIn("static_cast<int>(PilotReady(play, link))", source)
+        self.assertIn("link->actor.world.pos.x << ','", source)
+        self.assertIn("link->actor.world.pos.y << ','", source)
+        self.assertIn("link->actor.world.pos.z << ','", source)
+        self.assertNotIn("link->actor.world.pos =", source)
+
     def test_menu_is_opt_in_not_a_default_replacement(self):
         source = MENU.read_text(encoding="utf-8")
         self.assertEqual(source.count('CVAR_SETTING("Goemon.PrototypePilot")'), 1)
