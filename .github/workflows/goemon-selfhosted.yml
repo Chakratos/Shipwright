@@ -61,6 +61,21 @@ jobs:
             throw "Goemon-Tests fehlgeschlagen: $LASTEXITCODE"
           }
 
+      - name: Prepare original N64 model references locally
+        # Opt-in, one-time fetch of the publicly available static OBJ rips.
+        # Nothing is published as a GitHub artifact or committed to git.
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-models]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $destination = 'C:\\actions-runner-goemon\\character-models'
+          & py -3 tools\\goemon\\re\\prepare_reference_models.py --output-dir $destination
+          if ($LASTEXITCODE -ne 0) {
+            throw "Lokaler Originalmodell-Import fehlgeschlagen: $LASTEXITCODE"
+          }
+          Write-Host "Vier lokale Goemon-Meshes vorbereitet: $destination"
+          Write-Host 'Keine Modell- oder Texturdateien werden hochgeladen.'
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
