@@ -138,11 +138,16 @@ def scan_segmented_graphics(
     triangle_commands = 0
     vtx_count = 0
     display_list_targets = 0
+    raw_vtx_opcodes = 0
+    raw_vtx_segments: Counter[int] = Counter()
     first_vtx: list[dict] = []
     for at in range(0, len(data) - 7, 8):
         w0, w1 = struct.unpack_from(">II", data, at)
         opcode = w0 >> 24
         opcodes[opcode] += 1
+        if opcode == N64_G_VTX:
+            raw_vtx_opcodes += 1
+            raw_vtx_segments[w1 >> 24] += 1
         valid_dma = n64_vtx_dma(w0, w1, banks)
         if valid_dma:
             vtx_count += 1
@@ -160,6 +165,10 @@ def scan_segmented_graphics(
             display_list_targets += 1
     return {
         "valid_segmented_f3dex_vtx_dmas": vtx_count,
+        "raw_vtx_opcode_candidates": raw_vtx_opcodes,
+        "raw_vtx_source_segments": {
+            f"0x{k:02X}": n for k, n in sorted(raw_vtx_segments.items())
+        },
         "raw_f3dex_triangle_command_candidates": triangle_commands,
         "resolved_display_list_targets": display_list_targets,
         "first_valid_vertex_dmas": first_vtx,
@@ -197,6 +206,7 @@ def scan_original_character_group(rom: bytes, character_slot: int) -> dict:
         "segmented_resources": {"0x09": root, "0x07": root + 3},
         "files": graphics,
         "rig_headers_in_root_file": rig,
+        "rig_headers_in_geometry_file": find_rig_header_candidates(files[3], banks),
         "provenance": "mnsg/config/usa/splat.yaml + Goemon64Recomp/patches/types.h",
         "copyrighted_data_exported": False,
     }
