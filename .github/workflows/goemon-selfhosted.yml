@@ -75,3 +75,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Ship-Asset-Build fehlgeschlagen: $LASTEXITCODE" }
           & $cmake --build build\goemon-ci --config Release --target soh --parallel 8
           if ($LASTEXITCODE -ne 0) { throw "Ship-C++-Build fehlgeschlagen: $LASTEXITCODE" }
+
+      - name: Publish Windows executable and engine assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: goemon-ship-windows
+          path: |
+            x64/Release/soh.exe
+            build/goemon-ci/soh/soh.o2r
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 2
+
