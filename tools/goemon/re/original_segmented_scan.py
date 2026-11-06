@@ -200,6 +200,28 @@ def scan_original_character_group(rom: bytes, character_slot: int) -> dict:
         for index in range(4)
     }
     rig = find_rig_header_candidates(files[0], banks)
+    # Goemon64Recomp uses overlay_info[0] for segment 0x08 while the
+    # decompressed ROM's +1 and +2 files are splat databin (vram=0).
+    # Their assignment to the runtime slot is NOT source-proven. Evaluate
+    # both possibilities and compare structural evidence rather than
+    # silently guessing that "segment 8 == file 289/290".
+    candidates08 = {}
+    for file_part in (1, 2):
+        candidate_banks = {**banks, 8: files[file_part]}
+        candidates08[f"file_plus_{file_part}"] = {
+            "file_id": root + file_part,
+            "as_segment_08": True,
+            "hypothesis_not_proven": True,
+            "headers_in_self": find_rig_header_candidates(
+                files[file_part], candidate_banks
+            ),
+            "headers_in_root_09": find_rig_header_candidates(
+                files[0], candidate_banks
+            ),
+            "headers_in_geometry_07": find_rig_header_candidates(
+                files[3], candidate_banks
+            ),
+        }
     return {
         "character_slot": character_slot,
         "source_graphics_file_ids": [root, root + 1, root + 2, root + 3],
@@ -207,6 +229,7 @@ def scan_original_character_group(rom: bytes, character_slot: int) -> dict:
         "files": graphics,
         "rig_headers_in_root_file": rig,
         "rig_headers_in_geometry_file": find_rig_header_candidates(files[3], banks),
+        "hypothetical_segment08_mappings": candidates08,
         "provenance": "mnsg/config/usa/splat.yaml + Goemon64Recomp/patches/types.h",
         "copyrighted_data_exported": False,
     }
