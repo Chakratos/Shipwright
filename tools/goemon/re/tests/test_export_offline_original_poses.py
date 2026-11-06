@@ -40,6 +40,7 @@ class OfflineSourcePoseCatalogTests(unittest.TestCase):
         self.assertFalse(record["animation_timeline_decoded"])
         self.assertEqual(source["actual_animation_frames_recovered"],0)
         self.assertFalse(source["gameplay_capture_required"])
+        self.assertNotIn("synthetic_animation_frames", source)
         json.dumps(source)
 
     def test_invalid_limb_count_or_wrong_bank_not_claimed_as_pose(self):
