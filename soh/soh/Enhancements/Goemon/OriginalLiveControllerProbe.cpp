@@ -142,7 +142,7 @@ void RecordLiveControllerGhost() {
             sLive, stick, jumpPressed, jumpHeld, resolve);
         const auto numericAction = driven.action;
         const bool actionSupported = driven.measuredTransitionSupported;
-        const std::optional<Goemon::Original::OriginalMotionFrame> step{driven.motion};
+        std::optional<Goemon::Original::OriginalMotionFrame> step{driven.motion};
 
         // Temporary Zelda-ground alignment for the separate ghost only.
         // Never apply this diagnostic snap to the real Link/Goemon Actor.
