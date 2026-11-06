@@ -94,6 +94,36 @@ jobs:
           Write-Host "108 Original-Grafikabschnitte liegen lokal: $dest"
           Write-Host "Keine ROM-, OBJ- oder Texturdateien werden hochgeladen."
 
+      - name: Build original Goemon skeleton animation capture mod locally
+        # Runs only when explicitly selected in commit message.
+        # Builds a MIPS .nrm probe against local cached tools and decomp sources.
+        # The probe writes original poses only when the player enables
+        # "Original-Skelettanimationen aufnehmen" inside the original game.
+        if: \${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-animation-mod]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & "$PWD\tools\goemon\diagnostic_mod\build_windows.ps1" -SkipDownload -NoInstall
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original Goemon Animations-Capture-Mod Build fehlgeschlagen: $LASTEXITCODE"
+          }
+          $workspace = Join-Path (Split-Path $PWD -Parent) 'GoemonTraceModBuild'
+          $source = Join-Path $workspace 'build\goemon_original_trace.nrm'
+          if (-not (Test-Path $source -PathType Leaf)) {
+            throw "Original-MIPS-Capture-Mod nicht gebaut: $source"
+          }
+          $localOut = 'C:\actions-runner-goemon\original-animation-capture'
+          New-Item -ItemType Directory -Force -Path $localOut | Out-Null
+          Copy-Item -LiteralPath $source -Destination (Join-Path $localOut 'goemon_original_trace.nrm') -Force
+          $interactiveMods = 'C:\Users\Chakratos\AppData\Local\Goemon64Recompiled\mods'
+          if (Test-Path $interactiveMods -PathType Container) {
+            Copy-Item -LiteralPath $source -Destination (Join-Path $interactiveMods 'goemon_original_trace.nrm') -Force
+            Write-Host "Neuer Original-Skelett-Capture-Mod lokal installiert: $interactiveMods"
+          } else {
+            Write-Host "Nur lokaler Runner-Capture-Mod vorhanden: $localOut; Spiel-Mod-Verzeichnis nicht vorhanden."
+          }
+          Write-Host 'Keine Original-ROM-, Mesh- oder Animationsdateien hochgeladen.'
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
