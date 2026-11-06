@@ -15,6 +15,7 @@ import argparse
 import hashlib
 from io import BytesIO
 import json
+import shutil
 from pathlib import Path
 import sys
 from urllib.request import Request, urlopen
@@ -35,6 +36,30 @@ SOURCE_PAGES = {
     "Yae": "https://models.spriters-resource.com/nintendo_64/mysticalninjastarringgoemon/asset/291015/",
 }
 MAX_ZIP_BYTES = 5 * 1024 * 1024
+# Original model asset IDs and archive OBJ entry names from provider pages.
+MODEL_ASSET_IDS = {
+    "Goemon": ("291117", "goe/goe.obj"),
+    "Ebisumaru": ("291027", "ebi/ebisumaru.obj"),
+    "Sasuke": ("291233", "sas/sas.obj"),
+    "Yae": ("291015", "yae/yae.obj"),
+}
+
+def discover_local_archive(character: str, downloads: Path) -> Path | None:
+    if character not in MODEL_ASSET_IDS or not downloads.is_dir():
+        return None
+    _, signature = MODEL_ASSET_IDS[character]
+    for path in sorted(downloads.glob("*.zip")):
+        if path.stat().st_size > MAX_ZIP_BYTES:
+            continue
+        try:
+            with ZipFile(path) as archive:
+                entries = {name.replace(chr(92), "/").lower()
+                           for name in archive.namelist()}
+                if signature in entries and archive.testzip() is None:
+                    return path
+        except (OSError, BadZipFile):
+            continue
+    return None
 
 def download_reference_archive(character: str, output: Path) -> str:
     if character not in REFERENCE_URLS:
@@ -60,7 +85,8 @@ def download_reference_archive(character: str, output: Path) -> str:
     output.write_bytes(raw)
     return hashlib.sha256(raw).hexdigest()
 
-def prepare_all_models(destination: Path) -> dict:
+def prepare_all_models(destination: Path, *, download_dir: Path | None = None,
+                       allow_network: bool = True) -> dict:
     project = Path(__file__).resolve().parents[3]
     destination = destination.expanduser().resolve()
     if project == destination or project in destination.parents:
@@ -69,11 +95,21 @@ def prepare_all_models(destination: Path) -> dict:
     summary = []
     for character in CHARACTERS:
         source = source_dir / f"{character}.zip"
-        archive_hash = (
-            hashlib.sha256(source.read_bytes()).hexdigest()
-            if source.is_file()
-            else download_reference_archive(character, source)
-        )
+        if not source.is_file() and download_dir is not None:
+            local = discover_local_archive(character, download_dir)
+            if local is not None:
+                source.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(local, source)
+                print(f"LOCAL MODEL SOURCE: {character} from {local.name}")
+        if source.is_file():
+            archive_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        elif allow_network:
+            archive_hash = download_reference_archive(character, source)
+        else:
+            raise ValueError(
+                f"{character}: ZIP missing. Download from {SOURCE_PAGES[character]} "
+                "into the selected Downloads directory; no network access attempted."
+            )
         packed, report, textures = load_reference_model(source, character)
         target = destination / character
         target.mkdir(parents=True,exist_ok=True)
@@ -106,9 +142,14 @@ def prepare_all_models(destination: Path) -> dict:
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--output-dir",required=True,type=Path)
+    p.add_argument("--download-dir", type=Path,
+                   help="optional browser Downloads directory, auto-match four original ZIPs")
+    p.add_argument("--offline", action="store_true",
+                   help="use cached/browser-downloaded ZIPs only; no network access")
     args=p.parse_args(argv)
     try:
-        prepare_all_models(args.output_dir)
+        prepare_all_models(args.output_dir, download_dir=args.download_dir,
+                           allow_network=not args.offline)
     except (OSError,ValueError,BadZipFile) as exc:
         print(f"MODEL REFERENCE IMPORT FAILED: {exc}",file=sys.stderr)
         return 2
