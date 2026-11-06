@@ -27,6 +27,7 @@ $ScriptsToCheck = @(
     (Join-Path $Project "tools\goemon\reference_probe\jump_trace_fit.py"),
     (Join-Path $Project "tools\goemon\reference_probe\horizontal_trace_fit.py"),
     (Join-Path $Project "tools\goemon\reference_probe\animation_trace_fit.py"),
+    (Join-Path $Project "tools\goemon\reference_probe\original_skeletal_poses.py"),
     (Join-Path $Project "tools\goemon\reference_probe\yaw_trace_fit.py"),
     (Join-Path $Project "tools\goemon\reference_probe\steering_trace_fit.py"),
     (Join-Path $Project "tools\goemon\reference_probe\vector_trace_fit.py"),
@@ -49,6 +50,7 @@ Write-Host "Die Aufnahme ist standardmaessig AUS."
 Write-Host "Lade deinen Spielstand, aktiviere im Mod-Menue Original-Daten aufnehmen,"
 Write-Host "verlasse das Menue und bewege den Stick, um die Aufnahme zu starten."
 Write-Host "Danach: Stillstand, Laufen, Drehen, Springen und Angriff."
+Write-Host "Fuer echte Original-Gliederanimationen in Mod Settings zusaetzlich Original-Skelettanimationen aufnehmen aktivieren."
 Write-Host "Zur Beendigung Aufnahme im Mod-Menue auf Aus stellen."
 Write-Host "Danach das Spiel normal schliessen. Die Dateien werden automatisch gesammelt."
 Write-Host ""
