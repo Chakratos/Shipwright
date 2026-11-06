@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       full_build:
-        description: 'Run the full 10-minute Ship Windows build and upload the executable'
+        description: 'Build Ship (or use [goemon-build] in a push commit message)'
         type: boolean
         required: false
         default: false
@@ -22,7 +22,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: goemon-selfhosted-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && inputs.full_build && 'full' || 'fast' }}
+  group: goemon-selfhosted-${{ github.ref }}-${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) && 'full' || 'fast' }}
   cancel-in-progress: true
 
 jobs:
@@ -37,9 +37,11 @@ jobs:
           # Preserve incremental CMake output across self-hosted runs:
           # a full build should only compile changed sources next time.
           clean: false
-          submodules: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build && 'recursive' || 'false' }}
+          submodules: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) && 'recursive' || 'false' }}
           persist-credentials: false
 
+      # Normal pushes: fast tests only. The literal [goemon-build] marker
+      # explicitly opts a single commit into the cached full Windows build.
       - name: Goemon Python and C++20 tests
         shell: powershell
         run: |
@@ -60,7 +62,7 @@ jobs:
           }
 
       - name: Configure and build Ship of Harkinian
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build }}
+        if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -93,7 +95,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "Ship-C++-Build fehlgeschlagen: $LASTEXITCODE" }
 
       - name: Publish Windows executable and engine assets
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_build }}
+        if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         uses: actions/upload-artifact@v4
         with:
           name: goemon-ship-windows
