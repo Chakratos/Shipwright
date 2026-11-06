@@ -24,6 +24,7 @@
 
 extern "C" {
 #include "z64.h"
+#include "variables.h" // gDbgCamEnabled: debug-camera restoration guard
 #include "functions.h"
 #include "macros.h"
 extern PlayState* gPlayState;
