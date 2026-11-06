@@ -161,6 +161,20 @@ jobs:
           Write-Host "Original-Posen stehen lokal: $dest"
           Write-Host 'Ohne Spielstart, ohne manuelle Aufnahme und ohne GitHub-Artifact-Upload.'
 
+      - name: Link source-ROM skeletal limbs to corrected N64 graphics
+        # Reads only previously exported local original ROM-derived data.
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-bone-link]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $out = 'C:\actions-runner-goemon\original-rom-poses\original_bone_mesh_links.json'
+          & py -3 tools\goemon\re\link_offline_bones_to_source_meshes.py --output $out
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original ROM bone-to-Gfx linking failed: $LASTEXITCODE"
+          }
+          Write-Host "Original limb-to-ROM-graphics links saved locally: $out"
+          Write-Host 'No original game launch, no external model downloads, no asset uploads.'
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
