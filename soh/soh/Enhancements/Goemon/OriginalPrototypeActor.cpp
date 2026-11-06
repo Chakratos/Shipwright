@@ -5,7 +5,7 @@
 // Stick/camera mapping and Zelda collision response are provisional.
 // Enable only with gSettings.Goemon.PrototypeActor = 1.
 #include "OriginalLiveFrame.hpp"
-#include "OriginalZeldaWorldProbe.hpp"
+#include "OriginalZeldaActorTerrain.hpp"
 
 #include <cmath>
 #include <cstdint>
@@ -33,7 +33,8 @@ extern PlayState* gPlayState;
 namespace {
 using Goemon::Original::OriginalLiveFrameState;
 using Goemon::Original::OriginalPlanarStep;
-using Goemon::Original::WorldCollisionProbe;
+using Goemon::Original::ZeldaTerrainResult;
+using Goemon::Original::ZeldaTerrainReject;
 using Goemon::Original::WorldPoint;
 
 int sActorId = -1;
@@ -119,7 +120,7 @@ void InitActor(Actor* actor, PlayState* play) {
         sLog << "frame,scene,room,ship_stick_x,ship_stick_y,preview_yaw10,"
                 "action,measured_transition,actor_x,actor_y,actor_z,"
                 "desired_dx,desired_dz,applied_dx,applied_dz,wall_hit,"
-                "floor_found,preview_floor_snap,airborne\n";
+                "floor_found,preview_floor_snap,airborne,terrain_reject_code\n";
     }
 }
 
@@ -159,22 +160,25 @@ void UpdateActor(Actor* actor, PlayState* play) {
     const bool jumpHeld = (pad.cur.button & BTN_A) != 0;
 
     try {
-        WorldCollisionProbe probe{};
-        auto resolve = [&](float x, float y, float z, OriginalPlanarStep desired)
+        ZeldaTerrainResult terrain{};
+        auto resolve = [&](float x, float modelY, float z, float groundY,
+                           bool airborne, OriginalPlanarStep desired)
             -> OriginalPlanarStep {
-            probe = Goemon::Original::ProbeOriginalStepAgainstWorld(
-                WorldPoint{x, y, z}, desired,
+            terrain = Goemon::Original::ProbeConservativeZeldaTerrain(
+                WorldPoint{x, modelY, z}, groundY, desired, airborne,
+                Goemon::Original::ZeldaTerrainEnvelope{},
                 [&](WorldPoint a, WorldPoint b) { return QueryWall(play, a, b); },
                 [&](WorldPoint to) { return QueryFloor(play, to); });
-            // Temporary diagnostic wall-ray block, NOT original Goemon
-            // collision. No contact radius or wall-slide has been proven.
-            return probe.wallHit ? OriginalPlanarStep{} : desired;
+            return terrain.applied;
         };
         const auto step = Goemon::Original::AdvanceOriginalLivePreview(
             sLive, stick, jumpPressed, jumpHeld, resolve);
-        const auto floor = Goemon::Original::PreviewGhostGroundHeight(
-            probe, step.motion.airborne);
-        if (floor) sLive.controller.motion.groundY = *floor;
+        // A floor is only adopted when the provisional Zelda geometry
+        // check has explicitly accepted this grounded movement.
+        const bool previewFloor = terrain.floorFound &&
+                                  terrain.rejection == ZeldaTerrainReject::None &&
+                                  !step.motion.airborne;
+        if (previewFloor) sLive.controller.motion.groundY = terrain.floorY;
 
         const auto& pose = sLive.controller.motion;
         actor->prevPos = actor->world.pos;
@@ -192,9 +196,9 @@ void UpdateActor(Actor* actor, PlayState* play) {
         DebugDisplay_AddObject(
             actor->world.pos.x, actor->world.pos.y + 18.0f,
             actor->world.pos.z, 0, 0, 0, 2.0f, 2.0f, 2.0f,
-            static_cast<std::uint8_t>(probe.wallHit ? 255 : 255),
-            static_cast<std::uint8_t>(probe.wallHit ? 50 : 178),
-            static_cast<std::uint8_t>(probe.wallHit ? 50 : 32),
+            static_cast<std::uint8_t>(255),
+            static_cast<std::uint8_t>(terrain.rejection != ZeldaTerrainReject::None ? 50 : 178),
+            static_cast<std::uint8_t>(terrain.rejection != ZeldaTerrainReject::None ? 50 : 32),
             static_cast<std::uint8_t>(230), 2, play->state.gfxCtx);
 
         if (sLog.is_open())
@@ -210,10 +214,11 @@ void UpdateActor(Actor* actor, PlayState* play) {
                  << step.motion.desiredPlanar.z << ','
                  << step.motion.appliedPlanar.x << ','
                  << step.motion.appliedPlanar.z << ','
-                 << static_cast<int>(probe.wallHit) << ','
-                 << static_cast<int>(probe.floorFound) << ','
-                 << static_cast<int>(floor.has_value()) << ','
-                 << static_cast<int>(step.motion.airborne) << '\n';
+                 << static_cast<int>(terrain.wallHit) << ','
+                 << static_cast<int>(terrain.floorFound) << ','
+                 << static_cast<int>(previewFloor) << ','
+                 << static_cast<int>(step.motion.airborne) << ','
+                 << static_cast<int>(terrain.rejection) << '\n';
     } catch (const std::exception&) {
         // Isolate failures from vanilla Link: dispose of the prototype.
         Actor_Kill(actor);
