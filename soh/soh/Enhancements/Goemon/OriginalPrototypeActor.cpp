@@ -45,6 +45,7 @@ std::int32_t sRoom = -1;
 std::uint64_t sFrame = 0;
 std::ofstream sLog;
 bool sSuspended = false;
+bool sFaulted = false; // Clear only when prototype is explicitly disabled.
 
 void CloseLog() {
     if (sLog.is_open()) sLog.close();
@@ -219,8 +220,14 @@ void UpdateActor(Actor* actor, PlayState* play) {
                  << static_cast<int>(previewFloor) << ','
                  << static_cast<int>(step.motion.airborne) << ','
                  << static_cast<int>(terrain.rejection) << '\n';
-    } catch (const std::exception&) {
-        // Isolate failures from vanilla Link: dispose of the prototype.
+    } catch (const std::exception& error) {
+        // Keep the fatal diagnostic and do not auto-respawn every frame.
+        // The user can disable then re-enable the prototype to retry.
+        std::ofstream failure("goemon_prototype_actor_error.txt",
+                              std::ios::out | std::ios::trunc);
+        if (failure.is_open()) failure << error.what() << '\n';
+        sFaulted = true;
+        CloseLog();
         Actor_Kill(actor);
     }
 }
@@ -230,9 +237,10 @@ void SpawnWhenRequested() {
     if (!CVarGetInteger(CVAR_GOEMON_PROTOTYPE_ACTOR, 0)) {
         if (sActor != nullptr && sActor->update != nullptr)
             Actor_Kill(sActor);
+        sFaulted = false;
         return;
     }
-    if (sActor != nullptr) return;
+    if (sActor != nullptr || sFaulted) return;
     Player* link = GET_PLAYER(gPlayState);
     if (!AllowedToStep(gPlayState, link) ||
         !(link->actor.bgCheckFlags & BGCHECKFLAG_GROUND)) return;
