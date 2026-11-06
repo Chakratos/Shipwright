@@ -22,19 +22,25 @@ Link**. Original asset data is not compiled into Ship.
 2. In Ship open **Dev Tools → Goemon → Spawn Independent Goemon Actor
    (Prototype)**. The toggle defaults to OFF.
 3. Stand on normal ground and enable the option. A gold marker spawns at
-   Link's current location. Both Link and this **separate Actor** observe
-   the current gamepad; their movement diverges because they run different
-   movement systems. Full-stick movement, turns, stopping and A jumps
-   exercise the prototype.
-4. Disable the option to despawn the prototype. Re-enabling starts a new
-   Actor. Inspect `goemon_prototype_actor.csv` in Ship's working folder.
+   Link's current location. By default both Link and the **separate Actor**
+   receive the current gamepad for a side-by-side diagnostic.
+4. Enable **Pilot Goemon Actor (Freeze Link Input)** to redirect the local
+   Link movement input to the independent Actor. Only the Actor receives
+   movement/jump commands, while the rendered camera follows its position.
+   Press A to try the measured jump arc, use full stick to run and release
+   to brake. This does NOT move Link's actor position directly or replace
+   Zelda interactions, doors, attacks or items.
+5. Disable **Pilot Goemon Actor** to restore normal Link controls and the
+   vanilla camera. Disable **Spawn Independent Goemon Actor** to despawn it.
+6. Re-enabling the Actor starts a fresh prototype. Inspect
+   `goemon_prototype_actor.csv` in Ship's working folder.
    Produce a compact numeric summary, without manual CSV inspection:
 
    ```powershell
    py -3 tools\goemon\analyze_actor_trace.py "goemon_prototype_actor.csv" --output "goemon_actor_report.json"
    ```
 
-5. If the Actor stops unexpectedly, inspect
+7. If the Actor stops unexpectedly, inspect
    `goemon_prototype_actor_error.txt`. A fatal geometry error is latched;
    **disable and re-enable** the toggle to retry (no infinite respawn loop).
 
@@ -49,10 +55,20 @@ own updates.
   API when normal grounded gameplay is active.
 - `OriginalLiveFrame.hpp` performs transactional motion updates:
   rejected collision updates do not modify the controller state.
-- The native Actor update reads Ship input and calls the independently
-  measured Goemon motion core. A temporary Ship camera/stick adapter
-  chooses numeric Goemon actions; unsupported transitions are marked
-  explicitly and **do not acquire fabricated original velocity**.
+- The native Actor update reads the unmodified Ship gamepad and calls the
+  independently measured Goemon motion core. A temporary Ship camera/stick
+  adapter chooses numeric Goemon actions; unsupported transitions are
+  marked explicitly and **do not acquire fabricated original velocity**.
+- The optional `PrototypePilot` flag suppresses **only the local Input
+  copy** passed to Link's `Player_UpdateCommon`, never
+  `play->state.input[0]`. The separately registered Actor still reads the
+  raw current controller. This gate refuses to activate if the Actor is
+  absent, faulted, in another scene, or Link is not in normal gameplay.
+- `OnPlayDrawBegin` translates the already-updated Zelda camera view
+  to the Actor's position while reusing vanilla camera yaw/distance.
+  `PilotCameraHistory` guarantees idempotency when high-FPS rendering
+  calls Play_Draw multiple times between Camera_Update ticks; it restores
+  the vanilla view when pilot mode is turned off.
 - Zelda's collision context supplies **six body-sweep wall rays** at two
   heights and three lateral offsets, plus a destination floor query.
   Sample heights and widths are provisional, not original NG5E dimensions.
@@ -75,12 +91,14 @@ own updates.
 
 ## Limits / next engineering work
 
-This is **not yet a playable Goemon character or finished replacement
-player**. It has no original mesh, skeleton, animation, combat or camera
-controller. Link still moves normally from the same input. It has no
-Zelda-player collision cylinder, hitbox, scene-exit ownership, item use or
-Randomizer progression. It is deliberately not installed in
-`ACTORCAT_PLAYER`.
+This is a **steerable independent Actor pilot**, not yet a playable Goemon
+character or finished player replacement. It has no original mesh,
+skeleton, animation, combat or original camera controller. Without pilot,
+Link and the Actor read the same gamepad; with pilot, Link's local input
+is zeroed while Goemon receives the raw input and the rendered view
+follows Goemon. This prototype still has no player collision cylinder,
+hitbox, door/scene-exit ownership, item use or Randomizer progression.
+It is deliberately not installed in `ACTORCAT_PLAYER`.
 
 The conservative six-ray Zelda envelope, block-on-contact policy, floor
 height filters, 1:1 world-unit conversion, provisional analog threshold
@@ -92,9 +110,10 @@ NG5E's original behavior.
 
 ### Required before the first fully playable character
 
-1. Verify the Actor compiles and visibly updates in Ship using **one**
-   manually requested full Windows build; review its CSV on a flat surface,
-   a wall, an edge and an ordinary room transition.
+1. Verify the Actor and new C-language Link input hook compile and run
+   in Ship using **one** Windows integration build. Test pilot ON/OFF,
+   the camera view restoration, a flat surface, a wall, an edge and
+   a normal room transition; analyze the Actor's CSV.
 2. Replace temporary collision with a tested cylinder + vertical
    ground/ledge/landing integration; calibrate Goemon-to-Zelda world units.
 3. Attach genuine model, skeleton and animation data from the local NG5E
