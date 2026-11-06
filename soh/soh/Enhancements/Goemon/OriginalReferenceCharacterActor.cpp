@@ -17,6 +17,7 @@
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <stb_image.h>
@@ -268,7 +269,17 @@ void UpdateReferenceActor(Actor* actor, PlayState* play) {
     const float x = link->actor.world.pos.x + std::sin(yaw) * 55.0f;
     const float z = link->actor.world.pos.z + std::cos(yaw) * 55.0f;
     actor->prevPos = actor->world.pos;
-    actor->world.pos = {x, link->actor.world.pos.y, z};
+    Vec3f probe{x, link->actor.world.pos.y + 90.0f, z};
+    CollisionPoly* floor = nullptr;
+    s32 bgId = BGCHECK_SCENE;
+    const float floorY = BgCheck_EntityRaycastFloor3(
+        &play->colCtx, &floor, &bgId, &probe);
+    actor->world.pos = {
+        x,
+        floor != nullptr && floorY > BGCHECK_Y_MIN
+            ? floorY : link->actor.world.pos.y,
+        z
+    };
     actor->shape.rot.y = link->actor.shape.rot.y;
     actor->world.rot.y = actor->shape.rot.y;
     Actor_SetFocus(actor, 35.0f);
