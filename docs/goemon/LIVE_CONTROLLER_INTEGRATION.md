@@ -8,8 +8,13 @@ actual Ship gameplay. It uses **real Ship controller inputs** to advance a
 separate Goemon motion pose on every `OnPlayerUpdate`, using the already
 source-measured original NG5E motion kernel.
 
+A **cyan debug ball** shows the separate Goemon ghost position in the scene.
+It turns **red on a diagnostic wall-ray hit**. This is a visibility marker,
+**not the original character model**. To hide it, set
+`gSettings.Goemon.LiveControllerGhostDraw=0` (default: 1 when ghost is enabled).
+
 The CSV `goemon_live_controller_ghost.csv` is written to the **game's
-working directory**. Switch the CVar to `0` to close the recording.
+working directory**. Switch the main CVar to `0` to close the recording.
 
 Fields include Ship raw stick axes, provisional numeric Goemon action and
 target heading, supported/unsupported original velocity transition, source
