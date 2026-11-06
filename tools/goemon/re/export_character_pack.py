@@ -24,6 +24,7 @@ from character_assets import (
 )
 from decompress_rom import ensure_decompressed_rom
 from character_id_binding import source_proven_character_graphics
+from character_names import corroborated_character_names
 from pic0000_catalog import MAGIC, catalog_chunks
 
 
@@ -57,6 +58,7 @@ def package_character_files(
     names: set[str] = set()
     assets: dict[str, bytes] = {}
     characters = []
+    names = corroborated_character_names(tuple(group[0][0] for group in groups))
     picture_total = 0
     for slot, group in enumerate(groups):
         ids = [file_id for file_id, _ in group]
@@ -106,7 +108,9 @@ def package_character_files(
         characters.append({
             "character_slot": slot,
             "original_root_id": ids[0],
-            "character_name": None,
+            "character_name": names[slot]["character_name"],
+            "name_provenance": names[slot]["name_provenance"],
+            "rom_proven_name_string": False,
             "source_files": resource_records,
             "picture_chunks": picture_records,
         })
@@ -119,10 +123,12 @@ def package_character_files(
         "resource_file_count": 16,
         "picture_block_count": picture_total,
         "characters": characters,
+        "name_evidence": {str(k): v for k, v in names.items()},
         "limitations": (
-            "Lossless original binary resource pack only. Character-to-name, "
-            "texture codec, display-list parsing and animation decoding not "
-            "yet established. Not a ready-to-render Ship resource archive."
+            "Lossless original binary resource pack only. Character names are "
+            "externally corroborated by published USA GameShark modifiers, "
+            "not by in-ROM name strings. Texture codec, display-list parsing "
+            "and animation decoding remain unknown; not ready to render."
         ),
     }
     assets["manifest.json"] = (json.dumps(manifest, indent=2) + "\n").encode("utf-8")
