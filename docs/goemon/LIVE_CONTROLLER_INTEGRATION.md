@@ -15,6 +15,15 @@ It turns **red on a diagnostic wall-ray hit**. This is a visibility marker,
 
 The CSV `goemon_live_controller_ghost.csv` is written to the **game's
 working directory**. Switch the main CVar to `0` to close the recording.
+The `action_supported` field is 1 only when the measured original
+controller accepts the frame. Unsupported phases use a separate idle
+fallback and are marked 0, not falsely reported as verified.
+
+The `preview_floor_snap` field reports the **diagnostic-only** floor
+height adjustment. When grounded with no wall hit and a valid Zelda floor,
+the ghost updates its base Y to that floor. In-air jumps and blocked wall
+steps do not snap. This is not evidence of Goemon's original floor-snapping
+behavior or a safe algorithm for moving a real player Actor.
 
 Fields include Ship raw stick axes, provisional numeric Goemon action and
 target heading, supported/unsupported original velocity transition, source
@@ -37,7 +46,7 @@ original Goemon assets are embedded in Ship or committed to GitHub.
 | Ship camera -\> 10-bit heading | Ship camera adaptation | **Temporary, not original** |
 | Action 13/15/16/23 selection from Ship buttons | Diagnostic mapping | **Temporary, not original** |
 | Zelda collision ray, full-stop on wall | Ship collision APIs | **Temporary, not original** |
-| Flat-ground ghost jump and 1:1 world units | Diagnostic only | **Not scale- or floor-calibrated** |
+| Flat-ground ghost jump, Zelda floor-height preview and 1:1 world units | Diagnostic only | **Not original floor/collision calibration** |
 | Original character models, skeletons, animation | Not converted | **Not implemented** |
 
 The input adapter intentionally **rejects intermediate analog magnitudes**
@@ -46,12 +55,16 @@ actions; this is an explicit limitation, not a simulated original behavior.
 
 ## Local testing
 
-1. Run a Ship build from the `feature/goemon-original-controller` branch.
-   The GitHub `goemon-selfhosted` workflow builds on the user's own
-   Windows runner; it does not use GitHub-hosted runner minutes.
-2. Set `gSettings.Goemon.LiveControllerGhost` to `1` using Ship CVar
-   configuration or console, then walk, turn, release and press A.
-3. Set it to `0`. Examine `goemon_live_controller_ghost.csv`.
+1. Open the repository's **Actions → goemon-selfhosted → Run workflow**,
+   select `feature/goemon-original-controller`, and enable `full_build`
+   when a fresh Ship executable is actually required. Ordinary pushes
+   only execute Python/C++ regression tests and never compile Ship.
+2. Run that build and open **Dev Tools → Goemon** in Ship.
+   Enable **Live Goemon Controller Ghost** and **Show Goemon Ghost Marker**.
+   Walk, turn, release and press A. The Goemon section also exposes
+   separate Zelda geometry, Ship player and original replay recordings.
+3. Disable the live ghost. Inspect `goemon_live_controller_ghost.csv`,
+   particularly `action_supported` and `preview_floor_snap`.
 4. Cross-compare with the original source trace and Zelda geometry trace
    before turning any of the provisional mappings into gameplay rules.
 
