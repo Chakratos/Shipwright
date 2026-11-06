@@ -167,6 +167,43 @@ def candidate_animated_skeletons(
     }
 
 
+def scan_yae_shared_09_hypotheses(rom: bytes) -> list[dict]:
+    """Check the remaining source 0x09 asset banks when Yae only lists 07/08.
+
+    The user's known ROM confirms source splat file_303 (runtime 302)
+    is a 264336-byte 0x07 bank, while runtime 303 is a 464-byte 0x08
+    bank. An original 0x09 overlay may remain resident from the prior
+    group; test exact source-listed 0x09 banks, without asserting which
+    was actually resident in the active game scene.
+    """
+    table = read_file_table(rom)
+    groups = source_align_character_files(rom)
+    yae = groups[3]
+    base = {}
+    for file in yae[2:4]:
+        entry = table[file.runtime_file_id]
+        base[file.source_segment] = rom[entry.start:entry.end]
+    outcomes = []
+    for source_slot in range(3):
+        from_source = groups[source_slot][3]
+        if from_source.source_segment != 9:
+            raise ValueError("source candidate not mapped at 0x09")
+        entry = table[from_source.runtime_file_id]
+        shared = rom[entry.start:entry.end]
+        candidate_banks = {**base, 9:shared}
+        candidates = candidate_animated_skeletons(
+            candidate_banks, min_limbs=4, max_candidates=6
+        )
+        outcomes.append({
+            "splat_file": from_source.splat_file_id,
+            "actual_runtime_file": from_source.runtime_file_id,
+            "hypothesis_not_runtime_confirmed": True,
+            "valid_structural_graphs": candidates["structurally_valid_candidate_count"],
+            "samples": candidates["first_valid_candidates"],
+        })
+    return outcomes
+
+
 def scan_offline_original_rom(rom: bytes) -> dict:
     groups = source_align_character_files(rom)
     table = read_file_table(rom)
@@ -198,6 +235,7 @@ def scan_offline_original_rom(rom: bytes) -> dict:
         "gameplay_capture_required":False,
         "source_rom_hash_verified_externally":True,
         "characters":result,
+        "yae_candidate_shared_segment09": scan_yae_shared_09_hypotheses(rom),
         "limitations":[
             "Structural graph consistency is not proof of player animation ownership",
             "Original keyframe data and active action mapping not yet decoded",
