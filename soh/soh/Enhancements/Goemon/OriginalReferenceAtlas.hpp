@@ -185,7 +185,7 @@ enum class AtlasClipSide : std::uint8_t {
                         (subtriangle[1].v - subtriangle[0].v);
                     if (std::fabs(determinant) < 0.000001f) continue;
                     for (const auto& p : subtriangle) {
-                        const float height = (&p.x)[heightAxis] -
+                        const float height = (up == ReferenceUpAxis::Y ? p.y : p.z) -
                                              minimum[heightAxis];
                         const float centerX =
                             (minimum[0] + maximum[0]) * 0.5f;
