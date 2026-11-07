@@ -52,6 +52,16 @@ jobs:
             tools/goemon/re/tests/test_original_articulated_frame.cpp \
             -o /tmp/goemon_articulated_frame_test
           /tmp/goemon_articulated_frame_test
+          # Verify the actual file-format boundary rather than only
+          # testing each component with independent in-memory fixtures.
+          python3 tools/goemon/re/tests/make_synthetic_articulated_fixtures.py \
+            --output-dir /tmp/goemon_source_animation_fixtures
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I. \
+            tools/goemon/re/tests/test_original_articulated_e2e.cpp \
+            -o /tmp/goemon_articulated_e2e
+          /tmp/goemon_articulated_e2e \
+            /tmp/goemon_source_animation_fixtures/synthetic.goskel \
+            /tmp/goemon_source_animation_fixtures/synthetic.gopa
       - name: Confirm no copyrighted assets generated or uploaded
         run: |
           echo "Synthetic tests only. No original ROM, mesh, image, NRM or artifacts."
