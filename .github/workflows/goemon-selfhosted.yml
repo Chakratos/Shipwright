@@ -240,6 +240,16 @@ jobs:
           }
           Write-Host 'Original per-body-part ROM meshes stored in C:\actions-runner-goemon\original-rig-limbs'
 
+      - name: Execute original ROM MIPS animation evaluator
+        # Private N64 machine code, local deterministic CPU state; never upload assets.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-mips-execute]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\probe_original_mips_execution.py
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Original N64 ROM MIPS interpreter probe failed'
+          }
       - name: Decode original animation MIPS and archive compressed ROM streams
         # Both input and outputs stay on the private Windows runner.
         # Log contains ONLY high-level instruction metadata, no ROM bytes.
