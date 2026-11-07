@@ -366,6 +366,16 @@ jobs:
           Write-Host "Original ROM-only character asset files staged locally: $counter"
           Write-Host 'Original MIPS animation codec still required before gameplay playback; no fake animation enabled.'
 
+      - name: Verify original source-MIPS bodypart preview against private native game assets
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-source-render-smoke]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\verify.py --native --source-preview-assets 'C:\Users\Chakratos\Desktop\SoH Goemon Test\character-original'
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Original native N64 limb preview rejected source matrices or geometry'
+          }
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell

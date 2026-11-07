@@ -56,7 +56,7 @@ def windows_msvc() -> tuple[str, dict[str, str]] | None:
     return compiler, environment
 
 
-def run_native(root: Path) -> int:
+def run_native(root: Path, source_preview_assets: Path | None = None) -> int:
     msvc = windows_msvc()
     environment = msvc[1] if msvc else dict(os.environ)
     compiler = (msvc[0] if msvc else
@@ -116,7 +116,10 @@ def run_native(root: Path) -> int:
                     "-pedantic", "-I", str(root.parents[1]),
                     str(source), "-o", str(executable),
                 ]
-            for arguments in (command, [str(executable)]):
+            args=[str(executable)]
+            if source_preview_assets is not None and source.stem=="test_original_isolated_mips_preview":
+                args.append(str(source_preview_assets))
+            for arguments in (command,args):
                 result = subprocess.run(arguments, check=False, timeout=120, env=environment)
                 if result.returncode != 0:
                     return result.returncode
@@ -127,7 +130,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--quiet", action="store_true")
     parser.add_argument("--native", action="store_true", help="compile/run native C++20 original-memory and collision tests")
+    parser.add_argument("--source-preview-assets", type=Path, help="private self-hosted original.goskel/isolated.gomips root; native source geometry smoke test")
     args = parser.parse_args(argv)
+    if args.source_preview_assets is not None and not args.native:
+        parser.error("--source-preview-assets requires --native")
 
     root = Path(__file__).resolve().parent
     folders = (
@@ -156,7 +162,7 @@ def main(argv: list[str] | None = None) -> int:
         real_result = verify_real_rom(["--source-aligned", "--offline-rigs"])
         if real_result:
             return real_result
-    return run_native(root) if args.native else 0
+    return run_native(root,args.source_preview_assets) if args.native else 0
 
 
 if __name__ == "__main__":

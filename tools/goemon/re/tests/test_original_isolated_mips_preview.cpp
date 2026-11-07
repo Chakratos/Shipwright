@@ -3,7 +3,12 @@
 #include <bit>
 #include <cstdint>
 #include <cstdio>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 using namespace Goemon::Original;
@@ -59,7 +64,98 @@ static SourceRig Rig() {
     rig.authoredPoses.push_back(source);
     return rig;
 }
-int main() {
+// Live native file check uses ONLY the original source-ROM archives on
+// the owner's self-hosted Windows machine. No game code, ROM assets or
+// individual matrix/vertex values are uploaded.
+static std::vector<std::uint8_t> ReadOwnedAsset(
+    const std::filesystem::path& path
+) {
+    std::ifstream f(path,std::ios::binary|std::ios::ate);
+    if(!f) throw std::runtime_error("missing locally staged original rig/MIPS preview file");
+    const auto size=f.tellg();
+    if(size<=0 || size>24*1024*1024)
+        throw std::runtime_error("invalid source file size on private runner");
+    std::vector<std::uint8_t> bytes(static_cast<std::size_t>(size));
+    f.seekg(0);
+    if(!f.read(reinterpret_cast<char*>(bytes.data()),
+               static_cast<std::streamsize>(bytes.size())))
+        throw std::runtime_error("unable to read local original N64 source preview");
+    return bytes;
+}
+
+static int CheckOwnerOriginalPreview(const std::filesystem::path& root) {
+    const char* names[]={"Goemon","Ebisumaru","Sasuke","Yae"};
+    int readyCharacters=0;
+    for(std::size_t slot=0;slot<4;++slot) {
+        const auto dir=root/names[slot];
+        try {
+            auto rigFile=ReadOwnedAsset(dir/"original.goskel");
+            auto mipsFile=ReadOwnedAsset(dir/"isolated.gomips");
+            const auto rig=SourceRigReader(rigFile).Parse();
+            const auto source=IsolatedMipsSourceReader(mipsFile).Parse();
+            if(rig.character!=slot || source.sourceCharacterSlot!=slot)
+                throw std::runtime_error("original character slot mismatch");
+            (void)ValidateIsolatedMipsRig(rig,source);
+            bool ready=false;
+            for(int mode=0;mode<2;++mode) {
+                bool bothSamplesValid=true;
+                for(unsigned sample=0;sample<2;++sample) {
+                    try {
+                        const auto layout=(mode==0
+                            ? OriginalMatrixMemoryLayout::RowMajorColumnVectors
+                            : OriginalMatrixMemoryLayout::ColumnMajorColumnVectors);
+                        const auto frame=BuildIsolatedOriginalMipsPreview(
+                            rig,source,sample,layout);
+                        std::size_t vertices=0;
+                        bool withinRange=true;
+                        for(const auto& limb:frame.limbs) {
+                            vertices+=limb.triangleVertices.size();
+                            for(const auto& v:limb.triangleVertices)
+                                if(!std::isfinite(v.x)||!std::isfinite(v.y)||
+                                   !std::isfinite(v.z)||
+                                   std::fabs(v.x)>32767.0f||
+                                   std::fabs(v.y)>32767.0f||
+                                   std::fabs(v.z)>32767.0f)
+                                    withinRange=false;
+                        }
+                        const bool sampleReady=withinRange && vertices>0;
+                        std::cout<<"GOEMON_NATIVE_SOURCE_RENDER "
+                                 <<names[slot]<<" layout="<<mode
+                                 <<" sample="<<sample
+                                 <<" drawable_limbs="<<frame.limbs.size()
+                                 <<" vertices="<<vertices
+                                 <<" blocked="<<frame.blockedLimbMatrices
+                                 <<" unresolved_geometry="<<frame.unresolvedOriginalMeshes
+                                 <<" unknown_gfx_tag="<<frame.unknownGraphicsTags
+                                 <<" vtx16_ready="<<(sampleReady?1:0)<<'\n';
+                        bothSamplesValid=bothSamplesValid&&sampleReady;
+                    } catch(const std::exception& ex) {
+                        bothSamplesValid=false;
+                        // The private original source matrices are never dumped.
+                        std::cout<<"GOEMON_NATIVE_SOURCE_RENDER "
+                                 <<names[slot]<<" layout="<<mode
+                                 <<" sample="<<sample
+                                 <<" ERROR="<<ex.what()<<'\n';
+                    }
+                }
+                ready=ready||bothSamplesValid;
+            }
+            if(ready) ++readyCharacters;
+        } catch(const std::exception& ex) {
+            std::cout<<"GOEMON_NATIVE_SOURCE_RENDER "<<names[slot]
+                     <<" ASSET_ERROR="<<ex.what()<<'\n';
+        }
+    }
+    std::cout<<"GOEMON_NATIVE_SOURCE_RENDER_SUMMARY characters_ready="
+             <<readyCharacters<<"/4\n";
+    return readyCharacters==4?0:3;
+}
+
+int main(int argc,char** argv) {
+    if(argc==2)
+        return CheckOwnerOriginalPreview(argv[1]);
+    if(argc!=1)
+        return 2;
     const auto bytes=Fixture();
     const auto source=IsolatedMipsSourceReader(bytes).Parse();
     const auto rig=Rig();
