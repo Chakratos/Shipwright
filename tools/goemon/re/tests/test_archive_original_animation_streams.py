@@ -61,6 +61,7 @@ class OriginalAnimationArchiveTests(unittest.TestCase):
         self.assertEqual(summary["encoded_channel_markers"]["0xB100"],6)
         self.assertFalse(summary["original_decoder_fully_ported"])
         self.assertFalse(summary["real_action_timing_known"])
+        self.assertEqual(len(archive),HEADER.size+CLIP.size+256+2*LIMB.size)
 
     def test_corrupt_source_or_hierarchy_rejected(self):
         image,doc=fixture()
