@@ -326,3 +326,108 @@ Do not call structural candidates actual frames or infer timelines from
 catalog order. No random motion, no fake animation, no Link-model swap
 as the final result. The baseline external static models can remain only
 until authentic per-limb rendering is validated.
+
+
+## Native original MIPS animation execution milestone — 7 November 2026 (16:17 CET)
+
+**Do not lose this recovery point.** The project has advanced beyond
+disassembly / raw stream exports to ACTUALLY EXECUTING original
+hash-verified NG5E ROM MIPS instructions, with big-endian RDRAM, real
+MIPS branch-delay rules, integer arithmetic and COP1 single/double
+precision. This is experimental isolated-rig execution, NOT established
+real gameplay clip selection or complete in-game animation.
+
+### Proven implementation
+
+- Original CPU interpreter: tools/goemon/re/original_mips_vm.py
+- Verified owner-ROM launch/context: tools/goemon/re/probe_original_mips_execution.py
+- Local per-bone matrix batch: tools/goemon/re/export_original_mips_matrix_samples.py
+- Synthetic portable tests: test_original_mips_vm.py and
+  test_export_original_mips_matrix_samples.py
+- Only tested source-ROM-derived original CPU code ever executes locally.
+  No ROM bytes, disassembly, or raw matrix data committed/uploaded.
+- The original renderer global at **0x80168530** was shown by true MIPS
+  execution to be the source pointer passed in a0 to 0x80019ED8.
+  Public Goemon64Recomp/patches/variables.h independently declares it
+  as **MtxF *D_80168530_169130**. The controlled test context sets
+  it to 0x801684B0 (the separately declared MtxF), without asserting
+  that is exactly how the live original renderer initializes it.
+
+### Confirmed original execution
+
+Goemon's first static root completes the exact MIPS evaluator,
+588 executed instructions / 422 distinct instruction addresses,
+including original callee routines 0x80003F30, 0x80019ED8,
+0x8001A8E4, 0x8001AABC, and 0x8001ADBC.
+
+A source limb with six numeric animation selectors (Goemon original
+pointer 0x070005DC) executes **968 instructions at progress=0** and
+**990 at progress=1**; both resulting 4x4 MtxF outputs have 16 finite
+float values and DIFFER. This demonstrates real time-dependent
+source-original math under a controlled runtime context, without fake
+interpolation or artificial bone motion.
+
+The same MIPS run returns with 16 finite matrix fields for selected
+limbs in Ebisumaru, Sasuke, and Yae; Goemon and Yae's selected
+limbs differ between 0 and 1. Selecting a constant limb does not imply
+its character has no animation.
+
+### Private complete source-limb matrix batch
+
+One source AnimatedSkeleton candidate per character; all its limb
+pointers; original MIPS evaluated separately against controlled
+animation_progress 0.0 and 1.0 using identity parent MtxF.
+This is **NOT** the verified live game composite bone hierarchy.
+
+| Character | Source candidate limbs | Different MtxF between progress 0/1 | Same MtxF | Blocked |
+|---|---:|---:|---:|---:|
+| Goemon | 14 | 4 | 10 | 0 |
+| Ebisumaru | 15 | 3 | 12 | 0 |
+| Sasuke | 18 | 5 | 11 | 2 |
+| Yae | 20 | 6 | 14 | 0 |
+| **Total** | **67** | **18** | **47** | **2** |
+
+**132/134** individual source MIPS executions generated finite 4x4
+matrices. Two Sasuke limb pointers **0x070005A8** and **0x070005C0**
+remain blocked by a source-engine matrix-helper store at 0x8001F664
+attempting RDRAM address 0x3F800000 under synthetic initialization.
+Do NOT silently map that address as memory; track down the original
+parent-matrix stack or object state and test the actual ABI.
+
+Files are on the user's Windows PC at:
+
+C:\actions-runner-goemon\original-mips-isolated-limb-matrices
+
+Each original limb has a private, lossless IEEE-754 16-word matrix
+at both controlled progress values. Individual local JSON files carry
+explicit "action_id": null, "source_tick_mapping_verified": false,
+"parent_world_composition_verified": false and
+"engine_matrix_memory_layout_verified": false.
+
+The final successful source-batch run was:
+https://github.com/Chakratos/Shipwright/actions/runs/42390415262
+and earlier:
+https://github.com/Chakratos/Shipwright/actions/runs/42388995482
+(full first real MIPS return), and:
+https://github.com/Chakratos/Shipwright/actions/runs/42389891083
+(first all-limb batch).
+
+### Required next implementation — no diagnostic churn
+
+1. Recover EXACT live renderer global 0x80168530 parent matrix-stack
+   owner, initialize the real player Object context and resolve the two
+   Sasuke nodes. The public Recomp declares MtxF*, which is hard evidence.
+2. Validate source parent-child transform composition and original memory
+   matrix convention on real player nodes. Avoid confusing isolated bone
+   math with full world-space animated poses.
+3. Prove owner of actual player AnimatedSkeleton and original action/tick
+   timing; the 371 ROM descriptors are not confirmed clips or timeline.
+4. Generate genuine GOPA0001 per-game-frame matrices only after those
+   invariants are verified. Integrate GOSKEL source geometry with
+   the original articulated renderer in Ship, and then run one isolated
+   full Windows game build and compare in-game behavior.
+5. Do not modify the separate SoH AP Archipelago installation or copy
+   unverified animations into game runtime as if they were validated.
+
+All tests up to this checkpoint passed. No full Ship build was run,
+and no actual animation has yet been rendered inside Ship.
