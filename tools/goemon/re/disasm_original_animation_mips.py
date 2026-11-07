@@ -201,6 +201,8 @@ def main(argv=None)->int:
         if hashlib.sha256(decoded).hexdigest()!=DECOMPRESSED_SHA256:
             raise ValueError("wrong decompressed MNSG ROM")
         result=analyze_original_matrix_mips(decoded[START_ROM:END_ROM])
+        from original_mips_animation_flow import source_mips_flow_report
+        flow=source_mips_flow_report(decoded[START_ROM:END_ROM],START_VRAM)
         target=a.output_dir.resolve()
         project=Path(__file__).resolve().parents[3]
         if target==project or project in target.parents:
@@ -213,10 +215,18 @@ def main(argv=None)->int:
             key:value for key,value in result.items()
             if key!="mips_instructions"
         }
+        (target/"original_mips_animation_flow.json").write_text(
+            json.dumps(flow,indent=2)+"\\n",encoding="utf-8")
         (target/"original_animation_matrix_function_summary.json").write_text(
             json.dumps(metadata,indent=2)+"\n",encoding="utf-8")
         print("GOEMON_MIPS_MATRIX_FUNCTION "+json.dumps({
             "instructions":result["instruction_count"],
+            "mips_basic_blocks":flow["control_flow"]["basic_blocks"],
+            "mips_reachable_blocks":flow["control_flow"]["reachable_blocks"],
+            "conditional_branches":flow["control_flow"]["conditional_branch_count"],
+            "branch_likely":flow["control_flow"]["branch_likely_count"],
+            "original_animation_global_accesses":
+                flow["direct_animation_global_memory_accesses"],
             "calls":result["direct_mips_call_targets"],
             "opcode_frequency":result["opcode_frequency"],
             "important_imm":{k:v for k,v in result["immediate_values"].items()
