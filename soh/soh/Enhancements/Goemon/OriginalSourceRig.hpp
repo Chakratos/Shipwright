@@ -50,9 +50,9 @@ struct SourceRig {
     std::vector<SourceRigPose> authoredPoses;
 };
 
-struct SourcePoseSpan {
-    std::size_t begin = 0;
-    std::size_t count = 0;
+struct SourceRigLayoutGroup {
+    // Original Skeleton descriptor indices, never chronological frames.
+    std::vector<std::size_t> descriptorIndices;
 };
 
 class SourceRigReader {
@@ -161,9 +161,8 @@ class SourceRigReader {
     }
 };
 
-// A source encoded-Skeleton *layout* is the identical ordered tree plus limb graphics.
-// A sequence of matching source-authored poses can be inspected without
-// pretending its temporal rate or actual original action is established.
+// Layout grouping is evidence of identical source Skeleton structure,
+// NOT evidence of animation sequence, action, frame order or frame rate.
 [[nodiscard]] inline bool HaveMatchingSourceRigLayout(
     const SourceRigPose& a, const SourceRigPose& b
 ) {
@@ -176,37 +175,43 @@ class SourceRigReader {
     return true;
 }
 
-[[nodiscard]] inline SourcePoseSpan LongestAuthoredPoseSeries(
+[[nodiscard]] inline std::vector<SourceRigLayoutGroup> GroupOriginalSourceRigLayouts(
     const SourceRig& rig
 ) {
-    SourcePoseSpan best{};
-    if (rig.authoredPoses.empty()) return best;
-    for (std::size_t start=0; start<rig.authoredPoses.size();) {
-        std::size_t end=start+1;
-        for (;end<rig.authoredPoses.size();++end) {
-            if (!HaveMatchingSourceRigLayout(
-                    rig.authoredPoses[end-1],rig.authoredPoses[end]))
+    std::vector<SourceRigLayoutGroup> groups;
+    for (std::size_t i=0; i<rig.authoredPoses.size(); ++i) {
+        bool grouped=false;
+        for (auto& group : groups) {
+            if (HaveMatchingSourceRigLayout(
+                    rig.authoredPoses[group.descriptorIndices.front()],
+                    rig.authoredPoses[i])) {
+                group.descriptorIndices.push_back(i);
+                grouped=true;
                 break;
-            if (rig.authoredPoses[end].originalHeader <=
-                rig.authoredPoses[end-1].originalHeader)
-                break;
+            }
         }
-        if (end-start>best.count) best={start,end-start};
-        start=end;
+        if (!grouped) groups.push_back({{i}});
     }
-    return best;
+    return groups;
 }
 
-[[nodiscard]] inline const SourceRigPose* PreviewOriginalAuthoredPose(
-    const SourceRig& rig, SourcePoseSpan series,
-    std::uint64_t ticks, unsigned ticksPerPose = 3
+[[nodiscard]] inline const SourceRigPose* FindExactOriginalSourceDescriptor(
+    const SourceRig& rig, std::uint32_t originalSegmentedHeader
 ) {
-    if (!ticksPerPose || series.count == 0 ||
-        series.begin>=rig.authoredPoses.size() ||
-        series.count>rig.authoredPoses.size()-series.begin)
-        return nullptr;
-    return &rig.authoredPoses[
-        series.begin+(static_cast<std::size_t>(ticks/ticksPerPose)%series.count)];
+    const SourceRigPose* found=nullptr;
+    for (const auto& record : rig.authoredPoses) {
+        if (record.originalHeader!=originalSegmentedHeader)
+            continue;
+        if (found!=nullptr)
+            throw std::invalid_argument("ambiguous source Skeleton header");
+        found=&record;
+    }
+    return found;
 }
+
+// There is deliberately no SourceRig "pose playback" API. Its encoded
+// channel words cannot be turned into physical matrices by assigning an
+// arbitrary tick rate. Actual animation must come from the original MIPS
+// evaluator after source-action ownership and channel decoding are proven.
 
 } // namespace Goemon::Original
