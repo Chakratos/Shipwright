@@ -277,6 +277,18 @@ jobs:
           Write-Host "Original articulated rig packages available locally: $manifest"
           Write-Host 'No source ROM assets or geometry uploaded.'
 
+      - name: Verify genuine rig and animation channels belong together
+        # Exact binary consistency on the private runner. No ROM/Gfx uploaded.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-rig-package]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\\goemon\\re\\verify_original_rig_animation_pair.py
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original source rig/animation verification failed: $LASTEXITCODE"
+          }
+          Write-Host 'Original all-character source package integrity validated locally.'
+
       - name: Stage source-ROM rig assets in isolated Goemon test installation
         # Never copy stale assets if one of the preceding source-ROM jobs failed.
         # Does NOT modify the existing SoH AP / Archipelago installation.
