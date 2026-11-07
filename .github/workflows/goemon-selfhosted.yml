@@ -189,6 +189,19 @@ jobs:
           }
           Write-Host "Original-animierte-Skelettglieder mit echten N64 Gfx-Spans lokal: $out"
 
+      - name: Diagnose Yae unrelocated Skeleton segment pointers
+        # Analyze Yae's own source 0x07 independently of unconfirmed 0x09
+        # graphics-bank ownership. No data or disassembly uploaded.
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-yae-source07]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\\goemon\\re\\analyze_yae_resource_pointers.py
+          if ($LASTEXITCODE -ne 0) {
+            throw "Yae source07 pointer diagnosis failed: $LASTEXITCODE"
+          }
+          Write-Host 'Yae candidate segment statistics stored locally.'
+
       - name: Probe Yae original shared graphics bank offline
         # Validates F3DEX geometry hypotheses only; original overlay
         # ownership is unverified and must not be silently assumed.
