@@ -32,8 +32,8 @@ int main(int argc,char** argv) {
     assert(rig.character==0);
     assert(rig.authoredPoses.size()==1);
     assert(rig.meshes.size()==2);
-    assert(archive.frames.size()==1);
-    assert(archive.totalBoneMatrices==2);
+    assert(archive.frames.size()==2);
+    assert(archive.totalBoneMatrices==4);
 
     const auto animated=BuildExactOriginalArticulatedFrame(
         rig,archive,0,15,123,
@@ -55,13 +55,24 @@ int main(int argc,char** argv) {
     assert(first[1].s==32 && first[1].rgba[1]==255);
     assert(second[2].t==32 && second[2].rgba[2]==255);
 
+    // A second exact original tick genuinely changes each limb's pose.
+    // Test source matrix data are synthetic; the renderer must not
+    // synthesize or interpolate frames between those supplied.
+    const auto next=BuildExactOriginalArticulatedFrame(
+        rig,archive,0,15,124,
+        OriginalMatrixMemoryLayout::ColumnMajorColumnVectors);
+    assert(next.limbs[0].triangleVertices[0].x==21.0f);
+    assert(next.limbs[1].triangleVertices[0].x==-19.0f);
+    assert(next.limbs[0].triangleVertices[0].x !=
+           animated.limbs[0].triangleVertices[0].x);
+
     bool missingFrame=false;
     try {
         (void)BuildExactOriginalArticulatedFrame(
-            rig,archive,0,15,124,
+            rig,archive,0,15,125,
             OriginalMatrixMemoryLayout::ColumnMajorColumnVectors);
     } catch(const std::invalid_argument&) { missingFrame=true; }
     assert(missingFrame);
 
-    std::puts("Goemon original articulated E2E: Python source file -> C++ exact two-bone world geometry PASS");
+    std::puts("Goemon original articulated E2E: Python 2-frame source file -> C++ independent animated world limbs PASS");
 }
