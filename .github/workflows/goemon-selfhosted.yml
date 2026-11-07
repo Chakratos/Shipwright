@@ -189,6 +189,19 @@ jobs:
           }
           Write-Host "Original-animierte-Skelettglieder mit echten N64 Gfx-Spans lokal: $out"
 
+      - name: Probe Yae original shared graphics bank offline
+        # Validates F3DEX geometry hypotheses only; original overlay
+        # ownership is unverified and must not be silently assumed.
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-yae-bank-probe]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\\goemon\\re\\probe_yae_shared_graphics.py
+          if ($LASTEXITCODE -ne 0) {
+            throw "Yae source graphics bank probe failed: $LASTEXITCODE"
+          }
+          Write-Host 'Yae source-only bank evidence stored locally. No assets uploaded.'
+
       - name: Find original Goemon animation action pointers in ROM
         # Read main code data and source-verified original pose headers.
         if: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[goemon-action-pointers]') || contains(github.event.head_commit.message, '[goemon-animation-codec]')) }}
