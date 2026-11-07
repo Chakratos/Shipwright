@@ -39,6 +39,7 @@ class OriginalMipsCPU:
         self.pc=0
         self.executed=0
         self.calls=Counter()
+        self.first_calls=[]
         self.reads=Counter()
         self.writes=Counter()
         self.visited=set()
@@ -107,6 +108,8 @@ class OriginalMipsCPU:
                 if fn==9:
                     self.write(rd or 31,pc+8)
                     self.calls[f"0x{a:08X}"]+=1
+                    if len(self.first_calls)<16:
+                        self.first_calls.append({"target":f"0x{a:08X}", "args":[f"0x{self.r[n]:08X}" for n in range(4,8)]})
                 jump=(True,a,False)
             elif fn in (0x20,0x21):self.write(rd,a+b)
             elif fn in (0x22,0x23):self.write(rd,a-b)
@@ -136,6 +139,8 @@ class OriginalMipsCPU:
             if op==3:
                 self.write(31,pc+8)
                 self.calls[f"0x{target:08X}"]+=1
+                if len(self.first_calls)<16:
+                    self.first_calls.append({"target":f"0x{target:08X}", "args":[f"0x{self.r[n]:08X}" for n in range(4,8)]})
             jump=(True,target,False)
         elif op in (4,5,6,7,0x14,0x15,0x16,0x17):
             taken={4:a==b,5:a!=b,6:s32(a)<=0,7:s32(a)>0,
@@ -161,14 +166,20 @@ class OriginalMipsCPU:
             label=self.region(address)
             if op in (0x20,0x21,0x23,0x24,0x25,0x31):
                 self.reads[label]+=1
-                val=self.load(address,width)
+                try:
+                    val=self.load(address,width)
+                except MipsFault as fault:
+                    raise MipsFault(f"{fault}; original PC=0x{pc:08X} op=0x{op:02X} base=r{rs}=0x{a:08X} imm={s16(imm)}") from fault
                 if op in (0x20,0x21) and val&(1<<(width*8-1)):
                     val-=1<<(width*8)
                 if op==0x31:self.f[rt]=val&U32
                 else:self.write(rt,val)
             else:
                 self.writes[label]+=1
-                self.store(address,self.f[rt] if op==0x39 else b,width)
+                try:
+                    self.store(address,self.f[rt] if op==0x39 else b,width)
+                except MipsFault as fault:
+                    raise MipsFault(f"{fault}; original PC=0x{pc:08X} op=0x{op:02X} base=r{rs}=0x{a:08X} imm={s16(imm)}") from fault
         elif op==0x11:
             fmt=rs
             fs=(w>>11)&31
