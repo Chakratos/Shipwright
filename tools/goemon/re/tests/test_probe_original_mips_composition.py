@@ -29,6 +29,13 @@ class SourceMipsCompositionTests(unittest.TestCase):
         nodes[1]["parent"]=0x07000040
         with self.assertRaisesRegex(ValueError,"no original source"):
             find_child_with_original_parent(nodes)
+    def test_noncommuting_original_cpu_seed_can_distinguish_order(self):
+        seed=[0,0,1,11,0,1,0,7,-1,0,0,-5,0,0,0,1]
+        child=[1,0,0,12,0,1,0,3,0,0,1,4,0,0,0,1]
+        left=row_major_multiply(seed,child)
+        right=row_major_multiply(child,seed)
+        self.assertGreater(normalized_matrix_error(left,right),0.1)
+
     def test_reject_nan_original_matrix_without_inventing_values(self):
         with self.assertRaisesRegex(ValueError,"nonfinite"):
             normalized_matrix_error([0]*15+[math.nan],[0]*16)

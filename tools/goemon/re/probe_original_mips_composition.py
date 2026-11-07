@@ -18,7 +18,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from original_mips_vm import f32
+from original_mips_vm import f32,bits32
 from probe_original_mips_execution import (
     run_probe,original_source_context,verified_decoded_original_rom
 )
@@ -89,6 +89,27 @@ def test_original_composition(rom:bytes,slot:int,progress:float)->dict:
     ba=row_major_multiply(child_iso,parent_m)
     err_ab=normalized_matrix_error(ab,actual)
     err_ba=normalized_matrix_error(ba,actual)
+    # Parent transform from the selected ROM candidate commutes with
+    # child transform in this test. Inject a known noncommutative MtxF
+    # only as an independent controlled experiment, NOT an original
+    # authored animation or proof of actual game-frame matrix stack.
+    seed=[
+        0.0,0.0,1.0,11.0,
+        0.0,1.0,0.0,7.0,
+        -1.0,0.0,0.0,-5.0,
+        0.0,0.0,0.0,1.0,
+    ]
+    seed_result=run_probe(
+        rom,progress,slot=slot,source_limb_ptr=child,
+        capture_local_matrix=True,
+        initial_matrix_u32=[bits32(v) for v in seed]
+    )
+    seed_actual=matrix_values(seed_result)
+    seed_left=normalized_matrix_error(
+        row_major_multiply(seed,child_iso),seed_actual)
+    seed_right=normalized_matrix_error(
+        row_major_multiply(child_iso,seed),seed_actual)
+    seed_unchanged=normalized_matrix_error(child_iso,seed_actual)
     threshold=1e-4
     matches=[name for name,error in (
         ("parent_times_child",err_ab),
@@ -102,6 +123,14 @@ def test_original_composition(rom:bytes,slot:int,progress:float)->dict:
         "parent_then_child_relative_error":round(err_ab,7),
         "child_then_parent_relative_error":round(err_ba,7),
         "exact_float_composition_candidates":matches,
+        "controlled_noncommuting_seed_left_error":round(seed_left,7),
+        "controlled_noncommuting_seed_right_error":round(seed_right,7),
+        "controlled_seed_was_ignored_error":round(seed_unchanged,7),
+        "controlled_noncommuting_seed_possible_order":[
+            name for name,error in (
+                ("seed_times_child",seed_left),
+                ("child_times_seed",seed_right)
+            ) if error<=threshold],
         "source_game_playback_verified":False,
         "render_matrix_stack_verified":False,
         "source_mips_instructions_child_isolated":b.get("executed"),
