@@ -114,6 +114,16 @@ class OriginalSourceRigPackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,"no source 0x07"):
             select_original_player_rig_descriptors(p)
 
+    def test_yae_retain_tagged_source_gfx_words_without_decoding_animation(self):
+        p,m=fixture()
+        p["original_source_poses"][0]["limbs"][0]["gfx"]=0x0F000120
+        p["original_source_poses"][0]["limbs"][1]["gfx"]=0x29000020
+        archive=create_original_rig_package(3,p,m)
+        self.assertEqual(inspect_original_rig_package(archive)["character_id"],3)
+        offset=HEADER.size+MESH_HEADER.size+48+POSE_HEADER.size
+        self.assertEqual(LIMB.unpack_from(archive,offset)[0],0x0F000120)
+        self.assertEqual(LIMB.unpack_from(archive,offset+LIMB.size)[0],0x29000020)
+
     def test_no_fake_source_pose_or_player_clip_accepted(self):
         p,m=fixture()
         p["format"]="manual-created-fake"

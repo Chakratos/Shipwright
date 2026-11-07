@@ -31,6 +31,19 @@ struct SourceRigLimbMesh {
     std::vector<SourceRigVertex> vertices;
 };
 
+[[nodiscard]] inline bool IsOriginalSourceRawGfxWord(std::uint32_t ptr) {
+    return ptr==0 || (ptr>>24)==0x09 ||
+           (ptr>>24)==0x29 || (ptr>>24)==0x0F;
+}
+
+[[nodiscard]] inline std::uint32_t OriginalSourceNormalizedGfxWord(
+    std::uint32_t ptr
+) {
+    // Original player renderer uses (display_list_vram_addr & 0x8FFFFFFF).
+    // 0x0F remains unresolved rather than being forced into source 0x09.
+    return ptr & 0x8FFFFFFF;
+}
+
 struct SourceRigBonePose {
     std::uint32_t sourceGfxPointer = 0;
     std::int16_t parent = -1;
@@ -122,7 +135,7 @@ class SourceRigReader {
                 for (auto& value : bone.sourceTransforms)
                     value = static_cast<std::int16_t>(ReadU16LE());
                 if (bone.parent < -1 || bone.parent >= static_cast<std::int16_t>(j) ||
-                    (bone.sourceGfxPointer && bone.sourceGfxPointer>>24!=9))
+                    !IsOriginalSourceRawGfxWord(bone.sourceGfxPointer))
                     throw std::invalid_argument("invalid original source Skeleton linkage");
                 pose.bones.push_back(bone);
             }

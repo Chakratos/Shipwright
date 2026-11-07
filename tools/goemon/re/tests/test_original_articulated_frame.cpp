@@ -108,6 +108,23 @@ int main() {
             OriginalMatrixMemoryLayout::RowMajorColumnVectors);
     });
 
+    // The authentic renderer masks Yae's source tag before looking up
+    // the original limb geometry. No fallback is invented for 0x0F.
+    auto yaeRig=rig;
+    yaeRig.character=3;
+    auto yaePose=pose;
+    yaePose.characterId=3;
+    yaePose.bones[1].sourceGfxPointer=0x29000100;
+    auto tagged=BuildExactOriginalArticulatedFrame(
+        yaeRig,yaePose,OriginalMatrixMemoryLayout::RowMajorColumnVectors);
+    assert(tagged.limbs.size()==2);
+    assert(tagged.limbs[0].sourceGraphicsPointer==0x29000100);
+    yaePose.bones[1].sourceGfxPointer=0x0F000120;
+    ExpectInvalid([&]{
+        (void)BuildExactOriginalArticulatedFrame(
+            yaeRig,yaePose,OriginalMatrixMemoryLayout::RowMajorColumnVectors);
+    });
+
     auto wrongCharacter=rig;
     wrongCharacter.character=2;
     ExpectInvalid([&]{

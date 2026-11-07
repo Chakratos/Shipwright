@@ -73,6 +73,29 @@ int main(){
     assert(updatedGroups[1].descriptorIndices.size()==1);
     assert(!HaveMatchingSourceRigLayout(rig.authoredPoses[1],rig.authoredPoses[2]));
 
+    // Yae preserves raw 0x29 source Gfx tags and unresolved 0x0F words.
+    // A normalized 0x09 pointer is only used when matching decoded meshes.
+    assert(IsOriginalSourceRawGfxWord(0x29000020));
+    assert(IsOriginalSourceRawGfxWord(0x0F000120));
+    assert(!IsOriginalSourceRawGfxWord(0x30000020));
+    assert(OriginalSourceNormalizedGfxWord(0x29000020)==0x09000020);
+    assert(OriginalSourceNormalizedGfxWord(0x0F000120)==0x0F000120);
+    auto yae=data;
+    // GOSKEL01 character slot at byte 8, first authored pose starts after
+    // 20-byte header + 8-byte mesh header + 3 16-byte N64 vertices.
+    yae[8]=3;
+    const std::size_t poseStart=20+8+3*16;
+    const std::size_t firstBone=poseStart+12;
+    const std::size_t nextBone=firstBone+24;
+    yae[firstBone]=0x20;yae[firstBone+1]=0x01;
+    yae[firstBone+2]=0x00;yae[firstBone+3]=0x0F;
+    yae[nextBone]=0x20;yae[nextBone+1]=0x00;
+    yae[nextBone+2]=0x00;yae[nextBone+3]=0x29;
+    auto yaeRig=SourceRigReader(yae).Parse();
+    assert(yaeRig.character==3);
+    assert(yaeRig.authoredPoses[0].bones[0].sourceGfxPointer==0x0F000120);
+    assert(yaeRig.authoredPoses[0].bones[1].sourceGfxPointer==0x29000020);
+
     auto bad=data;bad[0]='X';Reject(bad);
     bad=data;bad.resize(bad.size()-10);Reject(bad);
     bad=data;bad.push_back(0);Reject(bad);

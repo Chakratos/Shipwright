@@ -27,6 +27,11 @@ from decompress_rom import decompress_us_rom
 from decode_original_limb_meshes import decode_all_character_skeletal_meshes
 from source_aligned_character_assets import source_align_character_files
 from original_segmented_geometry import N64_VERTEX_STRUCT
+from analyze_yae_resource_pointers import build_yae_source_animation_catalog
+from probe_yae_shared_graphics import (
+    compare_yae_banks,collect_yae_source_gfx_roots
+)
+from decode_original_limb_meshes import decode_original_limb_mesh
 
 MAGIC=b"GOSKEL01"
 HEADER=struct.Struct("<8sIII") # magic, original character slot, mesh count, authored pose count
@@ -37,6 +42,13 @@ MAX_MESHES=2048
 MAX_POSES=1024
 MAX_TRIANGLES_PER_MESH=30000
 MAX_BONES_PER_POSE=128
+
+def valid_raw_original_limb_gfx(ptr:int)->bool:
+    # The source N64 player renderer masks 0x29 -> 0x09 for geometry.
+    # Some Yae nodes contain 0x0F, whose owner/semantics remain unknown.
+    # GOSKEL01 preserves those exact raw words, but does not render them.
+    return ptr==0 or (ptr>>24) in (0x09,0x29,0x0F)
+
 
 def create_original_rig_package(character:int, doc:dict,
                                 source_meshes:dict) -> bytes:
@@ -84,7 +96,10 @@ def create_original_rig_package(character:int, doc:dict,
             if len(xyz)!=9 or any(not isinstance(x,int) or not -32768<=x<=32767
                                   for x in xyz):
                 raise ValueError("invalid original signed 16-bit S/R/T")
-            target.extend(LIMB.pack(int(bone["gfx"]),parent,*xyz))
+            raw_gfx=int(bone["gfx"])
+            if not valid_raw_original_limb_gfx(raw_gfx):
+                raise ValueError("unsupported original raw limb graphics pointer")
+            target.extend(LIMB.pack(raw_gfx,parent,*xyz))
     return bytes(target)
 
 
@@ -124,7 +139,7 @@ def inspect_original_rig_package(data:bytes)->dict:
                 raise ValueError("truncated original skeletal transform")
             gfx,parent,*src=LIMB.unpack_from(data,at)
             at+=LIMB.size
-            if not -1<=parent<index or (gfx and gfx>>24!=9):
+            if not -1<=parent<index or not valid_raw_original_limb_gfx(gfx):
                 raise ValueError("invalid original skeletal limb pointer/link")
             roots.append((gfx,parent,tuple(src)))
         original_poses.append((header,flags,roots))
@@ -201,6 +216,58 @@ def package_original_rigs(rom:bytes,poses_dir:Path,output_dir:Path)->dict:
             "skipped_nonplayer_segment_descriptors":unverified_overlay_count,
         })
         print("GOEMON_SOURCE_RIG_PACKAGE "+json.dumps(results[-1],separators=(",",":")))
+    # Yae's source 0x07 has 118 Skeleton-shaped animation records.
+    # 0x29 graphics pointers refer to 0x09 after the native N64 mask.
+    # The unique candidate source bank (runtime file 299 in the verified
+    # NG5E ROM) was proven by executing 40/40 original display lists.
+    # Runtime overlay residency and active player ownership remain unknown.
+    ygroup=groups[3]
+    y07f=table[ygroup[2].runtime_file_id]
+    y08f=table[ygroup[3].runtime_file_id]
+    yae07=decoded[y07f.start:y07f.end]
+    yae08=decoded[y08f.start:y08f.end]
+    alternatives=[]
+    for source in groups[:3]:
+        entry=source[3]
+        if entry.source_segment!=9:
+            raise ValueError("invalid original source graphics segment")
+        f=table[entry.runtime_file_id]
+        alternatives.append((entry.runtime_file_id,decoded[f.start:f.end]))
+    compare=compare_yae_banks(alternatives,yae07,yae08)
+    selected=compare["unique_geometric_best_candidate_file"]
+    if selected is None:
+        raise ValueError("no unique geometrically valid Yae graphics bank")
+    matching=next(x for x in compare["candidate_09_banks"]
+                  if x["source_09_runtime_file_id"]==selected)
+    if (matching["failed_limb_meshes"]!=0 or
+        matching["executed_original_limb_meshes"]!=
+        matching["distinct_original_limb_display_lists"]):
+        raise ValueError("Yae original source skeleton references unresolved geometry")
+    ybank9=next(data for fid,data in alternatives if fid==selected)
+    _, roots, _, unresolved=collect_yae_source_gfx_roots(yae07)
+    meshy={}
+    for ptr in sorted(roots):
+        meshy[f"0x{ptr:08X}"]=decode_original_limb_mesh(
+            ptr,{7:yae07,8:yae08,9:ybank9})
+    ydoc=build_yae_source_animation_catalog(yae07)
+    yblob=create_original_rig_package(3,ydoc,meshy)
+    yinfo=inspect_original_rig_package(yblob)
+    ydest=target/"Yae"
+    ydest.mkdir(exist_ok=True)
+    (ydest/"original.goskel").write_bytes(yblob)
+    results.append({
+        "character":"Yae",
+        **yinfo,
+        "source_rig_file":"Yae/original.goskel",
+        "original_gfx_roots_unresolved":sum(unresolved.values()),
+        "original_animation_action_mapping_complete":False,
+        "source_09_geometric_best_runtime_file":selected,
+        "original_source_09_runtime_residency_verified":False,
+        "active_player_rig_verified":False,
+        "source_encoded_nonmesh_gfx_tags_preserved":True,
+    })
+    print("GOEMON_SOURCE_RIG_PACKAGE "+json.dumps(results[-1],separators=(",",":")))
+
     summary={
         "schema":"goemon-original-n64-rig-package-v1",
         "characters":results,

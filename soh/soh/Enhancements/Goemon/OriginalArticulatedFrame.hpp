@@ -110,7 +110,8 @@ struct OriginalArticulatedFrame {
             continue;  // Original skeletal parent may be a pure pivot.
         const SourceRigLimbMesh* mesh = nullptr;
         for (const auto& candidate : sourceRig.meshes) {
-            if (candidate.sourceGfxPointer == bone.sourceGfxPointer) {
+            if (candidate.sourceGfxPointer == OriginalSourceNormalizedGfxWord(
+                    bone.sourceGfxPointer)) {
                 if (mesh != nullptr)
                     throw std::invalid_argument("duplicate source ROM Gfx mesh");
                 mesh = &candidate;
