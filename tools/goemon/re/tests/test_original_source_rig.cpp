@@ -58,17 +58,19 @@ int main(){
     assert(rig.authoredPoses[0].bones.size()==2);
     assert(rig.authoredPoses[0].bones[0].parent==-1);
     assert(rig.authoredPoses[1].bones[1].sourceTransforms[4]==128);
-    auto series=LongestAuthoredPoseSeries(rig);
-    assert(series.begin==0 && series.count==3);
-    assert(PreviewOriginalAuthoredPose(rig,series,0)==&rig.authoredPoses[0]);
-    assert(PreviewOriginalAuthoredPose(rig,series,3)==&rig.authoredPoses[1]);
-    assert(PreviewOriginalAuthoredPose(rig,series,6)==&rig.authoredPoses[2]);
-    assert(PreviewOriginalAuthoredPose(rig,series,9)==&rig.authoredPoses[0]);
-    assert(PreviewOriginalAuthoredPose(rig,series,0,0)==nullptr);
-
+    const auto initialGroups=GroupOriginalSourceRigLayouts(rig);
+    assert(initialGroups.size()==1);
+    assert(initialGroups[0].descriptorIndices.size()==3);
+    assert(FindExactOriginalSourceDescriptor(rig,0x07000CB8)
+           ==&rig.authoredPoses[1]);
+    assert(FindExactOriginalSourceDescriptor(rig,0x07000000)==nullptr);
+    // Original descriptor addresses are not timeline frames. The reader
+    // does NOT provide fake pose-rate, interpolation or tick loops.
     rig.authoredPoses[2].bones[1].sourceGfxPointer=0x09000050;
-    series=LongestAuthoredPoseSeries(rig);
-    assert(series.begin==0 && series.count==2);
+    const auto updatedGroups=GroupOriginalSourceRigLayouts(rig);
+    assert(updatedGroups.size()==2);
+    assert(updatedGroups[0].descriptorIndices.size()==2);
+    assert(updatedGroups[1].descriptorIndices.size()==1);
     assert(!HaveMatchingSourceRigLayout(rig.authoredPoses[1],rig.authoredPoses[2]));
 
     auto bad=data;bad[0]='X';Reject(bad);
