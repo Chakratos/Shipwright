@@ -56,6 +56,8 @@ def classify_progress_changes(entries:list[dict])->dict:
                     "source_limb_pointer":limb.get("source_limb_pointer"),
                     "reasons":[r.get("blocker","")[:180] for r in records
                                if "matrix_ieee754_u32" not in r],
+                    "first_native_calls":records[0].get("first_native_calls",[]),
+                    "read_dependencies":records[0].get("memory_reads_before_failure",[]),
                 })
         elif records[0]["matrix_ieee754_u32"]!=records[1]["matrix_ieee754_u32"]:
             changing+=1
@@ -92,6 +94,12 @@ def evaluate_character(rom:bytes,slot:int)->tuple[dict,dict]:
                 record["source_instruction_count"]=data["executed"]
             except ValueError as ex:
                 record["blocker"]=data.get("blocker",str(ex))
+                # Only CPU register argument provenance, never source ROM bytes.
+                # The failing Sasuke nodes exercise a different native helper.
+                record["first_native_calls"]=data.get(
+                    "first_original_function_calls",[])[:8]
+                record["memory_reads_before_failure"]=data.get(
+                    "first_original_memory_read_dependencies",[])[:12]
             records.append(record)
         limbs.append({
             "source_limb_pointer":f"0x{node['ptr']:08X}",
