@@ -145,3 +145,71 @@ object geometry, textures or MIPS disassembly to GitHub. Do not overwrite
 
 **Immediate user involvement required:** none. The original ROM is already
 on the Windows runner, and GitHub-hosted synthetic tests work without it.
+
+
+## Verified continuation — 7 November 2026, after runner resumed
+
+The previous chat was exported and the user requested development to resume.
+Two commits were completed directly on this branch:
+
+- `5a81768`: preserve disassembly when a target overlaps a MIPS delay
+  slot; filter out non-`0x07` skeleton header candidates instead of
+  asserting they belong to the source player; block stale test-deployment
+  if source-ROM jobs fail.
+- `0dcb450`: instruction-entry CFG with delayed transfers modelled
+  atomically and conservative branch-likely annulment; preserve explicit
+  CFG ambiguity rather than inventing false basic blocks.
+
+These changes passed the hosted portable tests and private Windows
+ROM analyses (runs `42368756132` and `42369022592`). No full
+Ship Windows build was triggered.
+
+### Exact verified original-ROM results
+
+| Character | Player-resource candidate descriptors | Decoded source meshes in packaged rig | Triangles | Raw candidate animation bytes |
+| --- | ---: | ---: | ---: | ---: |
+| Goemon | 89 | 12 | 330 | 121,300 |
+| Ebisumaru | 81 | 14 | 430 | 121,120 |
+| Sasuke | 83 | 15 | 386 | 134,516 |
+
+Total: 253 **structural candidate descriptors** (NOT confirmed
+keyframes), 41 packaged limb mesh roots, 1,146 triangles and
+376,936 raw candidate stream bytes. The script excluded 7 Ebisumaru
+and 1 Sasuke structural records from segment `0x09` because those
+must not be serialized as segment-`0x07` player headers.
+
+All six `original.goskel`/`original.goanim` assets are staged
+in `C:\Users\Chakratos\Desktop\SoH Goemon Test\character-original`.
+No copyrighted source assets were uploaded.
+
+### MIPS decoder details now verified against actual private ROM
+
+- Matrix evaluator: 245 original MIPS instructions.
+- Instruction-entry reachability: 193 entries.
+- One branch-target/delay-slot overlap:
+  transfer at `0x80019508` branches to `0x80019514`, which is
+  independently the delay slot belonging to `0x80019510`.
+  No reachable nested branch-in-delay was detected.
+- The older simple basic-block graph is still flagged **unverified**;
+  the newer instruction-entry report is the viable analysis path.
+- Identified JAL targets: `0x80019ED8`, `0x8001F5F8`,
+  `0x8001F2D8`, `0x8001E634`, `0x80043D10`.
+  Their math/codec semantics are NOT yet decoded.
+- Original frame timing, channel math, interpolation, active player
+  clip ownership, rendering matrices and Yae's graphics bank remain
+  unresolved. Raw stream archives are not playable animations.
+
+### Next focused implementation
+
+1. Establish which original call targets evaluate channel samples versus
+   3D matrix transforms, using ROM-local analysis and public Recomp calls.
+2. Resolve original `0xB000`/`0xB100` encoded S/R/T channels
+   against the source animation data with real animation-progress values.
+3. Only when verified, bake original tick-specific pose matrices into
+   `GOPA0001` and feed `OriginalArticulatedFrame.hpp`.
+4. Then integrate actual articulated batches into Ship and perform one
+   full Windows build plus an in-game check. Do not use synthetic
+   animation or claim original playback before validation.
+
+This handoff is checked into source to make another chat interruption
+recoverable. The existing Archipelago installation must stay untouched.
