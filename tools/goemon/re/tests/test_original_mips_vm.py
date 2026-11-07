@@ -4,7 +4,7 @@ import struct
 import sys
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from original_mips_vm import OriginalMipsCPU,MipsFault,STOP,f32,bits32
+from original_mips_vm import OriginalMipsCPU,MipsFault,STOP,f32,bits32,f64
 
 def I(op,rs,rt,imm):
     return (op<<26)|(rs<<21)|(rt<<16)|(imm&65535)
@@ -39,6 +39,15 @@ class MipsEmulatorTests(unittest.TestCase):
         self.assertEqual(self.cpu.load(0x80160024),0x3f800000)
         self.assertEqual(f32(self.cpu.f[4]),1.0)
         self.assertEqual(bits32(1.0),0x3f800000)
+    def test_real_mips_cvt_double_and_back(self):
+        # cvt.d.s f6,f4 ; cvt.s.d f8,f6 ; jr ra ; nop
+        self.cpu.f[4]=bits32(1.25)
+        cvtd=(0x11<<26)|(0x10<<21)|(4<<11)|(6<<6)|0x21
+        cvts=(0x11<<26)|(0x11<<21)|(6<<11)|(8<<6)|0x20
+        self.execute(cvtd,cvts,R(31,0,0,0,8),0)
+        self.assertEqual(f64(self.cpu.f[6],self.cpu.f[7]),1.25)
+        self.assertEqual(f32(self.cpu.f[8]),1.25)
+
     def test_unsupported_code_and_invalid_pointer_fail_closed(self):
         with self.assertRaisesRegex(MipsFault,"unknown MIPS opcode"):
             self.execute(0xfc000000)

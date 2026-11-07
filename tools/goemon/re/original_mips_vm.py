@@ -26,6 +26,12 @@ def f32(bits):
 def bits32(value):
     return struct.unpack(">I",struct.pack(">f",value))[0]
 
+def f64(hi,lo):
+    return struct.unpack(">d",struct.pack(">II",hi&U32,lo&U32))[0]
+
+def bits64(value):
+    return struct.unpack(">II",struct.pack(">d",value))
+
 class MipsFault(ValueError):
     pass
 
@@ -182,12 +188,13 @@ class OriginalMipsCPU:
         elif op==14:self.write(rt,a^imm)
         elif op==10:self.write(rt,int(s32(a)<s16(imm)))
         elif op==11:self.write(rt,int(a<(s16(imm)&U32)))
-        elif op in (0x20,0x21,0x23,0x24,0x25,0x28,0x29,0x2B,0x31,0x39):
+        elif op in (0x20,0x21,0x23,0x24,0x25,0x28,0x29,0x2B,0x31,0x35,0x39,0x3D):
             address=(a+s16(imm))&U32
             width=(1 if op in (0x20,0x24,0x28) else
-                   2 if op in (0x21,0x25,0x29) else 4)
+                   2 if op in (0x21,0x25,0x29) else
+                   8 if op in (0x35,0x3D) else 4)
             label=self.region(address)
-            if op in (0x20,0x21,0x23,0x24,0x25,0x31):
+            if op in (0x20,0x21,0x23,0x24,0x25,0x31,0x35):
                 self.reads[label]+=1
                 try:
                     val=self.load(address,width)
@@ -204,11 +211,19 @@ class OriginalMipsCPU:
                 if op in (0x20,0x21) and val&(1<<(width*8-1)):
                     val-=1<<(width*8)
                 if op==0x31:self.f[rt]=val&U32
+                elif op==0x35:
+                    if rt&1:raise MipsFault("unaligned floating-point double register")
+                    self.f[rt]=(val>>32)&U32
+                    self.f[rt+1]=val&U32
                 else:self.write(rt,val)
             else:
                 self.writes[label]+=1
                 try:
-                    self.store(address,self.f[rt] if op==0x39 else b,width)
+                    if op==0x3D:
+                        if rt&1:raise MipsFault("unaligned floating-point double register")
+                        self.store(address,(self.f[rt]<<32)|self.f[rt+1],width)
+                    else:
+                        self.store(address,self.f[rt] if op==0x39 else b,width)
                 except MipsFault as fault:
                     raise MipsFault(f"{fault}; original PC=0x{pc:08X} op=0x{op:02X} base=r{rs}=0x{a:08X} imm={s16(imm)}") from fault
         elif op==0x11:
@@ -235,10 +250,37 @@ class OriginalMipsCPU:
                         return jump
                     else:out=-x
                     self.f[fd]=bits32(out)
+                elif fn==0x21:
+                    if fd&1:raise MipsFault("unaligned COP1.D output register")
+                    self.f[fd],self.f[fd+1]=bits64(float(x))
                 elif fn==0x24:self.f[fd]=int(round(x))&U32
                 elif fn in (0x32,0x3C,0x3E):
                     self.fcond={0x32:x==y,0x3C:x<y,0x3E:x<=y}[fn]
                 else:raise MipsFault(f"unknown COP1.S fn 0x{fn:02X} at 0x{pc:08X}")
+            elif fmt==17:
+                if fs&1 or fd&1:
+                    raise MipsFault("unaligned COP1.D register")
+                x=f64(self.f[fs],self.f[fs+1])
+                if fn in (0,1,2,3,5,6,7):
+                    if ft&1:raise MipsFault("unaligned COP1.D operand")
+                    y=f64(self.f[ft],self.f[ft+1])
+                    if fn==0:v=x+y
+                    elif fn==1:v=x-y
+                    elif fn==2:v=x*y
+                    elif fn==3:
+                        if y==0:raise MipsFault("original COP1.D division by zero")
+                        v=x/y
+                    elif fn==5:v=abs(x)
+                    elif fn==6:v=x
+                    else:v=-x
+                    self.f[fd],self.f[fd+1]=bits64(v)
+                elif fn==0x20:self.f[fd]=bits32(x)
+                elif fn==0x24:self.f[fd]=int(round(x))&U32
+                elif fn in (0x32,0x3C,0x3E):
+                    if ft&1:raise MipsFault("unaligned COP1.D operand")
+                    y=f64(self.f[ft],self.f[ft+1])
+                    self.fcond={0x32:x==y,0x3C:x<y,0x3E:x<=y}[fn]
+                else:raise MipsFault(f"unknown COP1.D fn 0x{fn:02X} at 0x{pc:08X}")
             elif fmt==20 and fn==0x20:self.f[fd]=bits32(float(s32(self.f[fs])))
             else:raise MipsFault(f"unknown COP1 format 0x{fmt:02X} at 0x{pc:08X}")
         else:raise MipsFault(f"unknown MIPS opcode 0x{op:02X} at 0x{pc:08X}")
