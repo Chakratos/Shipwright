@@ -38,9 +38,8 @@ def verified_decoded_original_rom(rom:bytes)->bytes:
     return decoded
 
 
-def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
-              slot:int=0,source_limb_ptr:int|None=None,
-              capture_local_matrix:bool=False)->dict:
+@lru_cache(maxsize=4)
+def original_source_context(rom:bytes,slot:int)->tuple[dict,dict]:
     decoded=verified_decoded_original_rom(rom)
     if not 0<=slot<4:
         raise ValueError("original source character slot outside four figures")
@@ -55,7 +54,15 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
     candidate=next((x for x in catalog["original_source_poses"]
                     if x["source_header_segment"]=="0x07"),None)
     if candidate is None:
-        raise ValueError("no original ROM Goemon player-resource candidate")
+        raise ValueError("no source-verified original player-resource candidate")
+    return banks,candidate
+
+
+def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
+              slot:int=0,source_limb_ptr:int|None=None,
+              capture_local_matrix:bool=False)->dict:
+    decoded=verified_decoded_original_rom(rom)
+    banks,candidate=original_source_context(rom,slot)
     vm=OriginalMipsCPU()
     # ROM 0x1000 is original program vRAM 0x80000400, +0xC00.
     vm.copy(0x80000400,decoded[0x1000:0x81000])
