@@ -61,7 +61,9 @@ def original_source_context(rom:bytes,slot:int)->tuple[dict,dict]:
 def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
               slot:int=0,source_limb_ptr:int|None=None,
               capture_local_matrix:bool=False,
-              initial_matrix_u32:list[int]|tuple[int,...]|None=None)->dict:
+              initial_matrix_u32:list[int]|tuple[int,...]|None=None,
+              separate_matrix_stack:bool=False,
+              stack_initial_matrix_u32:list[int]|tuple[int,...]|None=None)->dict:
     decoded=verified_decoded_original_rom(rom)
     banks,candidate=original_source_context(rom,slot)
     vm=OriginalMipsCPU()
@@ -89,7 +91,8 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
     # A null value caused the first real source-ROM MIPS execution fault.
     # Supply an isolated identity MtxF at the known original matrix region.
     # This is test-context initialization, NOT a verified game runtime state.
-    vm.store(0x80168530,0x801684B0)
+    matrix_stack=0x80510000 if separate_matrix_stack else 0x801684B0
+    vm.store(0x80168530,matrix_stack)
     vm.store(0x801684F0,anim)
     vm.store(0x80168520,anim)
     vm.put_float(0x80168510,progress)
@@ -108,6 +111,16 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
             for row in range(4) for col in range(4)]
     for idx,bits in enumerate(start_matrix):
         vm.store(0x801684B0+idx*4,bits)
+    if separate_matrix_stack:
+        matrix_source=(
+            stack_initial_matrix_u32 if stack_initial_matrix_u32 is not None
+            else start_matrix)
+        if (len(matrix_source)!=16 or
+            any(type(bits)!=int or not 0<=bits<=0xFFFFFFFF or
+                not math.isfinite(f32(bits)) for bits in matrix_source)):
+            raise ValueError("unverified source MIPS matrix stack input")
+        for idx,bits in enumerate(matrix_source):
+            vm.store(matrix_stack+idx*4,bits)
     for axis in range(3):
         vm.put_float(ACTOR+0x1c+4*axis,1.0)
     vm.put_float(ACTOR+0x28,progress)
@@ -142,6 +155,15 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
     result["matrix_fingerprint_sha256_prefix"]=hashlib.sha256(
         matrix_bytes).hexdigest()[:16]
     result["output_matrix_layout_verified"]=False
+    result["separate_original_matrix_stack_probe"]=separate_matrix_stack
+    if separate_matrix_stack:
+        stack_words=tuple(vm.load(matrix_stack+index*4) for index in range(16))
+        result["original_mtxf_stack_sha256_prefix"]=hashlib.sha256(
+            b"".join(word.to_bytes(4,"big") for word in stack_words)
+        ).hexdigest()[:16]
+        result["original_mtxf_stack_changed_from_input"]=stack_words!=tuple(matrix_source)
+        if capture_local_matrix:
+            result["private_matrix_stack_u32"]=list(stack_words)
     if capture_local_matrix:
         # Private caller only. These are source engine matrix *bit
         # patterns*, not verified GOPA game frames. Never log this field.
