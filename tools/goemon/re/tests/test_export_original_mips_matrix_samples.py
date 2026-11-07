@@ -4,7 +4,7 @@ import sys
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from export_original_mips_matrix_samples import (
-    classify_progress_changes,validate_matrix_result
+    classify_progress_changes,validate_matrix_result,choose_visible_motion_headers
 )
 
 class SourceMipsMatrixSamplesTests(unittest.TestCase):
@@ -37,6 +37,27 @@ class SourceMipsMatrixSamplesTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ValueError,"source MIPS|matrix"):
                 validate_matrix_result(broken)
+    def test_original_visible_motion_rank_selects_four_source_headers(self):
+        names=("Goemon","Ebisumaru","Sasuke","Yae")
+        headers=(0x07014F30,0x07001CF8,0x070105B0,0x07023F60)
+        report={"schema":"goemon-original-source-mips-renderable-motion-coverage-v1",
+                "characters":[{
+                    "character":name,
+                    "highest_source_geometry_coverage":{
+                        "source_header":f"0x{ptr:08X}",
+                        "contains_original_gfx_data":True,
+                        "source_distinct_original_meshes":10,
+                        "original_action_identity_verified":False,
+                    }
+                } for name,ptr in zip(names,headers)]}
+        self.assertEqual(choose_visible_motion_headers(report)["Goemon"],
+                         0x14F30)
+        self.assertEqual(choose_visible_motion_headers(report)["Yae"],
+                         0x23F60)
+        report["characters"][0]["highest_source_geometry_coverage"]["contains_original_gfx_data"]=False
+        with self.assertRaisesRegex(ValueError,"cannot be selected"):
+            choose_visible_motion_headers(report)
+
     def test_missing_original_progress_samples_rejected(self):
         with self.assertRaisesRegex(ValueError,"count"):
             classify_progress_changes([{"samples":[{"matrix_ieee754_u32":[0]*16}]}])

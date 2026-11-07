@@ -22,7 +22,8 @@ import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from real_rom_check import locate_rom
 from probe_original_mips_execution import (
-    original_source_context,run_probe,verified_decoded_original_rom
+    original_source_context,original_source_catalog,
+    choose_source_candidate,run_probe,verified_decoded_original_rom
 )
 from source_aligned_character_assets import CHARACTER_NAMES
 
@@ -77,8 +78,13 @@ def classify_progress_changes(entries:list[dict])->dict:
     }
 
 
-def evaluate_character(rom:bytes,slot:int)->tuple[dict,dict]:
-    _,catalog=original_source_context(rom,slot)
+def evaluate_character(rom:bytes,slot:int,
+                       source_header_offset:int|None=None)->tuple[dict,dict]:
+    if source_header_offset is None:
+        _,catalog=original_source_context(rom,slot)
+    else:
+        _,candidates=original_source_catalog(rom,slot)
+        catalog=choose_source_candidate(candidates,source_header_offset)
     nodes=catalog["limbs"]
     if not nodes or len({n["ptr"] for n in nodes})!=len(nodes):
         raise ValueError("invalid original source Skeleton limb graph")
@@ -93,7 +99,8 @@ def evaluate_character(rom:bytes,slot:int)->tuple[dict,dict]:
             }
             data=run_probe(rom,progress,slot=slot,
                            source_limb_ptr=node["ptr"],capture_local_matrix=True,
-                           separate_matrix_stack=True)
+                           separate_matrix_stack=True,
+                           source_header_offset=source_header_offset)
             try:
                 record["matrix_ieee754_u32"]=validate_matrix_result(data)
                 record["source_instruction_count"]=data["executed"]
@@ -127,6 +134,8 @@ def evaluate_character(rom:bytes,slot:int)->tuple[dict,dict]:
         "original_animated_skeleton_flags":catalog["original_animated_skeleton_flags"],
         "source_animation_pointer":catalog["original_animation_pointer"],
         "source_skeleton_root":catalog["original_skeleton_root"],
+        "experimental_visible_time_sensitive_descriptor":
+            source_header_offset is not None,
         "controlled_animation_progress_values":list(PROGRESS),
         "source_game_action_verified":False,
         "source_tick_mapping_verified":False,
@@ -135,10 +144,31 @@ def evaluate_character(rom:bytes,slot:int)->tuple[dict,dict]:
         "source_original_rom_bytes_uploaded":False,
         "limbs":limbs,
     }
-    return file_doc,{"character":CHARACTER_NAMES[slot],**summary}
+    return file_doc,{"character":CHARACTER_NAMES[slot],
+                     "source_header_offset":catalog["source_header_offset"],
+                     **summary}
 
 
-def generate_local_matrix_samples(rom:bytes,destination:Path)->dict:
+def choose_visible_motion_headers(report:dict)->dict[str,int]:
+    if report.get("schema")!="goemon-original-source-mips-renderable-motion-coverage-v1":
+        raise ValueError("no verified original ROM source visible-motion ranking")
+    choices={}
+    for item in report["characters"]:
+        name=item["character"]
+        best=item.get("highest_source_geometry_coverage")
+        if (name not in CHARACTER_NAMES or name in choices or
+            not best or best.get("original_action_identity_verified") is not False or
+            not best.get("contains_original_gfx_data") or
+            best.get("source_distinct_original_meshes",0)<1):
+            raise ValueError("source visible-motion original descriptor cannot be selected")
+        choices[name]=int(best["source_header"],16)&0xFFFFFF
+    if set(choices)!=set(CHARACTER_NAMES):
+        raise ValueError("one or more source original playable characters missing")
+    return choices
+
+
+def generate_local_matrix_samples(rom:bytes,destination:Path,
+                                 visible_motion_ranking:dict|None=None)->dict:
     verified_decoded_original_rom(rom)
     root=Path(__file__).resolve().parents[3]
     target=destination.resolve()
@@ -146,8 +176,11 @@ def generate_local_matrix_samples(rom:bytes,destination:Path)->dict:
         raise ValueError("original matrix samples must stay outside Git checkout")
     target.mkdir(parents=True,exist_ok=True)
     summaries=[]
+    choices=(choose_visible_motion_headers(visible_motion_ranking)
+             if visible_motion_ranking is not None else {})
     for slot,name in enumerate(CHARACTER_NAMES):
-        data,summary=evaluate_character(rom,slot)
+        data,summary=evaluate_character(rom,slot,
+            source_header_offset=choices.get(name))
         (target/(name+"_source_mips_matrices.json")).write_text(
             json.dumps(data,indent=2)+"\n",encoding="utf-8")
         summaries.append(summary)
@@ -157,6 +190,7 @@ def generate_local_matrix_samples(rom:bytes,destination:Path)->dict:
         "source":"user-owned hash-verified NG5E ROM",
         "engine":"original Nintendo 64 MIPS CPU",
         "matrix_sample_progress":[0.0,1.0],
+        "selected_from_source_visible_motion_rank":visible_motion_ranking is not None,
         "characters":summaries,
         "total_source_bones":sum(x["original_limb_count"] for x in summaries),
         "total_evaluations":sum(x["original_limb_count"] for x in summaries)*2,
@@ -174,10 +208,13 @@ def main(argv=None)->int:
     p.add_argument("--rom",type=Path)
     p.add_argument("--output-dir",type=Path,default=Path(
         r"C:\actions-runner-goemon\original-mips-isolated-limb-matrices"))
+    p.add_argument("--selected-candidates",type=Path)
     a=p.parse_args(argv)
     try:
+        selected=(json.loads(a.selected_candidates.read_text("utf-8"))
+                  if a.selected_candidates is not None else None)
         generate_local_matrix_samples(
-            (a.rom or locate_rom()).read_bytes(),a.output_dir)
+            (a.rom or locate_rom()).read_bytes(),a.output_dir,selected)
     except (ValueError,OSError,TypeError,KeyError) as ex:
         print("GOEMON_MIPS_LIMB_MATRIX_BATCH FAILED:",ex,file=sys.stderr)
         return 2
