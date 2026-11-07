@@ -202,6 +202,18 @@ jobs:
           }
           Write-Host "Original ROM animation dispatch table analysis local: $out"
 
+      - name: Extract original skeleton-owned limb 3D meshes
+        # Writes real source-ROM per-limb geometry to owner's Windows PC only.
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-rig-limbs]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\export_original_rig_limbs.py
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original source ROM limb decoding failed: $LASTEXITCODE"
+          }
+          Write-Host 'Original per-body-part ROM meshes stored in C:\actions-runner-goemon\original-rig-limbs'
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
