@@ -238,13 +238,16 @@ class OriginalMipsCPU:
                 jump=(taken,(pc+4+s16(imm)*4)&U32,bool(rt&2))
             elif fmt==16:
                 x,y=f32(self.f[fs]),f32(self.f[rt])
-                if fn in (0,1,2,3,5,6,7):
+                if fn in (0,1,2,3,4,5,6,7):
                     if fn==0:out=x+y
                     elif fn==1:out=x-y
                     elif fn==2:out=x*y
                     elif fn==3:
                         if y==0:raise MipsFault("original FPU divide by zero")
                         out=x/y
+                    elif fn==4:
+                        if x<0:raise MipsFault("negative original COP1.S sqrt input")
+                        out=math.sqrt(x)
                     elif fn==5:out=abs(x)
                     elif fn==6:
                         self.f[fd]=self.f[fs]
@@ -272,7 +275,7 @@ class OriginalMipsCPU:
                 if fs&1 or fd&1:
                     raise MipsFault("unaligned COP1.D register")
                 x=f64(self.f[fs],self.f[fs+1])
-                if fn in (0,1,2,3,5,6,7):
+                if fn in (0,1,2,3,4,5,6,7):
                     if ft&1:raise MipsFault("unaligned COP1.D operand")
                     y=f64(self.f[ft],self.f[ft+1])
                     if fn==0:v=x+y
@@ -281,6 +284,9 @@ class OriginalMipsCPU:
                     elif fn==3:
                         if y==0:raise MipsFault("original COP1.D division by zero")
                         v=x/y
+                    elif fn==4:
+                        if x<0:raise MipsFault("negative original COP1.D sqrt input")
+                        v=math.sqrt(x)
                     elif fn==5:v=abs(x)
                     elif fn==6:v=x
                     else:v=-x
