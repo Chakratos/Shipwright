@@ -4,7 +4,9 @@
 // The file contains ORIGINAL N64 F3DEX vertices (big-endian Vtx) for each
 // Skeleton-owned Gfx root and original 24-byte *encoded limb channel selector words*, exported
 // without recording or running the original game.
-// The raw values MUST NOT be used as literal physical Euler/scale values\n// until original MIPS func_800192D0 is ported and validated.\n// No bundled copyrighted assets. This loader does not invent action IDs,
+// The raw values MUST NOT be used as literal physical Euler/scale values
+// until original MIPS func_800192D0 is ported and validated.
+// No bundled copyrighted assets. This loader does not invent action IDs,
 // interpolation, animation speed, texture colors, or missing mesh segments.
 #include <array>
 #include <cstddef>
