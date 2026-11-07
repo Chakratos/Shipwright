@@ -278,13 +278,69 @@ def find_original_animation_global_accesses(
 
 
 def source_mips_flow_report(source:bytes,entry:int)->dict:
+    """Keep the source disassembly useful even when CFG edges are ambiguous.
+
+    A jump to a delay-slot address requires context-dependent execution:
+    the instruction may be reached as another branch's delay slot OR as a
+    normal instruction. The basic-block builder deliberately rejects that
+    case. Do not turn that rejection into a failure to archive the original
+    ROM animation streams; report an *unverified* CFG and all conflicts.
+    """
+    limits=[
+        "CFG is static: runtime indirect jump/call targets unknown",
+        "LUI address recognition is conservative, not a full emulator",
+        "No original decoded keyframe or live game context inferred",
+    ]
+    try:
+        graph=build_original_mips_basic_blocks(source,entry)
+        graph["cfg_verified"]=True
+    except ValueError as exc:
+        if str(exc)!="MIPS original function branches into delay slot":
+            raise
+        words={
+            entry+off:struct.unpack_from(">I",source,off)[0]
+            for off in range(0,len(source),4)
+        }
+        transfers={
+            pc:t for pc,word in words.items()
+            if (t:=classify_original_mips_transfer(pc,word))
+        }
+        owners={}
+        for pc,t in transfers.items():
+            if t.delay_slot in words:
+                owners.setdefault(t.delay_slot,[]).append(pc)
+        conflicts=[
+            {"from_branch":f"0x{pc:08X}",
+             "target_delay_slot":f"0x{t.target:08X}",
+             "delay_slot_owned_by":[f"0x{owner:08X}"
+                                    for owner in owners[t.target]]}
+            for pc,t in sorted(transfers.items())
+            if t.kind in ("conditional_branch","jump")
+            and t.target in owners
+        ]
+        # Do not publish an incorrect partial graph as authoritative.
+        graph={
+            "entry":f"0x{entry:08X}",
+            "instructions":len(words),
+            "cfg_verified":False,
+            "basic_blocks":None,
+            "reachable_blocks":None,
+            "unreachable_blocks":None,
+            "branch_likely_count":sum(
+                t.annul_delay_if_not_taken for t in transfers.values()),
+            "conditional_branch_count":sum(
+                t.kind=="conditional_branch" for t in transfers.values()),
+            "delay_slot_count":len(owners),
+            "delay_slot_conflicts":conflicts,
+            "diagnostic":"branch targets overlap delay slots; no valid basic-block CFG emitted",
+            "edges":[],
+            "blocks":[],
+        }
+        limits.append(
+            "Basic-block CFG is UNVERIFIED due to branch-to-delay-slot ambiguity")
     return {
-        "control_flow":build_original_mips_basic_blocks(source,entry),
+        "control_flow":graph,
         "direct_animation_global_memory_accesses":
             find_original_animation_global_accesses(source,entry),
-        "limits":[
-            "CFG is static: runtime indirect jump/call targets unknown",
-            "LUI address recognition is conservative, not a full emulator",
-            "No original decoded keyframe or live game context inferred",
-        ]
+        "limits":limits,
     }

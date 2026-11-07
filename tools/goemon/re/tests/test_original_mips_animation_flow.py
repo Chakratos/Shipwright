@@ -97,6 +97,18 @@ class OriginalMipsControlFlowTests(unittest.TestCase):
             build_original_mips_basic_blocks(
                 struct.pack(">IIII",*source),BASE)
 
+    def test_ambiguous_delay_slot_preserves_diagnostics_without_fake_cfg(self):
+        source=struct.pack(">IIII",i(4,0,0,0),0,r(31,0,0,0,8),0)
+        report=source_mips_flow_report(source,BASE)
+        graph=report["control_flow"]
+        self.assertEqual(graph["instructions"],4)
+        self.assertFalse(graph["cfg_verified"])
+        self.assertIsNone(graph["basic_blocks"])
+        self.assertEqual(graph["edges"],[])
+        self.assertEqual(graph["delay_slot_conflicts"][0]["target_delay_slot"],
+                         f"0x{BASE+4:08X}")
+        self.assertIn("UNVERIFIED",report["limits"][-1])
+
     def test_conditional_global_report_never_claims_codec_is_decoded(self):
         analysis=source_mips_flow_report(fixture(),BASE)
         self.assertEqual(analysis["control_flow"]["instructions"],14)

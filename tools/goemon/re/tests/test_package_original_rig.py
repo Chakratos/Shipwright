@@ -8,7 +8,8 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from original_f3dex_geometry import N64Mesh,N64Vertex
 from package_original_rig import (
     MAGIC,HEADER,MESH_HEADER,POSE_HEADER,LIMB,
-    create_original_rig_package,inspect_original_rig_package
+    create_original_rig_package,inspect_original_rig_package,
+    select_original_player_rig_descriptors
 )
 
 
@@ -97,6 +98,21 @@ class OriginalSourceRigPackageTests(unittest.TestCase):
         p["original_source_poses"][0]["limbs"][1]["parent"]=0x07000111
         with self.assertRaisesRegex(ValueError,"hierarchy"):
             create_original_rig_package(0,p,m)
+
+    def test_source_09_overlay_descriptors_do_not_abort_player_rig(self):
+        p,m=fixture()
+        overlay={**p["original_source_poses"][0],
+                 "source_header_segment":"0x09",
+                 "source_header_offset":0x300}
+        p["original_source_poses"].append(overlay)
+        selected,excluded=select_original_player_rig_descriptors(p)
+        self.assertEqual(excluded,1)
+        self.assertEqual(len(selected["original_source_poses"]),2)
+        encoded=create_original_rig_package(0,selected,m)
+        self.assertEqual(inspect_original_rig_package(encoded)["rig_pose_count"],2)
+        p["original_source_poses"]=[overlay]
+        with self.assertRaisesRegex(ValueError,"no source 0x07"):
+            select_original_player_rig_descriptors(p)
 
     def test_no_fake_source_pose_or_player_clip_accepted(self):
         p,m=fixture()

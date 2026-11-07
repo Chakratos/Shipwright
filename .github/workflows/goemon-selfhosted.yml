@@ -252,9 +252,9 @@ jobs:
           Write-Host 'No source ROM assets or geometry uploaded.'
 
       - name: Stage source-ROM rig assets in isolated Goemon test installation
-        # Local-to-local only: original game assets must never enter GitHub.
+        # Never copy stale assets if one of the preceding source-ROM jobs failed.
         # Does NOT modify the existing SoH AP / Archipelago installation.
-        if: ${{ always() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-rig-package]') }}
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-rig-package]') }}
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'

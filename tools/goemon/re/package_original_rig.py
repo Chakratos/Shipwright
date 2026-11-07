@@ -143,6 +143,24 @@ def inspect_original_rig_package(data:bytes)->dict:
     }
 
 
+def select_original_player_rig_descriptors(source_doc:dict)->tuple[dict,int]:
+    """Keep only 0x07 player-resource descriptors; never reinterpret 0x09.
+
+    Offline scans include valid Skeleton-shaped nodes inside the graphics
+    bank (0x09). Those are useful diagnostic candidates but cannot be
+    serialized as a 0x07 player rig. This is a source-bank filter, NOT
+    verification of animation clip ownership or physical transforms.
+    """
+    if source_doc.get("format")!="ng5e-original-rom-skeletal-poses-v1":
+        raise ValueError("requires ROM-authored original skeleton poses")
+    all_records=source_doc["original_source_poses"]
+    selected=[p for p in all_records
+              if p.get("source_header_segment")=="0x07"]
+    if not selected:
+        raise ValueError("no source 0x07 player-resource rig descriptors")
+    return {**source_doc,"original_source_poses":selected},len(all_records)-len(selected)
+
+
 def package_original_rigs(rom:bytes,poses_dir:Path,output_dir:Path)->dict:
     if hashlib.sha256(rom).hexdigest()!=ORIGINAL_SHA256:
         raise ValueError("ROM SHA-256 not original")
@@ -165,10 +183,11 @@ def package_original_rigs(rom:bytes,poses_dir:Path,output_dir:Path)->dict:
             banks[f.source_segment]=decoded[entry.start:entry.end]
         pose_doc=json.loads(
             (poses_dir/(name+"_original_source_poses.json")).read_text("utf-8"))
-        mesh_report=decode_all_character_skeletal_meshes(pose_doc,banks)
+        player_doc,unverified_overlay_count=select_original_player_rig_descriptors(pose_doc)
+        mesh_report=decode_all_character_skeletal_meshes(player_doc,banks)
         if not mesh_report["source_meshes"]:
             raise ValueError(f"no original source limb mesh decoded for {name}")
-        blob=create_original_rig_package(slot,pose_doc,mesh_report["source_meshes"])
+        blob=create_original_rig_package(slot,player_doc,mesh_report["source_meshes"])
         check=inspect_original_rig_package(blob)
         directory=target/name
         directory.mkdir(exist_ok=True)
@@ -179,6 +198,7 @@ def package_original_rigs(rom:bytes,poses_dir:Path,output_dir:Path)->dict:
             "source_rig_file":f"{name}/original.goskel",
             "original_gfx_roots_unresolved":len(mesh_report["decode_failures"]),
             "original_animation_action_mapping_complete":False,
+            "skipped_nonplayer_segment_descriptors":unverified_overlay_count,
         })
         print("GOEMON_SOURCE_RIG_PACKAGE "+json.dumps(results[-1],separators=(",",":")))
     summary={
