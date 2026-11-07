@@ -72,15 +72,26 @@ def make_synthetic_articulated_fixtures(out:Path)->tuple[Path,Path]:
     source={
         "format":"goemon-original-skeletal-poses-v1",
         "matrices_are_original_game_values":True,
-        "frames":[{
-            "original_game_frame":123,
-            "character_id":0,
-            "action_id":15,
-            "limbs":[
-                bone(0x07000218,0x09000100,10.0),
-                bone(0x07000230,0x09000200,-10.0),
-            ],
-        }]
+        "frames":[
+            {
+                "original_game_frame":123,
+                "character_id":0,
+                "action_id":15,
+                "limbs":[
+                    bone(0x07000218,0x09000100,10.0),
+                    bone(0x07000230,0x09000200,-10.0),
+                ],
+            },
+            {
+                "original_game_frame":124,
+                "character_id":0,
+                "action_id":15,
+                "limbs":[
+                    bone(0x07000218,0x09000100,20.0),
+                    bone(0x07000230,0x09000200,-20.0),
+                ],
+            },
+        ]
     }
     poses=out/"synthetic.gopa"
     poses.write_bytes(encode_pose_archive(source))
