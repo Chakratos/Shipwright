@@ -151,15 +151,15 @@ bool CharacterPilotReady(PlayState* play, const Player* link) {
 
 [[nodiscard]] std::vector<std::uint8_t> ReadLocalMesh(const fs::path& fileName) {
     std::ifstream file(fileName, std::ios::binary | std::ios::ate);
-    if (!file) throw std::runtime_error("GOMESH01 file not found: " + fileName.string());
+    if (!file) throw std::runtime_error("local Goemon character asset not found: " + fileName.string());
     const auto length = file.tellg();
     if (length <= 0 || length > 24 * 1024 * 1024)
-        throw std::runtime_error("GOMESH01 local file length outside limits");
+        throw std::runtime_error("local Goemon character asset length outside limits");
     std::vector<std::uint8_t> bytes(static_cast<std::size_t>(length));
     file.seekg(0, std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(bytes.data()),
                    static_cast<std::streamsize>(bytes.size())))
-        throw std::runtime_error("GOMESH01 local file read failed");
+        throw std::runtime_error("local Goemon character asset read failed");
     return bytes;
 }
 
