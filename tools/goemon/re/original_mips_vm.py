@@ -43,6 +43,19 @@ def ieee_divide(numerator,denominator):
     sign=math.copysign(1.0,numerator)*math.copysign(1.0,denominator)
     return math.copysign(math.inf,sign)
 
+def mips_float_to_word(x,op):
+    # R4300i COP1 masked invalid conversion returns the indefinite
+    # signed word 0x80000000. No host-Python exception or fabricated zero.
+    if not math.isfinite(x):
+        return 0x80000000
+    if op in (0x0C,0x24):value=round(x)
+    elif op==0x0D:value=math.trunc(x)
+    elif op==0x0E:value=math.ceil(x)
+    elif op==0x0F:value=math.floor(x)
+    else:raise ValueError("unknown MIPS COP1 word conversion")
+    return value&U32 if -(1<<31)<=value<(1<<31) else 0x80000000
+
+
 class MipsFault(ValueError):
     pass
 
@@ -266,15 +279,7 @@ class OriginalMipsCPU:
                     if fd&1:raise MipsFault("unaligned COP1.D output register")
                     self.f[fd],self.f[fd+1]=bits64(float(x))
                 elif fn in (0x0C,0x0D,0x0E,0x0F,0x24):
-                    if not math.isfinite(x):
-                        raise MipsFault("nonfinite MIPS FPU word conversion")
-                    if fn in (0x0C,0x24):converted=round(x)
-                    elif fn==0x0D:converted=math.trunc(x)
-                    elif fn==0x0E:converted=math.ceil(x)
-                    else:converted=math.floor(x)
-                    if not -(1<<31)<=converted<(1<<31):
-                        raise MipsFault("MIPS FPU word conversion overflow")
-                    self.f[fd]=converted&U32
+                    self.f[fd]=mips_float_to_word(x,fn)
                 elif fn in (0x32,0x3C,0x3E):
                     self.fcond={0x32:x==y,0x3C:x<y,0x3E:x<=y}[fn]
                 else:raise MipsFault(f"unknown COP1.S fn 0x{fn:02X} at 0x{pc:08X}")
@@ -298,7 +303,8 @@ class OriginalMipsCPU:
                     else:v=-x
                     self.f[fd],self.f[fd+1]=bits64(v)
                 elif fn==0x20:self.f[fd]=bits32(x)
-                elif fn==0x24:self.f[fd]=int(round(x))&U32
+                elif fn in (0x0C,0x0D,0x0E,0x0F,0x24):
+                    self.f[fd]=mips_float_to_word(x,fn)
                 elif fn in (0x32,0x3C,0x3E):
                     if ft&1:raise MipsFault("unaligned COP1.D operand")
                     y=f64(self.f[ft],self.f[ft+1])

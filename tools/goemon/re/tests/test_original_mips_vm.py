@@ -5,7 +5,7 @@ import math
 import sys
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from original_mips_vm import OriginalMipsCPU,MipsFault,STOP,f32,bits32,f64
+from original_mips_vm import OriginalMipsCPU,MipsFault,STOP,f32,bits32,f64,bits64
 
 def I(op,rs,rt,imm):
     return (op<<26)|(rs<<21)|(rt<<16)|(imm&65535)
@@ -67,6 +67,16 @@ class MipsEmulatorTests(unittest.TestCase):
         divide=(0x11<<26)|(0x10<<21)|(6<<16)|(4<<11)|(8<<6)|0x03
         self.execute(divide,R(31,0,0,0,8),0)
         self.assertTrue(math.isinf(f32(self.cpu.f[8])))
+
+    def test_original_cop1_truncate_word_double_and_invalid_indefinite(self):
+        self.cpu.f[4],self.cpu.f[5]=bits64(5.875)
+        trunc=(0x11<<26)|(0x11<<21)|(4<<11)|(8<<6)|0x0D
+        self.execute(trunc,R(31,0,0,0,8),0)
+        self.assertEqual(self.cpu.f[8],5)
+        self.cpu=OriginalMipsCPU()
+        self.cpu.f[4],self.cpu.f[5]=bits64(float("inf"))
+        self.execute(trunc,R(31,0,0,0,8),0)
+        self.assertEqual(self.cpu.f[8],0x80000000)
 
     def test_unsupported_code_and_invalid_pointer_fail_closed(self):
         with self.assertRaisesRegex(MipsFault,"unknown MIPS opcode"):
