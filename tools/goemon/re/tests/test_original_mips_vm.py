@@ -1,6 +1,7 @@
 """Portable synthetic MIPS tests; original commercial code never bundled."""
 from pathlib import Path
 import struct
+import math
 import sys
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
@@ -59,6 +60,13 @@ class MipsEmulatorTests(unittest.TestCase):
         sqrt=(0x11<<26)|(0x10<<21)|(4<<11)|(6<<6)|0x04
         self.execute(sqrt,R(31,0,0,0,8),0)
         self.assertEqual(f32(self.cpu.f[6]),3.0)
+
+    def test_original_masked_fpu_zero_division_emits_ieee_value(self):
+        self.cpu.f[4]=bits32(1.0)
+        self.cpu.f[6]=bits32(0.0)
+        divide=(0x11<<26)|(0x10<<21)|(6<<16)|(4<<11)|(8<<6)|0x03
+        self.execute(divide,R(31,0,0,0,8),0)
+        self.assertTrue(math.isinf(f32(self.cpu.f[8])))
 
     def test_unsupported_code_and_invalid_pointer_fail_closed(self):
         with self.assertRaisesRegex(MipsFault,"unknown MIPS opcode"):

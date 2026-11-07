@@ -33,6 +33,16 @@ def f64(hi,lo):
 def bits64(value):
     return struct.unpack(">II",struct.pack(">d",value))
 
+def ieee_divide(numerator,denominator):
+    # MIPS COP1 masked divide-by-zero returns IEEE754 Inf/NaN.
+    # Python instead raises ZeroDivisionError for floating-point zero.
+    if denominator!=0.0:
+        return numerator/denominator
+    if numerator==0.0 or math.isnan(numerator):
+        return math.nan
+    sign=math.copysign(1.0,numerator)*math.copysign(1.0,denominator)
+    return math.copysign(math.inf,sign)
+
 class MipsFault(ValueError):
     pass
 
@@ -242,9 +252,7 @@ class OriginalMipsCPU:
                     if fn==0:out=x+y
                     elif fn==1:out=x-y
                     elif fn==2:out=x*y
-                    elif fn==3:
-                        if y==0:raise MipsFault("original FPU divide by zero")
-                        out=x/y
+                    elif fn==3:out=ieee_divide(x,y)
                     elif fn==4:
                         if x<0:raise MipsFault("negative original COP1.S sqrt input")
                         out=math.sqrt(x)
@@ -281,9 +289,7 @@ class OriginalMipsCPU:
                     if fn==0:v=x+y
                     elif fn==1:v=x-y
                     elif fn==2:v=x*y
-                    elif fn==3:
-                        if y==0:raise MipsFault("original COP1.D division by zero")
-                        v=x/y
+                    elif fn==3:v=ieee_divide(x,y)
                     elif fn==4:
                         if x<0:raise MipsFault("negative original COP1.D sqrt input")
                         v=math.sqrt(x)
