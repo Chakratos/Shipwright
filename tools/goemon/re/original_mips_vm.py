@@ -258,6 +258,7 @@ class OriginalMipsCPU:
                     self.fcond={0x32:x==y,0x3C:x<y,0x3E:x<=y}[fn]
                 else:raise MipsFault(f"unknown COP1.S fn 0x{fn:02X} at 0x{pc:08X}")
             elif fmt==17:
+                ft=rt
                 if fs&1 or fd&1:
                     raise MipsFault("unaligned COP1.D register")
                 x=f64(self.f[fs],self.f[fs+1])
