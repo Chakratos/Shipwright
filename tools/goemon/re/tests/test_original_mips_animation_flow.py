@@ -61,7 +61,7 @@ class OriginalMipsControlFlowTests(unittest.TestCase):
         self.assertEqual([x["start"] for x in unreachable],
                          [f"0x{BASE+12*4:08X}"])
         self.assertIn(f"0x{BASE+8*4:08X}",
-                      [item["from"] for item in graph["calls"]])
+                      [item["at"] for item in graph["calls"]])
         self.assertIn("0x80010000",
                       [item["target"] for item in graph["calls"]])
 
