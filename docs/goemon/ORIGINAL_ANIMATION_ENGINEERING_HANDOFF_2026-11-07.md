@@ -234,3 +234,95 @@ relocation and `AnimatedSkeleton.animation` from
 `Goemon64Recomp/patches/anime.c` before assigning any source
 descriptors to active Goemon actions. In-game true original animation
 remains blocked on verified channel decoding and player rig ownership.
+
+
+## Source-ROM four-character asset milestone — 2026-11-07 16:10 CET
+
+The current branch continued after the previous handoff. The owner has
+not been asked to manually launch the original game, capture animation
+frames, upload ROM bytes, or download GitHub build artifacts. Full Ship
+builds were **not** triggered in this batch; portable and Windows native
+tests plus ROM-derived offline jobs were used.
+
+### Authentic Yae source resolution
+
+The previous Yae bank-search implementation was wrong to reject her
+0x29xxxxxx Skeleton Gfx words as addresses in nonexistent segment 0x29.
+The original Recomp player renderer masks display-list source pointers
+with `0x8FFFFFFF`, so `0x29xxxxxx` resolves to `0x09xxxxxx`.
+An independent read of Yae's authentic source-`0x07` bank found
+**118** traversable source-Skeleton candidate headers, with raw Gfx
+pointer segment frequencies 0x09=2044, 0x29=236, 0x0F=52 across candidate
+nodes. These are aggregate references, not distinct meshes.
+
+Execution of all **40 distinct masked Yae display-list roots** with
+the original F3DEX decoder established a unique geometrically complete
+source-`0x09` candidate: decompressed runtime file **299**, the bank
+also used by Sasuke. All **40/40** roots yielded real N64 geometry,
+**901 triangles**, zero invalid display-list roots. Alternative 0x09
+banks 291 and 295 yielded 14 and 22 decoded roots respectively.
+This is strong *geometric* evidence of reuse; runtime overlay residency
+and player animation ownership have **not** been independently established.
+
+The unrecognized original `0x0F` Gfx words are retained in raw rig
+descriptors and channel archives; do not coerce them to 0x09 or invent
+geometry. This affects 52 aggregate Yae source records.
+
+### Fully local original source assets
+
+| Character | Original 0x07 candidate descriptors | Original .goskel mesh roots | Rig triangles | Raw .goanim bytes |
+| --- | ---: | ---: | ---: | ---: |
+| Goemon | 89 | 12 | 330 | 121,300 |
+| Ebisumaru | 81 | 14 | 430 | 121,120 |
+| Sasuke | 83 | 15 | 386 | 134,516 |
+| Yae | 118 | 40 | 901 | 203,220 |
+| Total | 371 | 81 | 2,047 | 580,156 |
+
+The independent OBJ geometry-limb diagnostic export has 12 + 30 +
+23 + 40 = **105** decoded source meshes; this is not the same
+strictly-filtered set as the 81 meshes in the `.goskel` packages.
+
+All eight `original.goskel` and `original.goanim` files are staged
+on the owner's private Windows machine beneath:
+`C:\Users\Chakratos\Desktop\SoH Goemon Test\character-original`.
+Separate original source OBJ limb exports are in
+`C:\actions-runner-goemon\original-rig-limbs` (including Yae).
+No game ROM or original assets uploaded to GitHub.
+
+### Verified binary linkage
+
+A cross-archive pair validator now compares original header, flags,
+bone ordering, parent, **raw original Gfx pointer**, and all nine
+encoded S/R/T channel words from `GOSKEL01` and `GOANIM01`.
+Result: **371/371 descriptors match exactly**, including all 118
+Yae candidate headers, with 81 distinct linked source meshes.
+
+Per-character source-linked mesh roots: Goemon 12, Ebisumaru 14,
+Sasuke 15, Yae 40. Other normalized geometry roots still unresolved
+from strict rigs: 6 Goemon, 5 Ebisumaru, 5 Sasuke, zero Yae.
+The original 52 Yae `0x0F` source records remain unclassified.
+
+Successful native test + source-ROM run:
+`https://github.com/Chakratos/Shipwright/actions/runs/42384999730`.
+Key implementation commits:
+`a56e287` (Yae source-bank probe), `67ed0a4` (independent
+0x07 scan), `00fae6f` (0x29 graphics-mask correction),
+`4266eea` (Yae OBJ export), `c198451` (raw GOANIM01 Yae),
+`21a2ca1` (Yae GOSKEL01), `c062a30` and `11d9c12`
+(cross-archive validation and regression fix).
+
+### Priority after this handoff
+
+**STOP polishing geometry diagnostics unless blocking the original
+animation output.** The data pipeline now supports all four figures.
+Prioritize `func_800192D0_19ED0` and its MIPS helper call chain
+(0x80019ED8, 0x8001F5F8, 0x8001F2D8, 0x8001E634, 0x80043D10).
+Prove the math for `0xB000`/`0xB100` encoded channel selectors,
+source animation progress, actual clip ownership and per-bone matrix
+convention, then generate **real GOPA0001 animation frames** and connect
+them to the in-game original articulated renderer.
+
+Do not call structural candidates actual frames or infer timelines from
+catalog order. No random motion, no fake animation, no Link-model swap
+as the final result. The baseline external static models can remain only
+until authentic per-limb rendering is validated.
