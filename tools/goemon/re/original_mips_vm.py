@@ -78,10 +78,20 @@ class OriginalMipsCPU:
             before=self.r[reg]
             after=value&U32
             if reg==4 and before!=after and len(self.a0_source_changes)<32:
+                word=self.current_instruction_word
+                src=(word>>21)&31
+                oth=(word>>16)&31
                 self.a0_source_changes.append({
                     'at':f'0x{self.current_instruction_pc:08X}',
                     'old':f'0x{before:08X}',
                     'new':f'0x{after:08X}',
+                    'opcode_group':f'0x{word>>26:02X}',
+                    'r_function':f'0x{word&63:02X}' if word>>26==0 else None,
+                    'source_register':src,
+                    'source_register_value':f'0x{self.r[src]:08X}',
+                    'other_register':oth,
+                    'other_register_value':f'0x{self.r[oth]:08X}',
+                    'signed_immediate':s16(word),
                 })
             self.r[reg]=after
 
@@ -96,6 +106,7 @@ class OriginalMipsCPU:
     def instruction(self,pc,*,delay=False):
         self.current_instruction_pc=pc
         w=self.load(pc)
+        self.current_instruction_word=w
         op=w>>26
         rs=(w>>21)&31
         rt=(w>>16)&31
