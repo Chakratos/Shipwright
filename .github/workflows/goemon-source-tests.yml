@@ -1,0 +1,43 @@
+name: Goemon ROM decoder portable tests
+
+on:
+  push:
+    branches:
+      - feature/goemon-original-controller
+    paths:
+      - "tools/goemon/re/**"
+      - "soh/soh/Enhancements/Goemon/OriginalSourceRig.hpp"
+      - ".github/workflows/goemon-source-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  offline-codec-unit-tests:
+    name: Source ROM codec tests (no game ROM, no self-hosted PC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Python original source codec and F3DEX unit tests
+        run: |
+          set -euo pipefail
+          python3 tools/goemon/re/tests/test_decode_original_limb_meshes.py
+          python3 tools/goemon/re/tests/test_package_original_rig.py
+          python3 tools/goemon/re/tests/test_analyze_original_animation_channels.py
+          python3 tools/goemon/re/tests/test_archive_original_animation_streams.py
+          python3 tools/goemon/re/tests/test_disasm_original_animation_mips.py
+          python3 tools/goemon/re/tests/test_original_n64_display_list_graph.py
+          python3 tools/goemon/re/tests/test_offline_original_rigs.py
+          python3 tools/goemon/re/tests/test_source_aligned_original_geometry.py
+      - name: Native C++20 original source hierarchy/archive reader
+        run: |
+          set -euo pipefail
+          g++ -std=c++20 -O2 -Wall -Wextra -Werror -I. \
+            tools/goemon/re/tests/test_original_source_rig.cpp \
+            -o /tmp/goemon_source_rig_test
+          /tmp/goemon_source_rig_test
+      - name: Confirm no copyrighted assets generated or uploaded
+        run: |
+          echo "Synthetic tests only. No original ROM, mesh, image, NRM or artifacts."
