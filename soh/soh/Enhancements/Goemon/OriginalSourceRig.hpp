@@ -2,9 +2,9 @@
 // GOSKEL01: a user-local authentic source-ROM original Goemon rig.
 //
 // The file contains ORIGINAL N64 F3DEX vertices (big-endian Vtx) for each
-// Skeleton-owned Gfx root and original 24-byte limb S/R/T values, exported
+// Skeleton-owned Gfx root and original 24-byte *encoded limb channel selector words*, exported
 // without recording or running the original game.
-// No bundled copyrighted assets. This loader does not invent action IDs,
+// The raw values MUST NOT be used as literal physical Euler/scale values\n// until original MIPS func_800192D0 is ported and validated.\n// No bundled copyrighted assets. This loader does not invent action IDs,
 // interpolation, animation speed, texture colors, or missing mesh segments.
 #include <array>
 #include <cstddef>
@@ -159,7 +159,7 @@ class SourceRigReader {
     }
 };
 
-// A source pose *layout* is the identical ordered tree plus limb graphics.
+// A source encoded-Skeleton *layout* is the identical ordered tree plus limb graphics.
 // A sequence of matching source-authored poses can be inspected without
 // pretending its temporal rate or actual original action is established.
 [[nodiscard]] inline bool HaveMatchingSourceRigLayout(
