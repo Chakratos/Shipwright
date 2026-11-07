@@ -9,11 +9,12 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 import sys
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-from original_mips_vm import OriginalMipsCPU,MipsFault
+from original_mips_vm import OriginalMipsCPU,MipsFault,f32
 from real_rom_check import ORIGINAL_SHA256,DECOMPRESSED_SHA256,locate_rom
 from decompress_rom import decompress_us_rom
 from character_assets import read_file_table
@@ -87,6 +88,19 @@ def run_probe(rom:bytes,progress:float=0.0)->dict:
             "read_regions":dict(vm.reads),
             "write_regions":dict(vm.writes),
         }
+    # The original function writes back to its engine MtxF pointer.
+    # Only report numerical validity and a digest; never log actual
+    # commercial game matrix values or raw asset bytes.
+    matrix_words=tuple(vm.load(0x801684B0+index*4) for index in range(16))
+    identity=tuple(0x3F800000 if row==col else 0
+                   for row in range(4) for col in range(4))
+    matrix_bytes=b"".join(word.to_bytes(4,"big") for word in matrix_words)
+    result["matrix_finite_elements"]=sum(math.isfinite(f32(w)) for w in matrix_words)
+    result["matrix_elements_changed_from_identity"]=sum(
+        a!=b for a,b in zip(matrix_words,identity))
+    result["matrix_fingerprint_sha256_prefix"]=hashlib.sha256(
+        matrix_bytes).hexdigest()[:16]
+    result["output_matrix_layout_verified"]=False
     return {
         **result,
         "source":"original NG5E ROM",
@@ -106,14 +120,36 @@ def main(argv=None):
         r"C:\actions-runner-goemon\original-mips-cpu-probe.json"))
     args=p.parse_args(argv)
     try:
-        result=run_probe((args.rom or locate_rom()).read_bytes())
+        original=(args.rom or locate_rom()).read_bytes()
+        first=run_probe(original,progress=0.0)
+        second=run_probe(original,progress=1.0)
+        result={
+            "first_progress":first,
+            "second_progress":second,
+            "both_original_functions_returned":
+                bool(first.get("returned") and second.get("returned")),
+            "source_engine_matrix_changed_with_progress":
+                first["matrix_fingerprint_sha256_prefix"] !=
+                second["matrix_fingerprint_sha256_prefix"],
+            "original_action_timing_verified":False,
+            "original_frame_matrices_validated_in_game":False,
+        }
         path=args.output.resolve()
         repo=Path(__file__).resolve().parents[3]
         if path==repo or repo in path.parents:
             raise ValueError("original owner-ROM CPU execution report outside repository only")
         path.parent.mkdir(parents=True,exist_ok=True)
         path.write_text(json.dumps(result,indent=2)+"\n",encoding="utf-8")
-        print("GOEMON_MIPS_CPU_EXEC "+json.dumps(result,separators=(",",":")))
+        print("GOEMON_MIPS_CPU_EXEC "+json.dumps(first,separators=(",",":")))
+        print("GOEMON_MIPS_PROGRESS_DELTA "+json.dumps({
+            "both_returned":result["both_original_functions_returned"],
+            "progress_0_matrix_finite":first["matrix_finite_elements"],
+            "progress_1_matrix_finite":second["matrix_finite_elements"],
+            "progress_0_non_identity":first["matrix_elements_changed_from_identity"],
+            "progress_1_non_identity":second["matrix_elements_changed_from_identity"],
+            "matrix_changed":result["source_engine_matrix_changed_with_progress"],
+            "exact_animation_frames_confirmed":False,
+        },separators=(",",":")))
         print("GOEMON_MIPS_CPU_EXEC COMPLETE: owner-ROM execution, no ROM uploaded")
     except (OSError,ValueError,KeyError,TypeError) as e:
         print("GOEMON_MIPS_CPU_EXEC FAILED:",e,file=sys.stderr)
