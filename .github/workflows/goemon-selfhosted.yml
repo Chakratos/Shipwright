@@ -387,6 +387,17 @@ jobs:
             throw 'Original MIPS parent-child matrix composition test failed'
           }
 
+      - name: Analyze original source MtxF matrix-stack ownership
+        # Owner ROM stays on the private PC; original matrices not logged.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-mtxf-abi]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\probe_original_mips_matrix_stack.py
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Original source MtxF ownership probe failed'
+          }
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
