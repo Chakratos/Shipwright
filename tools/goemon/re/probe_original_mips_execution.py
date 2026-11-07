@@ -75,6 +75,7 @@ def run_probe(rom:bytes,progress:float=0.0)->dict:
             "distinct_instructions":len(vm.visited),
             "last_pc":f"0x{vm.pc:08X}",
             "calls":dict(vm.calls),
+            "first_original_function_calls":vm.first_calls,
             "read_regions":dict(vm.reads),
             "write_regions":dict(vm.writes),
         }
