@@ -11,10 +11,30 @@ from character_assets import FileEntry
 from source_aligned_character_assets import (
     SOURCE_SPLAT_GROUP_FILES,SourceAlignedFile
 )
-from offline_animation_action_pointers import scan_source_animation_pointer_tables
+from offline_animation_action_pointers import (
+    scan_source_animation_pointer_tables,scan_split_mips_pose_references
+)
 
 
 class SourceROMActionPointerTests(unittest.TestCase):
+    def test_exact_split_mips_pointer_matches_without_claiming_action(self):
+        # LUI t0,0x0700 ; ORI t1,t0,0x0048
+        # LUI t2,0x6700 ; ADDIU t2,t2,0x0050
+        blob=b"".join(x.to_bytes(4,"big") for x in (
+            (0x0f<<26)|(8<<16)|0x0700,
+            (0x0d<<26)|(8<<21)|(9<<16)|0x48,
+            (0x0f<<26)|(10<<16)|0x6700,
+            (0x09<<26)|(10<<21)|(10<<16)|0x50,
+        ))
+        found=scan_split_mips_pose_references(blob,{
+            0x07000048:1,0x67000050:2})
+        self.assertEqual([x["pose_candidate_index"] for x in found],[1,2])
+        self.assertEqual([x["combinator"] for x in found],["ori","addiu"])
+        self.assertTrue(all(not x["verified_executable_or_action_owner"]
+                            for x in found))
+        self.assertEqual(scan_split_mips_pose_references(blob,{
+            0x07000049:2}),[])
+
     def test_real_segmented_and_tagged_pose_header_references(self):
         src={id:(offset,seg) for id,offset,seg
              in SOURCE_SPLAT_GROUP_FILES}
@@ -61,6 +81,7 @@ class SourceROMActionPointerTests(unittest.TestCase):
         self.assertEqual(goemon["potential_animation_dispatch_tables"][0]["entries"],3)
         self.assertEqual(goemon["potential_animation_dispatch_tables"][0]["pose_indices"],[0,1,2])
         self.assertFalse(goemon["original_action_ids_proven"])
+        self.assertEqual(goemon["split_mips_pointer_candidate_count"],0)
         self.assertEqual(len(r["characters"]),3)
         self.assertTrue(r["no_runtime_capture"])
 

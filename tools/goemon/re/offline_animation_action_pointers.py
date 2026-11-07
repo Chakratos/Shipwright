@@ -28,6 +28,53 @@ from source_aligned_character_assets import (
 )
 
 
+def scan_split_mips_pose_references(data:bytes,pointers:dict[int,int])->list[dict]:
+    """Find syntactic MIPS LUI+ORI/ADDIU constructs of exact source pointers.
+
+    A compiler can materialize 0x0700xxxx or 0x6700xxxx in two immediates,
+    so searching literal 32-bit words alone misses such references.
+    This is a conservative *candidate* scan: we do not assume an
+    instruction pair is reachable executable code or owns a player action.
+    """
+    found=[]
+    for at in range(0,len(data)-7,4):
+        first=struct.unpack_from(">I",data,at)[0]
+        if first>>26!=0x0f or (first>>21)&31:
+            continue
+        reg=(first>>16)&31
+        if reg==0:
+            continue
+        upper=first&0xffff
+        for distance in (4,8,12,16):
+            nxt=at+distance
+            if nxt+4>len(data):
+                break
+            word=struct.unpack_from(">I",data,nxt)[0]
+            op=word>>26
+            if op not in (0x0d,0x09):
+                continue
+            if (word>>21)&31!=reg:
+                continue
+            lo=word&0xffff
+            pointer=(
+                ((upper<<16)|lo) if op==0x0d
+                else ((upper<<16)+(lo-65536 if lo&0x8000 else lo))&0xffffffff
+            )
+            if pointer in pointers:
+                found.append({
+                    "lui_at":at,
+                    "combine_at":nxt,
+                    "combinator":"ori" if op==0x0d else "addiu",
+                    "target_register":(word>>16)&31,
+                    "pose_candidate_index":pointers[pointer],
+                    "pointer_type":(
+                        "0x60000000_tagged_player_pointer" if pointer&0x60000000
+                        else "0x07_segmented_pointer"),
+                    "verified_executable_or_action_owner":False,
+                })
+    return found
+
+
 def scan_source_animation_pointer_tables(
     decoded_rom:bytes, poses_dir:Path
 ) -> dict:
@@ -73,6 +120,11 @@ def scan_source_animation_pointer_tables(
                         else "0x07_segmented_pointer"
                     ),
                 })
+        split_uses=[]
+        for blobname,data in blobs.items():
+            for hit in scan_split_mips_pose_references(data,all_ptrs):
+                split_uses.append({"source_file":blobname,**hit})
+        split_counts=Counter(x["source_file"] for x in split_uses)
         counts=Counter(x["source_file"] for x in occurrences)
         paired={item["pose_candidate_index"] for item in occurrences}
         # Group four-byte-adjacent pointer references into probable
@@ -107,6 +159,12 @@ def scan_source_animation_pointer_tables(
             "distinct_referenced_pose_headers":len(paired),
             "source_reference_count":len(occurrences),
             "references_by_source_file":dict(sorted(counts.items())),
+            "split_mips_pointer_candidate_count":len(split_uses),
+            "split_mips_distinct_candidate_headers":
+                len({x["pose_candidate_index"] for x in split_uses}),
+            "split_mips_reference_counts_by_file":dict(sorted(split_counts.items())),
+            "first_split_mips_pointer_candidates":split_uses[:20],
+            "split_mips_pointer_candidates_not_proven_action_ids":True,
             "potential_animation_dispatch_tables":tables[:20],
             "first_references":occurrences[:20],
             "original_action_ids_proven":False,
