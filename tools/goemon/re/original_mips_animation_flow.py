@@ -119,8 +119,10 @@ def build_original_mips_basic_blocks(
                                    "target":f"0x{t.target:08X}"})
         if t.target in words and t.kind in ("conditional_branch","jump"):
             leaders.add(t.target)
-        if t.fallthrough in words:
-            leaders.add(t.fallthrough)
+        # Split after all transfer delay slots, including JR/return. The
+        # following instructions exist in ROM but are not always reachable.
+        if t.pc+8 in words:
+            leaders.add(t.pc+8)
     ambiguous_jump_into_delay=sorted(leaders&delay_slots)
     if ambiguous_jump_into_delay:
         # Such control flow is legal in some MIPS programs but requires a
@@ -209,7 +211,7 @@ def find_original_animation_global_accesses(
         raise ValueError("unaligned source original MIPS data")
     # Known globals can be fields inside an Object, but we explicitly
     # report only direct full virtual addresses from LUI/offset patterns.
-    reg:[int|None]=[None]*32
+    reg: list[int|None]=[None]*32
     reg[0]=0
     accesses=[]
     def write(dest:int,value:int|None):
