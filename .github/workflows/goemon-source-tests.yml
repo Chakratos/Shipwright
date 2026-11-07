@@ -32,6 +32,7 @@ jobs:
           python3 tools/goemon/re/tests/test_archive_original_animation_streams.py
           python3 tools/goemon/re/tests/test_disasm_original_animation_mips.py
           python3 tools/goemon/re/tests/test_original_mips_animation_flow.py
+          python3 tools/goemon/re/tests/test_original_offline_runner_batch.py
           python3 tools/goemon/re/tests/test_original_n64_display_list_graph.py
           python3 tools/goemon/re/tests/test_offline_original_rigs.py
           python3 tools/goemon/re/tests/test_source_aligned_original_geometry.py
