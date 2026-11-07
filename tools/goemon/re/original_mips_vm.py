@@ -43,6 +43,7 @@ class OriginalMipsCPU:
         self.reads=Counter()
         self.writes=Counter()
         self.visited=set()
+        self.initial_memory_reads=[]
         self.a0_source_changes=[]
         self.current_instruction_pc=0
         self.source_region=(0,0)
@@ -192,6 +193,14 @@ class OriginalMipsCPU:
                     val=self.load(address,width)
                 except MipsFault as fault:
                     raise MipsFault(f"{fault}; original PC=0x{pc:08X} op=0x{op:02X} base=r{rs}=0x{a:08X} imm={s16(imm)}") from fault
+                if len(self.initial_memory_reads)<24:
+                    self.initial_memory_reads.append({
+                        'pc':f'0x{pc:08X}',
+                        'address':f'0x{address:08X}',
+                        'value_is_zero':val==0,
+                        'width':width,
+                        'dest_reg':rt,
+                    })
                 if op in (0x20,0x21) and val&(1<<(width*8-1)):
                     val-=1<<(width*8)
                 if op==0x31:self.f[rt]=val&U32
