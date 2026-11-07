@@ -43,6 +43,7 @@ def classify_progress_changes(entries:list[dict])->dict:
     changing=0
     static=0
     failed=0
+    first_failures=[]
     for limb in entries:
         records=limb.get("samples",[])
         if len(records)!=len(PROGRESS):
@@ -50,6 +51,12 @@ def classify_progress_changes(entries:list[dict])->dict:
         total+=1
         if any("matrix_ieee754_u32" not in r for r in records):
             failed+=1
+            if len(first_failures)<6:
+                first_failures.append({
+                    "source_limb_pointer":limb.get("source_limb_pointer"),
+                    "reasons":[r.get("blocker","")[:180] for r in records
+                               if "matrix_ieee754_u32" not in r],
+                })
         elif records[0]["matrix_ieee754_u32"]!=records[1]["matrix_ieee754_u32"]:
             changing+=1
         else:
@@ -59,6 +66,7 @@ def classify_progress_changes(entries:list[dict])->dict:
         "source_mips_matrix_pairs_changing":changing,
         "source_mips_matrix_pairs_static":static,
         "source_mips_matrix_pairs_blocked":failed,
+        "first_blocked_limb_reasons":first_failures,
         "all_pairs_examined":changing+static+failed==total
     }
 
