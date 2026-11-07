@@ -141,3 +141,39 @@ Ship executable still renders static original-looking models.
 **Do not request manual gameplay recording as a prerequisite:** the
 ROM, the original MIPS code and the decomp/recomp source are already
 available. Runtime capture is an optional validation fallback only.
+
+
+## 2026-11-07: Critical encoded-channel correction
+
+The 261 source-ROM records previously called poses are structurally
+plausible AnimatedSkeleton descriptors, NOT decoded physical matrices
+or verified chronological original game frames.
+
+Original raw Skeleton fields contain repeated 0xB000 and 0xB100 words
+inside scale, rotation and translation records, plus increasing values
+such as 762, 785, 808. They cannot be passed to Ship's matrix rotation
+or scale functions as literal angle/size values. The original MIPS
+function func_800192D0_19ED0 evaluates these descriptors with the
+AnimatedSkeleton.animation pointer and Object.animation_progress.
+
+New code:
+- decode_original_limb_meshes.py: recursively decodes genuine nested
+  F3DEX source limb triangles; needs the owner ROM for final output.
+- package_original_rig.py and OriginalSourceRig.hpp: preserve exact
+  original encoded source Skeleton fields, not playable animations.
+- analyze_original_animation_channels.py: counts tagged channel words
+  and analyzes offsets into the original source animation stream.
+- archive_original_animation_streams.py and OriginalAnimationStreams.hpp:
+  lossless GOANIM01 byte-stream package plus strict native C++20 reader.
+- disasm_original_animation_mips.py: inspect original 0x800192D0
+  through 0x800196A4 MIPS evaluator offline (ROM 0x19ED0..0x1A2A4).
+- .github/workflows/goemon-source-tests.yml: hosted synthetic unit tests
+  which run independently of the private ROM and Windows runner.
+
+Local original-ROM paths when the owner runner is online:
+  C:\actions-runner-goemon\original-animation-streams
+  C:\actions-runner-goemon\original-animation-mips
+
+WARNING: do not claim the earlier 261 structures are decoded animation
+frames, nor that true MNSG animations already play in Ship. The codec
+and state-to-clip mapping must be established before enabling them.
