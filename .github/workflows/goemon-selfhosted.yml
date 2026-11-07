@@ -409,6 +409,16 @@ jobs:
             throw 'Original source ROM MIPS descriptor progress scan failed'
           }
 
+      - name: Match original time-sensitive Skeletons to real source N64 geometry
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-visible-motion-rank]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\select_original_visible_mips_descriptors.py
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Original visible source MIPS motion candidate ranking failed'
+          }
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
