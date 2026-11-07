@@ -251,6 +251,40 @@ jobs:
           Write-Host "Original articulated rig packages available locally: $manifest"
           Write-Host 'No source ROM assets or geometry uploaded.'
 
+      - name: Stage source-ROM rig assets in isolated Goemon test installation
+        # Local-to-local only: original game assets must never enter GitHub.
+        # Does NOT modify the existing SoH AP / Archipelago installation.
+        if: ${{ always() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-rig-package]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $test = 'C:\Users\Chakratos\Desktop\SoH Goemon Test'
+          if (-not (Test-Path -LiteralPath $test -PathType Container)) {
+            Write-Host "No isolated Goemon test folder at $test; source assets remain in local runner directories."
+            exit 0
+          }
+          $sources = 'C:\actions-runner-goemon\original-rom-rigs'
+          $animation = 'C:\actions-runner-goemon\original-animation-streams'
+          $counter = 0
+          foreach ($character in @('Goemon', 'Ebisumaru', 'Sasuke')) {
+            $to = Join-Path (Join-Path $test 'character-original') $character
+            $rig = Join-Path (Join-Path $sources $character) 'original.goskel'
+            $anim = Join-Path (Join-Path $animation $character) 'original.goanim'
+            if ((Test-Path -LiteralPath $rig -PathType Leaf) -or (Test-Path -LiteralPath $anim -PathType Leaf)) {
+              New-Item -ItemType Directory -Force -Path $to | Out-Null
+              if (Test-Path -LiteralPath $rig -PathType Leaf) {
+                Copy-Item -LiteralPath $rig -Destination (Join-Path $to 'original.goskel') -Force
+                $counter++
+              }
+              if (Test-Path -LiteralPath $anim -PathType Leaf) {
+                Copy-Item -LiteralPath $anim -Destination (Join-Path $to 'original.goanim') -Force
+                $counter++
+              }
+            }
+          }
+          Write-Host "Original ROM-only character asset files staged locally: $counter"
+          Write-Host 'Original MIPS animation codec still required before gameplay playback; no fake animation enabled.'
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
