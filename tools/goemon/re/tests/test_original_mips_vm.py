@@ -48,6 +48,12 @@ class MipsEmulatorTests(unittest.TestCase):
         self.assertEqual(f64(self.cpu.f[6],self.cpu.f[7]),1.25)
         self.assertEqual(f32(self.cpu.f[8]),1.25)
 
+    def test_source_trunc_word_uses_mips_toward_zero_semantics(self):
+        self.cpu.f[4]=bits32(-1.75)
+        convert=(0x11<<26)|(0x10<<21)|(4<<11)|(6<<6)|0x0D
+        self.execute(convert,R(31,0,0,0,8),0)
+        self.assertEqual(self.cpu.f[6],0xFFFFFFFF)
+
     def test_unsupported_code_and_invalid_pointer_fail_closed(self):
         with self.assertRaisesRegex(MipsFault,"unknown MIPS opcode"):
             self.execute(0xfc000000)
