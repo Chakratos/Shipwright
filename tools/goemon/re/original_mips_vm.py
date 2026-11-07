@@ -311,7 +311,11 @@ class OriginalMipsCPU:
                     self.fcond={0x32:x==y,0x3C:x<y,0x3E:x<=y}[fn]
                 else:raise MipsFault(f"unknown COP1.D fn 0x{fn:02X} at 0x{pc:08X}")
             elif fmt==20 and fn==0x20:self.f[fd]=bits32(float(s32(self.f[fs])))
-            else:raise MipsFault(f"unknown COP1 format 0x{fmt:02X} at 0x{pc:08X}")
+            elif fmt==20 and fn==0x21:
+                if fd&1:raise MipsFault("unaligned COP1.D output register")
+                self.f[fd],self.f[fd+1]=bits64(float(s32(self.f[fs])))
+            else:raise MipsFault(
+                f"unknown COP1 format 0x{fmt:02X} fn 0x{fn:02X} at 0x{pc:08X}")
         else:raise MipsFault(f"unknown MIPS opcode 0x{op:02X} at 0x{pc:08X}")
         if delay and jump is not None:
             raise MipsFault(f"nested original branch delay at 0x{pc:08X}")
