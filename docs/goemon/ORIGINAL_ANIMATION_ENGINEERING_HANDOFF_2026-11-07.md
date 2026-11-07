@@ -213,3 +213,24 @@ No copyrighted source assets were uploaded.
 
 This handoff is checked into source to make another chat interruption
 recoverable. The existing Archipelago installation must stay untouched.
+
+
+### Additional ROM reference scans — verified negative result
+
+Runs `42369208597` and `42369357583` passed. The 253 structural
+Skeleton candidates had **zero** references across all three characters
+from both (a) aligned literal 32-bit `0x07xxxxxx` / `0x67xxxxxx`
+source pointers and (b) conservative MIPS `LUI` + `ORI/ADDIU`
+pointer construction scans.
+
+This is a negative finding **for those two detection strategies only**:
+the original game can compute overlay offsets dynamically, and the
+scan has not identified player `Object.graphics_1` initialization.
+It does not prove the candidates are unused, nor can they be called
+verified animation clips.
+
+Prioritize tracing actual player `Object.graphics_1` / overlay
+relocation and `AnimatedSkeleton.animation` from
+`Goemon64Recomp/patches/anime.c` before assigning any source
+descriptors to active Goemon actions. In-game true original animation
+remains blocked on verified channel decoding and player rig ownership.
