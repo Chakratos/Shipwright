@@ -43,6 +43,8 @@ class OriginalMipsCPU:
         self.reads=Counter()
         self.writes=Counter()
         self.visited=set()
+        self.a0_source_changes=[]
+        self.current_instruction_pc=0
         self.source_region=(0,0)
 
     def at(self,address,size,align=1):
@@ -73,7 +75,15 @@ class OriginalMipsCPU:
 
     def write(self,reg,value):
         if reg:
-            self.r[reg]=value&U32
+            before=self.r[reg]
+            after=value&U32
+            if reg==4 and before!=after and len(self.a0_source_changes)<32:
+                self.a0_source_changes.append({
+                    'at':f'0x{self.current_instruction_pc:08X}',
+                    'old':f'0x{before:08X}',
+                    'new':f'0x{after:08X}',
+                })
+            self.r[reg]=after
 
     def region(self,address):
         lo,hi=self.source_region
@@ -84,6 +94,7 @@ class OriginalMipsCPU:
         return "other"
 
     def instruction(self,pc,*,delay=False):
+        self.current_instruction_pc=pc
         w=self.load(pc)
         op=w>>26
         rs=(w>>21)&31
