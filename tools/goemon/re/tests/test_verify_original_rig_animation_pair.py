@@ -44,7 +44,7 @@ class SourceRigAnimationPairTests(unittest.TestCase):
         bad=bytearray(animation);bad[-2]^=1
         with self.assertRaisesRegex(ValueError,"channel mismatch"):
             compare_original_source_packages(rig,bytes(bad))
-        bad=bytearray(rig);bad[20]=0
+        bad=bytearray(rig);bad[23]=0
         with self.assertRaisesRegex(ValueError,"source graphics mesh"):
             compare_original_source_packages(bytes(bad),animation)
     def test_reject_source_animation_without_any_matching_original_gfx(self):
