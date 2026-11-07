@@ -261,6 +261,28 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw 'Original ROM isolated-limb MIPS matrix batch failed'
           }
+      - name: Package original MIPS-evaluated limbs for isolated native preview
+        # Requires previously verified original GOSKEL01 and current MIPS
+        # per-limb matrix sample run. No private asset uploads.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-native-mips-package]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\package_original_mips_samples.py
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Source-original MIPS/rig native package consistency failed'
+          }
+          $source = 'C:\actions-runner-goemon\original-source-mips-preview'
+          $test = 'C:\Users\Chakratos\Desktop\SoH Goemon Test\character-original'
+          if (Test-Path -LiteralPath (Split-Path $test -Parent) -PathType Container) {
+            foreach ($character in @('Goemon','Ebisumaru','Sasuke','Yae')) {
+              $to = Join-Path (Join-Path $test $character) 'isolated.gomips'
+              New-Item -ItemType Directory -Force -Path (Split-Path $to -Parent) | Out-Null
+              Copy-Item -LiteralPath (Join-Path (Join-Path $source $character) 'isolated.gomips') -Destination $to -Force
+            }
+            Write-Host '4 isolated native original MIPS preview files staged in SoH Goemon Test only.'
+          }
+
       - name: Decode original animation MIPS and archive compressed ROM streams
         # Both input and outputs stay on the private Windows runner.
         # Log contains ONLY high-level instruction metadata, no ROM bytes.

@@ -104,6 +104,7 @@ def evaluate_character(rom:bytes,slot:int)->tuple[dict,dict]:
         limbs.append({
             "source_limb_pointer":f"0x{node['ptr']:08X}",
             "raw_original_gfx_pointer":f"0x{node['gfx']:08X}",
+            "source_raw_srt_channels":[*node["scale"],*node["rotation"],*node["translation"]],
             "source_parent_pointer":(
                 f"0x{node['parent']:08X}" if node["parent"] is not None else None),
             "samples":records,
