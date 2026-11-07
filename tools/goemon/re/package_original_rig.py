@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """GOSKEL01: deterministic local package of authentic NG5E N64 limb geometry
-and original encoded Skeleton S/R/T channel words. Their true physical\nmeaning requires the original MIPS animation decoder before playback.
+and original encoded Skeleton S/R/T channel words. Their true physical
+meaning requires the original MIPS animation decoder before playback.
 
 Data comes ONLY from the user's hash-verified original ROM, decoded actual
 F3DEX Skeleton display-list roots, and the ROM-derived Skeleton hierarchy.
@@ -133,7 +134,8 @@ def inspect_original_rig_package(data:bytes)->dict:
         "character_id":slot,
         "rig_pose_count":poses,
         "decoded_original_mesh_roots":meshes,
-        "source_triangle_count":triangle_total,\n        "physical_bone_transform_decoder_verified":False,
+        "source_triangle_count":triangle_total,
+        "physical_bone_transform_decoder_verified":False,
         "first_original_pose_header":f"0x{original_poses[0][0]:08X}",
         "first_original_pose_limb_count":len(original_poses[0][2]),
         "first_original_limb_raw_transform":original_poses[0][2][0][2],
