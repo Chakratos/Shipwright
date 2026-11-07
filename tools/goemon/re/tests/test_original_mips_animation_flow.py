@@ -9,6 +9,7 @@ from original_mips_animation_flow import (
     classify_original_mips_transfer,
     build_original_mips_basic_blocks,
     find_original_animation_global_accesses,
+    build_original_mips_instruction_flow,
     source_mips_flow_report,
 )
 
@@ -108,6 +109,31 @@ class OriginalMipsControlFlowTests(unittest.TestCase):
         self.assertEqual(graph["delay_slot_conflicts"][0]["target_delay_slot"],
                          f"0x{BASE+4:08X}")
         self.assertIn("UNVERIFIED",report["limits"][-1])
+
+    def test_instruction_flow_handles_branch_into_delay_slot_as_normal_entry(self):
+        # BEQ +0: first execute PC+4 as its delay slot; the same address
+        # is also a legal branch target executed as a normal instruction.
+        data=struct.pack(">IIII",
+                         i(4,0,0,0),i(9,8,8,1),r(31,0,0,0,8),0)
+        graph=build_original_mips_instruction_flow(data,BASE)
+        self.assertEqual(graph["total_instructions"],4)
+        self.assertEqual(graph["reachable_instruction_entries"],3)
+        self.assertEqual(graph["atomic_delay_slot_transfers"],2)
+        self.assertEqual(graph["branch_delay_nesting_unresolved"],[])
+        entry_edges=[e for e in graph["edges"]
+                     if e["from"]==f"0x{BASE:08X}"]
+        self.assertEqual({e["to"] for e in entry_edges},
+                         {f"0x{BASE+4:08X}",f"0x{BASE+8:08X}"})
+        self.assertFalse(graph["semantics_fully_verified"] is None)
+
+    def test_branch_likely_marks_not_taken_delay_slot_as_annulled(self):
+        data=struct.pack(">IIII",
+                         i(0x14,2,0,1),i(9,8,8,1),r(31,0,0,0,8),0)
+        graph=build_original_mips_instruction_flow(data,BASE)
+        d=graph["delay_slot_execution"][f"0x{BASE:08X}"]
+        self.assertTrue(d["on_taken"])
+        self.assertFalse(d["on_fallthrough"])
+        self.assertEqual(d["slot_pc"],f"0x{BASE+4:08X}")
 
     def test_conditional_global_report_never_claims_codec_is_decoded(self):
         analysis=source_mips_flow_report(fixture(),BASE)

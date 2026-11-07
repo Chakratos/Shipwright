@@ -277,6 +277,79 @@ def find_original_animation_global_accesses(
     return accesses
 
 
+def build_original_mips_instruction_flow(data:bytes,entry:int)->dict:
+    """Context-aware fallthrough graph with branch delay execution explicit.
+
+    A transfer and the immediately following delay-slot instruction form
+    one logical execution event. The same delay-slot address can separately
+    be entered as an ordinary instruction by another branch. This graph
+    handles that case without claiming to have resolved runtime conditions,
+    indirect jumps, or control transfers nested *inside* delay slots.
+    """
+    if not data or len(data)%4 or entry%4:
+        raise ValueError("original MIPS instruction flow requires aligned source")
+    end=entry+len(data)
+    words={entry+off:struct.unpack_from(">I",data,off)[0]
+           for off in range(0,len(data),4)}
+    transfers={pc:t for pc,word in words.items()
+               if (t:=classify_original_mips_transfer(pc,word))}
+    if any(pc+4 not in words for pc in transfers):
+        raise ValueError("truncated original MIPS branch delay slot")
+    edges={}
+    delay_metadata={}
+    for pc in words:
+        t=transfers.get(pc)
+        if t is None:
+            successors=[pc+4] if pc+4<end else []
+        else:
+            successors=[]
+            if t.target in words and t.kind in ("jump","conditional_branch"):
+                successors.append(t.target)
+            if t.fallthrough in words:
+                successors.append(t.fallthrough)
+            delay_metadata[pc]={
+                "slot_pc":f"0x{pc+4:08X}",
+                "on_taken":True,
+                "on_fallthrough":not t.annul_delay_if_not_taken,
+                "nested_transfer_in_slot":pc+4 in transfers,
+                "kind":t.kind,
+            }
+        edges[pc]=tuple(dict.fromkeys(successors))
+    reached=set()
+    pending=[entry]
+    while pending:
+        pc=pending.pop()
+        if pc in reached:
+            continue
+        reached.add(pc)
+        pending.extend(next_pc for next_pc in edges[pc]
+                       if next_pc not in reached)
+    nested=[pc for pc in reached
+            if pc in transfers and pc+4 in transfers]
+    return {
+        "entry":f"0x{entry:08X}",
+        "total_instructions":len(words),
+        "reachable_instruction_entries":len(reached),
+        "reachable_transfer_instructions":sum(pc in transfers for pc in reached),
+        "atomic_delay_slot_transfers":sum(pc in delay_metadata for pc in reached),
+        "branch_delay_nesting_unresolved":[f"0x{pc:08X}" for pc in sorted(nested)],
+        "semantics_fully_verified":not nested and all(
+            t.kind not in ("indirect_call","indirect_jump")
+            for pc,t in transfers.items() if pc in reached),
+        "edges":[
+            {"from":f"0x{pc:08X}",
+             "to":f"0x{target:08X}",
+             "after_delay_slot":pc in transfers}
+            for pc in sorted(reached) for target in edges[pc]
+        ],
+        "delay_slot_execution":{
+            f"0x{pc:08X}":metadata for pc,metadata in sorted(delay_metadata.items())
+            if pc in reached
+        },
+        "note":"Instruction entry graph only; delay slot atomic, branch predicates unknown",
+    }
+
+
 def source_mips_flow_report(source:bytes,entry:int)->dict:
     """Keep the source disassembly useful even when CFG edges are ambiguous.
 
@@ -340,6 +413,7 @@ def source_mips_flow_report(source:bytes,entry:int)->dict:
             "Basic-block CFG is UNVERIFIED due to branch-to-delay-slot ambiguity")
     return {
         "control_flow":graph,
+        "instruction_flow":build_original_mips_instruction_flow(source,entry),
         "direct_animation_global_memory_accesses":
             find_original_animation_global_accesses(source,entry),
         "limits":limits,

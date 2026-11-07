@@ -225,6 +225,13 @@ def main(argv=None)->int:
             "mips_reachable_blocks":flow["control_flow"]["reachable_blocks"],
             "conditional_branches":flow["control_flow"]["conditional_branch_count"],
             "branch_likely":flow["control_flow"]["branch_likely_count"],
+            "basic_block_cfg_verified":flow["control_flow"]["cfg_verified"],
+            "instruction_entries_reachable":
+                flow["instruction_flow"]["reachable_instruction_entries"],
+            "instruction_flow_unresolved_delay_nesting":
+                len(flow["instruction_flow"]["branch_delay_nesting_unresolved"]),
+            "branch_into_delay_slot_conflicts":
+                flow["control_flow"].get("delay_slot_conflicts",[]),
             "original_animation_global_accesses":
                 flow["direct_animation_global_memory_accesses"],
             "calls":result["direct_mips_call_targets"],
