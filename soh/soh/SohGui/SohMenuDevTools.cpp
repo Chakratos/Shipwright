@@ -39,6 +39,16 @@ static const std::map<int32_t, const char*> goemonReferenceCharacterSlots = {
     { 3, "Yae" },
 };
 
+static const std::map<int32_t, const char*> goemonIsolatedMipsProgress = {
+    { 0, "Original CPU progress 0" },
+    { 1, "Original CPU progress 1" },
+};
+
+static const std::map<int32_t, const char*> goemonSourceMatrixLayouts = {
+    { 0, "Row major (experimental)" },
+    { 1, "Column major (experimental)" },
+};
+
 void SohMenu::AddMenuDevTools() {
     // Add Dev Tools Menu
     AddMenuEntry("Dev Tools", CVAR_SETTING("Menu.DevToolsSidebarSection"));
@@ -199,6 +209,31 @@ void SohMenu::AddMenuDevTools() {
                      .ComboMap(goemonReferenceCharacterSlots)
                      .DefaultIndex(0)
                      .Tooltip("Select Goemon, Ebisumaru, Sasuke or Yae for the original model renderer."));
+
+    AddWidget(path, "Preview Original ROM MIPS Body Parts", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("Goemon.UseOriginalMipsRigPreview"))
+        .Options(CheckboxOptions().DefaultValue(false).Tooltip(
+            "EXPERIMENTAL: render original ROM source-rig N64 body-part triangles "
+            "using matrices computed by the original N64 MIPS animation function. "
+            "Needs original.goskel and isolated.gomips under character-original/<Character>. "
+            "These are controlled isolated 0/1 samples, NOT verified run/jump/attack "
+            "animations; original action ownership, parent-matrix stack and texture "
+            "bindings are not yet reconstructed. Enabled only on request."));
+    AddWidget(path, "Original MIPS Progress Sample", WIDGET_CVAR_COMBOBOX)
+        .CVar(CVAR_SETTING("Goemon.SourceMipsProgressSample"))
+        .Options(ComboboxOptions()
+                     .ComboMap(goemonIsolatedMipsProgress)
+                     .DefaultIndex(0)
+                     .Tooltip("Switch manually between two exact source-MIPS evaluations. "
+                              "No invented playback loop or game-tick inference."));
+    AddWidget(path, "Original Matrix Layout (Unverified)", WIDGET_CVAR_COMBOBOX)
+        .CVar(CVAR_SETTING("Goemon.SourceMipsMatrixLayout"))
+        .Options(ComboboxOptions()
+                     .ComboMap(goemonSourceMatrixLayouts)
+                     .DefaultIndex(0)
+                     .Tooltip("Explicit source matrix interpretation to test. "
+                              "The game's actual final vertex-matrix convention is "
+                              "not yet experimentally verified."));
 
     AddWidget(path, "Capture Zelda World Geometry", WIDGET_CVAR_CHECKBOX)
         .CVar(CVAR_SETTING("Goemon.ZeldaWorldProbe"))
