@@ -162,6 +162,11 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
             b"".join(word.to_bytes(4,"big") for word in stack_words)
         ).hexdigest()[:16]
         result["original_mtxf_stack_changed_from_input"]=stack_words!=tuple(matrix_source)
+        result["original_mtxf_stack_finite_elements"]=sum(
+            math.isfinite(f32(word)) for word in stack_words)
+        result["original_mtxf_stack_nonidentity_elements"]=sum(
+            word != (0x3F800000 if i%5==0 else 0)
+            for i,word in enumerate(stack_words))
         if capture_local_matrix:
             result["private_matrix_stack_u32"]=list(stack_words)
     if capture_local_matrix:

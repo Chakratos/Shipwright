@@ -53,9 +53,12 @@ def run_matrix_abi(rom:bytes,slot:int)->dict:
     global_variant=run_probe(rom,0.0,slot=slot,source_limb_ptr=ptr,
         separate_matrix_stack=True,
         initial_matrix_u32=[bits32(v) for v in NONCOMMUTING])
+    progressed=run_probe(rom,1.0,slot=slot,source_limb_ptr=ptr,
+                         separate_matrix_stack=True)
     cases={"original_alias":base,"split_identity":split,
            "split_seeded_stack":variant,
-           "split_seeded_current":global_variant}
+           "split_seeded_current":global_variant,
+           "split_progress_1":progressed}
     return {
         "character":CHARACTER_NAMES[slot],
         "source_limb":f"0x{ptr:08X}",
@@ -67,6 +70,8 @@ def run_matrix_abi(rom:bytes,slot:int)->dict:
                 "current_mtxf_digest":data.get("matrix_fingerprint_sha256_prefix"),
                 "stack_digest":data.get("original_mtxf_stack_sha256_prefix"),
                 "stack_modified":data.get("original_mtxf_stack_changed_from_input"),
+                "stack_finite_floats":data.get("original_mtxf_stack_finite_elements"),
+                "stack_nonidentity_floats":data.get("original_mtxf_stack_nonidentity_elements"),
             } for key,data in cases.items()
         },
         "stack_seed_alters_current_mtxf":(
@@ -75,6 +80,9 @@ def run_matrix_abi(rom:bytes,slot:int)->dict:
         "current_seed_alters_current_mtxf":(
             global_variant["matrix_fingerprint_sha256_prefix"] !=
             split["matrix_fingerprint_sha256_prefix"]),
+        "stack_output_changes_between_progress_0_and_1":(
+            progressed.get("original_mtxf_stack_sha256_prefix") !=
+            split.get("original_mtxf_stack_sha256_prefix")),
         "original_player_stack_ownership_verified":False,
         "actual_animation_action_verified":False,
     }
