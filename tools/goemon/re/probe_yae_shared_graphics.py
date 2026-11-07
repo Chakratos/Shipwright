@@ -30,15 +30,13 @@ import struct
 from decode_original_limb_meshes import decode_original_limb_mesh
 
 
-def assess_yae_candidate_bank(banks:dict[int,bytes], *,
-                              graphics_source_file:int)->dict:
-    if 7 not in banks or 9 not in banks:
-        raise ValueError("Yae analysis requires authentic source 0x07 and hypothetical 0x09")
-    # The original player renderer strips object-type tag bits from a
-    # display-list pointer: (gfx & 0x8FFFFFFF). For example 0x29xxxxxx
-    # points into source segment 0x09, NOT a nonexistent bank 0x29.
-    # Traverse source 0x07 *independently* of a hypothesized Gfx bank.
-    y07=banks[7]
+def collect_yae_source_gfx_roots(
+    y07:bytes
+)->tuple[int,set[int],set[int],Counter]:
+    """Collect genuine segmented Gfx targets without selecting a graphics bank."""
+    # The original player renderer uses (gfx & 0x8FFFFFFF).
+    # A tagged 0x29xxxxxx address therefore points into segment 0x09.
+    # Preserve all other pointer types as unresolved metadata.
     candidates=0
     gfx_roots=set()
     unsupported_gfx=Counter()
@@ -66,6 +64,14 @@ def assess_yae_candidate_bank(banks:dict[int,bytes], *,
                     tagged_roots.add(raw)
             else:
                 unsupported_gfx[f"0x{raw>>24:02X}"]+=1
+    return candidates,gfx_roots,tagged_roots,unsupported_gfx
+
+
+def assess_yae_candidate_bank(banks:dict[int,bytes], *,
+                              graphics_source_file:int)->dict:
+    if 7 not in banks or 9 not in banks:
+        raise ValueError("Yae analysis requires authentic source 0x07 and hypothetical 0x09")
+    candidates,gfx_roots,tagged_roots,unsupported_gfx = collect_yae_source_gfx_roots(banks[7])
     successes={}
     failures=Counter()
     for ptr in sorted(gfx_roots):

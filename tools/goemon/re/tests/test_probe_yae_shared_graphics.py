@@ -5,7 +5,7 @@ import sys
 import unittest
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from probe_yae_shared_graphics import (
-    assess_yae_candidate_bank,compare_yae_banks
+    assess_yae_candidate_bank,compare_yae_banks,collect_yae_source_gfx_roots
 )
 
 def synthetic():
@@ -39,6 +39,17 @@ class YaeSourceBankProbeTests(unittest.TestCase):
         self.assertEqual(score["tagged_0x29_display_list_roots"],1)
         self.assertEqual(score["decoded_original_triangles"],1)
         self.assertFalse(score["actual_runtime_bank_residency_verified"])
+    def test_collect_exact_source_mesh_roots_separately_from_comparison(self):
+        y07,bank,_=synthetic()
+        count,pointers,tagged,unknown=collect_yae_source_gfx_roots(y07)
+        self.assertGreaterEqual(count,1)
+        self.assertEqual(pointers,{0x09000020})
+        self.assertEqual(tagged,{0x29000020})
+        self.assertEqual(sum(unknown.values()),0)
+        self.assertEqual(assess_yae_candidate_bank(
+            {7:y07,9:bank},graphics_source_file=299
+        )["decoded_original_triangles"],1)
+
     def test_incompatible_bank_does_not_become_a_verified_owner(self):
         y07,bank,bad=synthetic()
         report=compare_yae_banks([(291,bad),(295,bank),(299,bad)],
