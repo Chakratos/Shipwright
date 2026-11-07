@@ -20,24 +20,29 @@ from decompress_rom import decompress_us_rom
 from character_assets import read_file_table
 from source_aligned_character_assets import source_align_character_files
 from export_offline_original_poses import inspect_source_pose_bank
+from analyze_yae_resource_pointers import build_yae_source_animation_catalog
+from source_aligned_character_assets import CHARACTER_NAMES
 
 ENTRY=0x800192D0
 SOURCE=0x80400000
 ACTOR=0x80600000
 
-def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False)->dict:
+def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,slot:int=0)->dict:
     if hashlib.sha256(rom).hexdigest()!=ORIGINAL_SHA256:
         raise ValueError("original NG5E ROM hash mismatch")
     decoded=decompress_us_rom(rom)
     if hashlib.sha256(decoded).hexdigest()!=DECOMPRESSED_SHA256:
         raise ValueError("original decompressed NG5E ROM hash mismatch")
-    files=source_align_character_files(decoded)[0]
+    if not 0<=slot<4:
+        raise ValueError("original source character slot outside four figures")
+    files=source_align_character_files(decoded)[slot]
     table=read_file_table(decoded)
     banks={}
     for file in files[2:]:
         entry=table[file.runtime_file_id]
         banks[file.source_segment]=decoded[entry.start:entry.end]
-    catalog=inspect_source_pose_bank(banks,character="Goemon")
+    catalog=(build_yae_source_animation_catalog(banks[7]) if slot==3
+             else inspect_source_pose_bank(banks,character=CHARACTER_NAMES[slot]))
     candidate=next((x for x in catalog["original_source_poses"]
                     if x["source_header_segment"]=="0x07"),None)
     if candidate is None:
@@ -109,6 +114,7 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False)->dict:
     return {
         **result,
         "source":"original NG5E ROM",
+        "character":CHARACTER_NAMES[slot],
         "verified_rom_hash":True,
         "input_original_candidate_header":candidate["source_header_offset"],
         "selected_original_limb_pointer":f"0x{chosen['ptr']:08X}",
@@ -133,7 +139,20 @@ def main(argv=None):
         second=run_probe(original,progress=1.0)
         animated0=run_probe(original,progress=0.0,animated_limb=True)
         animated1=run_probe(original,progress=1.0,animated_limb=True)
+        more_characters=[]
+        for slot in (1,2,3):
+            x0=run_probe(original,progress=0.0,animated_limb=True,slot=slot)
+            x1=run_probe(original,progress=1.0,animated_limb=True,slot=slot)
+            more_characters.append({
+                "character":CHARACTER_NAMES[slot],
+                "progress_0":x0,"progress_1":x1,
+                "both_returned":bool(x0.get("returned") and x1.get("returned")),
+                "matrix_changed":(
+                    x0["matrix_fingerprint_sha256_prefix"] !=
+                    x1["matrix_fingerprint_sha256_prefix"]),
+            })
         result={
+            "all_character_animation_probes":more_characters,
             "animated_limb_progress_0":animated0,
             "animated_limb_progress_1":animated1,
             "animated_limb_matrix_differs":(
@@ -178,6 +197,23 @@ def main(argv=None):
             "matrix_differs_by_progress":result["animated_limb_matrix_differs"],
             "gameplay_clip_ownership_proven":False,
         },separators=(",",":")))
+        for sample in more_characters:
+            first=sample["progress_0"]
+            second=sample["progress_1"]
+            print("GOEMON_MIPS_CHARACTER "+json.dumps({
+                "character":sample["character"],
+                "original_limb":first["selected_original_limb_pointer"],
+                "numeric_channels":first["selected_limb_numeric_channels"],
+                "both_returned":sample["both_returned"],
+                "executed_at_0":first.get("executed"),
+                "executed_at_1":second.get("executed"),
+                "matrix_finite_0":first["matrix_finite_elements"],
+                "matrix_finite_1":second["matrix_finite_elements"],
+                "progress_matrix_changed":sample["matrix_changed"],
+                "blocker_0":first.get("blocker"),
+                "blocker_1":second.get("blocker"),
+                "source_action_timing_verified":False,
+            },separators=(",",":")))
         print("GOEMON_MIPS_CPU_EXEC COMPLETE: owner-ROM execution, no ROM uploaded")
     except (OSError,ValueError,KeyError,TypeError) as e:
         print("GOEMON_MIPS_CPU_EXEC FAILED:",e,file=sys.stderr)
