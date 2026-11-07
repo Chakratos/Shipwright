@@ -38,6 +38,7 @@ class OriginalBoneMeshTests(unittest.TestCase):
         self.assertEqual(actual.vertices[0].x,3)
         self.assertEqual(actual.vertices[1].y,14)
         self.assertEqual(actual.vertices[2].z,25)
+        self.assertEqual(len(actual.vertices),3)
         self.assertEqual(actual.vertices[1].s,32)
         self.assertEqual(actual.faces[0],(0,1,2))
 
