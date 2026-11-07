@@ -214,6 +214,25 @@ jobs:
           }
           Write-Host 'Original per-body-part ROM meshes stored in C:\actions-runner-goemon\original-rig-limbs'
 
+      - name: Decode original animation MIPS and archive compressed ROM streams
+        # Both input and outputs stay on the private Windows runner.
+        # Log contains ONLY high-level instruction metadata, no ROM bytes.
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-animation-codec]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\disasm_original_animation_mips.py
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original N64 MIPS animation evaluator decode failed: $LASTEXITCODE"
+          }
+          & py -3 tools\goemon\re\archive_original_animation_streams.py
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original ROM animation byte-stream extraction failed: $LASTEXITCODE"
+          }
+          Write-Host 'Original MIPS algorithm: C:\actions-runner-goemon\original-animation-mips'
+          Write-Host 'Actual source animation streams: C:\actions-runner-goemon\original-animation-streams'
+          Write-Host 'No gameplay recording, manual assets, or GitHub uploads.'
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
