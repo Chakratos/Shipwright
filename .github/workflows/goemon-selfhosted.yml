@@ -250,6 +250,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw 'Original N64 ROM MIPS interpreter probe failed'
           }
+      - name: Evaluate exact original N64 MIPS source matrices for all four rigs
+        # Writes private per-bone diagnostic matrices outside Git checkout.
+        # No unverified action IDs or GOPA game frames generated.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-mips-matrix-batch]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\export_original_mips_matrix_samples.py
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Original ROM isolated-limb MIPS matrix batch failed'
+          }
       - name: Decode original animation MIPS and archive compressed ROM streams
         # Both input and outputs stay on the private Windows runner.
         # Log contains ONLY high-level instruction metadata, no ROM bytes.
