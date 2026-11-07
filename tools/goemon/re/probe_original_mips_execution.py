@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import math
+from functools import lru_cache
 from pathlib import Path
 import sys
 
@@ -27,12 +28,20 @@ ENTRY=0x800192D0
 SOURCE=0x80400000
 ACTOR=0x80600000
 
-def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,slot:int=0)->dict:
+@lru_cache(maxsize=1)
+def verified_decoded_original_rom(rom:bytes)->bytes:
     if hashlib.sha256(rom).hexdigest()!=ORIGINAL_SHA256:
         raise ValueError("original NG5E ROM hash mismatch")
     decoded=decompress_us_rom(rom)
     if hashlib.sha256(decoded).hexdigest()!=DECOMPRESSED_SHA256:
         raise ValueError("original decompressed NG5E ROM hash mismatch")
+    return decoded
+
+
+def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
+              slot:int=0,source_limb_ptr:int|None=None,
+              capture_local_matrix:bool=False)->dict:
+    decoded=verified_decoded_original_rom(rom)
     if not 0<=slot<4:
         raise ValueError("original source character slot outside four figures")
     files=source_align_character_files(decoded)[slot]
@@ -55,8 +64,14 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,slot:int=0
     def numeric_channels(bone):
         raw=(*bone["scale"],*bone["rotation"],*bone["translation"])
         return sum(0<x<32768 for x in raw)
-    chosen=(max(candidate["limbs"],key=numeric_channels)
-            if animated_limb else candidate["limbs"][0])
+    if source_limb_ptr is not None:
+        chosen=next((node for node in candidate["limbs"]
+                     if node["ptr"]==source_limb_ptr),None)
+        if chosen is None:
+            raise ValueError("requested source limb absent from the original ROM candidate")
+    else:
+        chosen=(max(candidate["limbs"],key=numeric_channels)
+                if animated_limb else candidate["limbs"][0])
     limb=SOURCE+(int(chosen["ptr"])&0xFFFFFF)
     anim=SOURCE+(int(candidate["original_animation_pointer"],16)&0xFFFFFF)
     flags=int(candidate["original_animated_skeleton_flags"],16)
@@ -111,6 +126,10 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,slot:int=0
     result["matrix_fingerprint_sha256_prefix"]=hashlib.sha256(
         matrix_bytes).hexdigest()[:16]
     result["output_matrix_layout_verified"]=False
+    if capture_local_matrix:
+        # Private caller only. These are source engine matrix *bit
+        # patterns*, not verified GOPA game frames. Never log this field.
+        result["private_matrix_u32"]=list(matrix_words)
     return {
         **result,
         "source":"original NG5E ROM",
