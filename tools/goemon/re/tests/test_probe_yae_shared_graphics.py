@@ -16,7 +16,8 @@ def synthetic():
     struct.pack_into(">III",player,0x40,0x00000511,0x07000400,0x07000100)
     for i in range(5):
         struct.pack_into(">Ibb9h",player,0x100+24*i,
-                         0x09000020,1 if i<4 else 0,0,
+                         0x29000020 if i%2==0 else 0x09000020,
+                         1 if i<4 else 0,0,
                          128,128,128,0,0,0,0,0,0)
     struct.pack_into(">II",good,0x20,0x06000000,0x09000080)
     struct.pack_into(">II",good,0x28,0xB8000000,0)
@@ -35,6 +36,7 @@ class YaeSourceBankProbeTests(unittest.TestCase):
             {7:y07,8:bytes(32),9:bank},graphics_source_file=291)
         self.assertGreaterEqual(score["source_07_candidate_skeletons"],1)
         self.assertEqual(score["executed_original_limb_meshes"],1)
+        self.assertEqual(score["tagged_0x29_display_list_roots"],1)
         self.assertEqual(score["decoded_original_triangles"],1)
         self.assertFalse(score["actual_runtime_bank_residency_verified"])
     def test_incompatible_bank_does_not_become_a_verified_owner(self):

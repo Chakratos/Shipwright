@@ -23,7 +23,10 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from character_assets import read_file_table
 from decompress_rom import decompress_us_rom
 from source_aligned_character_assets import source_align_character_files
-from offline_original_rigs import candidate_animated_skeletons, traverse_original_skeleton
+from analyze_yae_resource_pointers import (
+    traverse_yae_bank07_unresolved_skeletons
+)
+import struct
 from decode_original_limb_meshes import decode_original_limb_mesh
 
 
@@ -31,23 +34,38 @@ def assess_yae_candidate_bank(banks:dict[int,bytes], *,
                               graphics_source_file:int)->dict:
     if 7 not in banks or 9 not in banks:
         raise ValueError("Yae analysis requires authentic source 0x07 and hypothetical 0x09")
-    found=candidate_animated_skeletons(banks,min_limbs=4,max_candidates=512)
-    verified_07=[]
+    # The original player renderer strips object-type tag bits from a
+    # display-list pointer: (gfx & 0x8FFFFFFF). For example 0x29xxxxxx
+    # points into source segment 0x09, NOT a nonexistent bank 0x29.
+    # Traverse source 0x07 *independently* of a hypothesized Gfx bank.
+    y07=banks[7]
+    candidates=0
     gfx_roots=set()
-    for candidate in found["first_valid_candidates"]:
-        if candidate["header_segment"]!="0x07":
+    unsupported_gfx=Counter()
+    tagged_roots=set()
+    for at in range(0,len(y07)-12+1,4):
+        flags,animation,root=struct.unpack_from(">III",y07,at)
+        if not 1<=((flags>>8)&0x7FFF)<=128:
             continue
-        if int(candidate["root_skeleton_pointer"],16)>>24!=7:
+        if root>>24!=7 or animation>>24!=7:
             continue
-        if int(candidate["animation_pointer"],16)>>24!=7:
+        try:
+            nodes=traverse_yae_bank07_unresolved_skeletons(y07,root)
+        except ValueError:
             continue
-        graph=traverse_original_skeleton(
-            int(candidate["root_skeleton_pointer"],16),banks)
-        vertices=[node["gfx"] for node in graph["nodes"] if node["gfx"]]
-        if not vertices or any(ptr>>24!=9 for ptr in vertices):
+        if len(nodes)<4:
             continue
-        verified_07.append(candidate)
-        gfx_roots.update(vertices)
+        candidates+=1
+        for _,raw in nodes:
+            if raw==0:
+                continue
+            normalized=raw & 0x8FFFFFFF
+            if normalized>>24==9:
+                gfx_roots.add(normalized)
+                if raw!=normalized:
+                    tagged_roots.add(raw)
+            else:
+                unsupported_gfx[f"0x{raw>>24:02X}"]+=1
     successes={}
     failures=Counter()
     for ptr in sorted(gfx_roots):
@@ -58,8 +76,10 @@ def assess_yae_candidate_bank(banks:dict[int,bytes], *,
             failures[str(exc).split(" at ")[0]]+=1
     return {
         "source_09_runtime_file_id":graphics_source_file,
-        "source_07_candidate_skeletons":len(verified_07),
+        "source_07_candidate_skeletons":candidates,
         "distinct_original_limb_display_lists":len(gfx_roots),
+        "tagged_0x29_display_list_roots":len(tagged_roots),
+        "unsupported_other_gfx_segments":dict(sorted(unsupported_gfx.items())),
         "executed_original_limb_meshes":len(successes),
         "decoded_original_triangles":sum(successes.values()),
         "failed_limb_meshes":sum(failures.values()),
