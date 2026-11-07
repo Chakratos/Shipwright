@@ -39,7 +39,7 @@ def verified_decoded_original_rom(rom:bytes)->bytes:
 
 
 @lru_cache(maxsize=4)
-def original_source_context(rom:bytes,slot:int)->tuple[dict,dict]:
+def original_source_catalog(rom:bytes,slot:int)->tuple[dict,tuple[dict,...]]:
     decoded=verified_decoded_original_rom(rom)
     if not 0<=slot<4:
         raise ValueError("original source character slot outside four figures")
@@ -51,11 +51,30 @@ def original_source_context(rom:bytes,slot:int)->tuple[dict,dict]:
         banks[file.source_segment]=decoded[entry.start:entry.end]
     catalog=(build_yae_source_animation_catalog(banks[7]) if slot==3
              else inspect_source_pose_bank(banks,character=CHARACTER_NAMES[slot]))
-    candidate=next((x for x in catalog["original_source_poses"]
-                    if x["source_header_segment"]=="0x07"),None)
-    if candidate is None:
+    candidates=tuple(
+        x for x in catalog["original_source_poses"]
+        if x["source_header_segment"]=="0x07")
+    if not candidates:
         raise ValueError("no source-verified original player-resource candidate")
-    return banks,candidate
+    return banks,candidates
+
+
+def choose_source_candidate(candidates:tuple[dict,...],
+                            original_header_offset:int|None)->dict:
+    if not candidates:
+        raise ValueError("no source ROM AnimatedSkeleton descriptors")
+    if original_header_offset is None:
+        return candidates[0]
+    selected=[candidate for candidate in candidates
+              if candidate["source_header_offset"]==original_header_offset]
+    if len(selected)!=1:
+        raise ValueError("original source 0x07 AnimatedSkeleton header absent/ambiguous")
+    return selected[0]
+
+
+def original_source_context(rom:bytes,slot:int)->tuple[dict,dict]:
+    banks,candidates=original_source_catalog(rom,slot)
+    return banks,choose_source_candidate(candidates,None)
 
 
 def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
@@ -63,9 +82,11 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
               capture_local_matrix:bool=False,
               initial_matrix_u32:list[int]|tuple[int,...]|None=None,
               separate_matrix_stack:bool=False,
-              stack_initial_matrix_u32:list[int]|tuple[int,...]|None=None)->dict:
+              stack_initial_matrix_u32:list[int]|tuple[int,...]|None=None,
+              source_header_offset:int|None=None)->dict:
     decoded=verified_decoded_original_rom(rom)
-    banks,candidate=original_source_context(rom,slot)
+    banks,candidates=original_source_catalog(rom,slot)
+    candidate=choose_source_candidate(candidates,source_header_offset)
     vm=OriginalMipsCPU()
     # ROM 0x1000 is original program vRAM 0x80000400, +0xC00.
     vm.copy(0x80000400,decoded[0x1000:0x81000])
