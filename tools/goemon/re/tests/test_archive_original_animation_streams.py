@@ -63,6 +63,18 @@ class OriginalAnimationArchiveTests(unittest.TestCase):
         self.assertFalse(summary["real_action_timing_known"])
         self.assertEqual(len(archive),HEADER.size+CLIP.size+256+2*LIMB.size)
 
+    def test_yae_raw_tagged_gfx_words_survive_without_animation_claims(self):
+        image,doc=fixture()
+        doc["original_source_poses"][0]["limbs"][1]["gfx"]=0x29000020
+        doc["original_source_poses"][0]["limbs"][0]["gfx"]=0x0F000120
+        blob=create_original_animation_archive(3,doc,image)
+        metadata=inspect_original_animation_archive(blob)
+        self.assertEqual(metadata["character_slot"],3)
+        self.assertFalse(metadata["original_decoder_fully_ported"])
+        at=HEADER.size+CLIP.size+256
+        self.assertEqual(LIMB.unpack_from(blob,at)[1],0x0F000120)
+        self.assertEqual(LIMB.unpack_from(blob,at+LIMB.size)[1],0x29000020)
+
     def test_corrupt_source_or_hierarchy_rejected(self):
         image,doc=fixture()
         payload=create_original_animation_archive(0,doc,image)

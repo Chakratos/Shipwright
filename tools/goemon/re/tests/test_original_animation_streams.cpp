@@ -63,6 +63,10 @@ int main(){
     assert(OriginalChannelTail(first,-20224).empty());
     assert(OriginalChannelTail(first,1024).empty());
 
+    auto yae=blob;yae[8]=3;
+    auto archiveYae=SourceAnimationStreamReader(yae).Parse();
+    assert(archiveYae.characterId==3);
+    assert(archiveYae.candidates[0].originalCompressedBytes.size()==256);
     auto invalid=blob;invalid[0]='X';Reject(invalid);
     invalid=blob;invalid.resize(invalid.size()-4);Reject(invalid);
     invalid=blob;invalid.push_back(0);Reject(invalid);

@@ -53,7 +53,7 @@ class SourceAnimationStreamReader {
         SourceAnimationStreamArchive archive{};
         archive.characterId=Read32LE();
         const std::uint32_t count=Read32LE();
-        if (archive.characterId>2 || !count || count>512)
+        if (archive.characterId>3 || !count || count>512)
             throw std::invalid_argument("source animation descriptor count invalid");
         archive.candidates.reserve(count);
         for (std::uint32_t i=0;i<count;++i) {

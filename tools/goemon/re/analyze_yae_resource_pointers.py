@@ -50,6 +50,94 @@ def traverse_yae_bank07_unresolved_skeletons(
     return limbs
 
 
+def traverse_yae_source07_animation_nodes(
+    bank07:bytes,root:int,max_nodes:int=128
+)->list[dict]:
+    """Return original 24-byte Skeleton records with correct node links.
+
+    Source Gfx pointers, including 0x29 tags and unresolved 0x0F records,
+    remain EXACT raw words. They are not reinterpreted as physical S/R/T
+    or silently dropped from the candidate animation source archive.
+    """
+    if root>>24!=7:
+        raise ValueError("Yae animation root not in 0x07")
+    todo=[(root,None)]
+    visited=set()
+    out=[]
+    while todo:
+        current,parent=todo.pop()
+        offset=current&0xFFFFFF
+        if current>>24!=7 or offset%4 or offset+_SKELETON.size>len(bank07):
+            raise ValueError("Yae source animation Skeleton pointer outside 0x07")
+        if current in visited or len(visited)>=max_nodes:
+            raise ValueError("Yae source animation Skeleton cycle or size limit")
+        visited.add(current)
+        gfx,right,left,*raw=_SKELETON.unpack_from(bank07,offset)
+        out.append({
+            "ptr":current,"parent":parent,"gfx":gfx,
+            "scale":tuple(raw[0:3]),
+            "rotation":tuple(raw[3:6]),
+            "translation":tuple(raw[6:9]),
+        })
+        if left:
+            todo.append((current+24*left,parent))
+        if right:
+            todo.append((current+24*right,current))
+    return out
+
+
+def build_yae_source_animation_catalog(bank07:bytes)->dict:
+    """Preserve candidate animation data without claiming valid gameplay clips."""
+    if len(bank07)<_ANIMATED.size+_SKELETON.size:
+        raise ValueError("Yae original bank too short")
+    candidates=[]
+    root_seen=set()
+    skipped=Counter()
+    for offset in range(0,len(bank07)-_ANIMATED.size+1,4):
+        flags,anim,root=_ANIMATED.unpack_from(bank07,offset)
+        if not 1<=((flags>>8)&0x7FFF)<=128 or anim>>24!=7 or root>>24!=7:
+            continue
+        if root in root_seen:
+            skipped["duplicate_skeleton_root"]+=1
+            continue
+        try:
+            limbs=traverse_yae_source07_animation_nodes(bank07,root)
+        except ValueError:
+            skipped["invalid_graph"]+=1
+            continue
+        if len(limbs)<4:
+            continue
+        begin=anim&0xFFFFFF
+        first_limb=min(n["ptr"]&0xFFFFFF for n in limbs)
+        if not 0<=begin<=first_limb<=len(bank07) or first_limb-begin>1024*1024:
+            skipped["unresolved_source_animation_region"]+=1
+            continue
+        root_seen.add(root)
+        candidates.append({
+            "candidate_number":len(candidates),
+            "source_header_segment":"0x07",
+            "source_header_offset":offset,
+            "original_animated_skeleton_flags":f"0x{flags:08X}",
+            "original_animation_pointer":f"0x{anim:08X}",
+            "original_skeleton_root":f"0x{root:08X}",
+            "limbs":limbs,
+            "original_action_id":None,
+            "animation_frame_index":None,
+            "raw_animation_channel_fields_preserved":True,
+            "active_player_ownership_verified":False,
+        })
+    if not candidates:
+        raise ValueError("no source-validated Yae animation descriptor regions")
+    return {
+        "character":"Yae",
+        "format":"ng5e-original-rom-skeletal-poses-v1",
+        "original_source_poses":candidates,
+        "excluded_candidates":dict(skipped),
+        "original_animation_frames_recovered":0,
+        "actual_gameplay_action_ids_verified":False,
+    }
+
+
 def characterize_yae_bank07(bank07:bytes)->dict:
     if len(bank07)<_SKELETON.size+_ANIMATED.size:
         raise ValueError("original Yae 0x07 bank truncated")

@@ -292,7 +292,7 @@ jobs:
           $sources = 'C:\actions-runner-goemon\original-rom-rigs'
           $animation = 'C:\actions-runner-goemon\original-animation-streams'
           $counter = 0
-          foreach ($character in @('Goemon', 'Ebisumaru', 'Sasuke')) {
+          foreach ($character in @('Goemon', 'Ebisumaru', 'Sasuke', 'Yae')) {
             $to = Join-Path (Join-Path $test 'character-original') $character
             $rig = Join-Path (Join-Path $sources $character) 'original.goskel'
             $anim = Join-Path (Join-Path $animation $character) 'original.goanim'

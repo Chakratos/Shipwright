@@ -28,6 +28,7 @@ from real_rom_check import ORIGINAL_SHA256,DECOMPRESSED_SHA256,locate_rom
 from character_assets import read_file_table
 from decompress_rom import decompress_us_rom
 from source_aligned_character_assets import source_align_character_files
+from analyze_yae_resource_pointers import build_yae_source_animation_catalog
 from analyze_original_animation_channels import (
     analyze_raw_original_animation_descriptors,
     summarize_channel_anomalies,
@@ -40,7 +41,7 @@ LIMB=struct.Struct("<IIh9h") # original limb ptr, gfx ptr, parent index, encoded
 MAX_CLIPS=512
 MAX_LIMBS=128
 MAX_STREAM=1024*1024
-CHARACTERS=("Goemon","Ebisumaru","Sasuke")
+CHARACTERS=("Goemon","Ebisumaru","Sasuke","Yae")
 
 
 def extract_original_candidate_animation(
@@ -78,7 +79,7 @@ def extract_original_candidate_animation(
 def create_original_animation_archive(
     slot:int, source_doc:dict, bank07:bytes
 )->bytes:
-    if not 0<=slot<3 or source_doc.get("format")!=(
+    if not 0<=slot<4 or source_doc.get("format")!=(
         "ng5e-original-rom-skeletal-poses-v1"):
         raise ValueError("wrong original ROM animation source format")
     clips=[
@@ -105,7 +106,7 @@ def inspect_original_animation_archive(blob:bytes)->dict:
     if len(blob)<HEADER.size:
         raise ValueError("original animation source archive truncated")
     magic,slot,count=HEADER.unpack_from(blob)
-    if magic!=MAGIC or slot>2 or not 1<=count<=MAX_CLIPS:
+    if magic!=MAGIC or slot>3 or not 1<=count<=MAX_CLIPS:
         raise ValueError("wrong original animation source archive header")
     pos=HEADER.size
     records=[]
@@ -169,8 +170,11 @@ def export_original_animation_streams(rom:bytes,
     for slot,name in enumerate(CHARACTERS):
         file=table[groups[slot][2].runtime_file_id]
         bank=decompressed[file.start:file.end]
-        doc=json.loads((poses_dir/(name+"_original_source_poses.json"))
-                       .read_text("utf-8"))
+        if slot==3:
+            doc=build_yae_source_animation_catalog(bank)
+        else:
+            doc=json.loads((poses_dir/(name+"_original_source_poses.json"))
+                           .read_text("utf-8"))
         bytestring=create_original_animation_archive(slot,doc,bank)
         info=inspect_original_animation_archive(bytestring)
         dest=out/name
@@ -184,6 +188,7 @@ def export_original_animation_streams(rom:bytes,
             "compressed_animation_file":f"{name}/original.goanim",
             **info,
             "source_channel_analysis":summarize_channel_anomalies(profile),
+            "source_yae_gfx_bank_runtime_verified":False if slot==3 else None,
         })
         print("GOEMON_ORIGINAL_ANIMATION_STREAM "+json.dumps({
             k:v for k,v in manifests[-1].items()
