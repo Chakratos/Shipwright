@@ -431,3 +431,63 @@ https://github.com/Chakratos/Shipwright/actions/runs/42389891083
 
 All tests up to this checkpoint passed. No full Ship build was run,
 and no actual animation has yet been rendered inside Ship.
+
+
+## Native source-MIPS original-rig rendering bridge — November 7, 2026
+
+The current branch has advanced from isolated original MIPS calculations
+to a source-only data bridge callable by the actual Ship rendering Actor.
+
+- Python source tool: tools/goemon/re/package_original_mips_samples.py
+  encodes GOMIPS01. It validates original source AnimatedSkeleton header,
+  character, bone count/order, parent graph, original graphics pointer
+  (including Yae 0x29/0x0F tags), and all nine original signed channel
+  words against the private local GOSKEL01 archive.
+- GOMIPS01 stores exactly two controlled original-CPU
+  animation_progress inputs (0.0,1.0), not original gameplay ticks.
+  A missing matrix is represented with an explicit unavailable bit,
+  never an invented identity matrix.
+- Native C++20 reader and isolated bone renderer:
+  soh/soh/Enhancements/Goemon/OriginalIsolatedMipsPreview.hpp.
+  Source N64 bodypart triangles are transformed using the original
+  MIPS-evaluated 4x4 matrices, with an explicitly selected memory layout.
+  Neither hierarchical world matrix stack nor real action timing is
+  claimed to be established.
+- Ship opt-in renderer: OriginalReferenceCharacterActor.cpp.
+  Real bodypart mesh triangles render via the original character Actor;
+  vertex colors come from original N64 vertices. Textures/UV materials
+  and verified hierarchical composition remain upcoming work. The
+  existing reference character path remains available as fallback
+  when the experimental option is disabled.
+- User-facing Dev Tools > Goemon controls:
+  Goemon.UseOriginalMipsRigPreview (default off),
+  Goemon.SourceMipsProgressSample (0 or 1; no fake looping),
+  Goemon.SourceMipsMatrixLayout (row/column, both unverified).
+- Original data remain on the owner's machine only:
+  C:\actions-runner-goemon\original-source-mips-preview
+  and in the isolated test installation:
+  C:\Users\Chakratos\Desktop\SoH Goemon Test\character-original.
+  Source preview load requires both original.goskel and isolated.gomips
+  under each character subdirectory. The root can be overridden through
+  GOEMON_ORIGINAL_CHARACTER_ASSETS.
+
+Verified owner ROM package result:
+Goemon 28/28, Ebisumaru 30/30, Sasuke 32/36, Yae 40/40.
+Total 130/134 isolated original CPU matrix evaluations valid.
+The earlier statement 132/134 was inaccurate: the two unhandled
+Sasuke limbs fail at BOTH progress inputs (four matrices).
+The precise original engine matrix-stack state is still needed for them.
+
+Source package/test workflow succeeded on GitHub Actions
+run 42396245338. Native C++ source geometry/preview test and
+281/281 Python tests passed on run 42396694311.
+No copyright-protected source files are uploaded.
+
+The first full Ship integration build has now been intentionally
+requested via [goemon-build] on this documentation commit, after
+the separate native tests succeeded. This build has to verify the
+actual game Actor source render integration. Before observing the
+game visually, do NOT claim original gameplay animations function:
+the preview only displays exact source-calculated isolated matrices,
+not recovered action IDs or original timed clips. Link/OoT quest
+integration remains incomplete. Never modify SoH AP/Archipelago.
