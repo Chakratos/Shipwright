@@ -19,7 +19,10 @@ def fixture():
     raw0=[-20224]*3+[-20480]*6
     raw1=[256]*3+[0]*6
     meta={
-        "format":"goemon-owner-rom-original-mips-isolated-bone-matrices-v1",
+        "format":"goemon-owner-rom-original-mips-isolated-bone-matrices-v2",
+        "original_mtxf_output_pointer_global":"D_80168530",
+        "output_stack_separate_from_current_mtxf":True,
+        "previous_alias_based_matrix_samples_invalidated":True,
         "character":"Yae","character_slot":3,
         "source_original_skeleton_header":"0x07000140",
         "original_animated_skeleton_flags":"0x80000111",
@@ -82,6 +85,16 @@ class NativeSourceMipsPackageTests(unittest.TestCase):
                 meta["limbs"][1][issue]=None
             with self.assertRaisesRegex(ValueError,"source MIPS|original"):
                 build_original_isolated_mips_binary(rig,meta)
+    def test_old_alias_based_source_matrices_not_accepted(self):
+        rig,meta=fixture()
+        meta["format"]="goemon-owner-rom-original-mips-isolated-bone-matrices-v1"
+        with self.assertRaisesRegex(ValueError,"not current"):
+            build_original_isolated_mips_binary(rig,meta)
+        meta["format"]="goemon-owner-rom-original-mips-isolated-bone-matrices-v2"
+        meta["output_stack_separate_from_current_mtxf"]=False
+        with self.assertRaisesRegex(ValueError,"obsolete aliased"):
+            build_original_isolated_mips_binary(rig,meta)
+
     def test_corrupted_binary_mask_and_trailing_rejected(self):
         rig,meta=fixture()
         binary=build_original_isolated_mips_binary(rig,meta)

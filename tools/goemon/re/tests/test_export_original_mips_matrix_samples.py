@@ -23,14 +23,17 @@ class SourceMipsMatrixSamplesTests(unittest.TestCase):
         self.assertEqual(result["source_mips_matrix_pairs_blocked"],1)
         self.assertTrue(result["all_pairs_examined"])
     def test_bad_matrix_or_unreturned_original_code_rejected(self):
-        valid={"returned":True,"matrix_finite_elements":16,
-               "private_matrix_u32":[0]*16}
+        valid={"returned":True,
+               "separate_original_matrix_stack_probe":True,
+               "original_mtxf_stack_finite_elements":16,
+               "private_matrix_stack_u32":[0]*16}
         self.assertEqual(len(validate_matrix_result(valid)),16)
         for broken in (
             {**valid,"returned":False},
-            {**valid,"matrix_finite_elements":15},
-            {**valid,"private_matrix_u32":[0]*15},
-            {**valid,"private_matrix_u32":[-1]*16}
+            {**valid,"original_mtxf_stack_finite_elements":15},
+            {**valid,"separate_original_matrix_stack_probe":False},
+            {**valid,"private_matrix_stack_u32":[0]*15},
+            {**valid,"private_matrix_stack_u32":[-1]*16}
         ):
             with self.assertRaisesRegex(ValueError,"source MIPS|matrix"):
                 validate_matrix_result(broken)

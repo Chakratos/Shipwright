@@ -2,8 +2,10 @@
 """Evaluate ALL limbs of one ROM-authored Skeleton per original character.
 
 Source: exact MIPS instructions executed from the hash-verified NG5E ROM.
-Each sample starts with an identity parent matrix and deterministic test
-Object state, at controlled source animation_progress=0 and 1.
+Each sample starts with an isolated identity current MtxF and independent
+destination MtxF stack pointed to by D_80168530 at progress=0 and 1.
+The separate destination is required by original N64 evaluator semantics:
+aliasing current and stack created false progress differences.
 
 The produced data are original-code *isolated limb matrices*, NOT final
 gameplay animation frames: parent-space composition, active action ownership,
@@ -28,11 +30,13 @@ PROGRESS=(0.0,1.0)
 
 
 def validate_matrix_result(sample:dict)->list[int]:
-    if sample.get("returned") is not True or sample.get("matrix_finite_elements")!=16:
-        raise ValueError("original source MIPS did not return 16 finite matrix floats")
-    bits=sample.get("private_matrix_u32")
+    if (sample.get("returned") is not True or
+        sample.get("separate_original_matrix_stack_probe") is not True or
+        sample.get("original_mtxf_stack_finite_elements")!=16):
+        raise ValueError("original source MIPS did not return 16 finite destination MtxF floats")
+    bits=sample.get("private_matrix_stack_u32")
     if not isinstance(bits,list) or len(bits)!=16 or any(
-        not isinstance(v,int) or not 0<=v<=0xFFFFFFFF for v in bits
+        type(v)!=int or not 0<=v<=0xFFFFFFFF for v in bits
     ):
         raise ValueError("missing exact original 4x4 source matrix words")
     return bits
@@ -88,7 +92,8 @@ def evaluate_character(rom:bytes,slot:int)->tuple[dict,dict]:
                 "physical_matrix_layout_verified":False
             }
             data=run_probe(rom,progress,slot=slot,
-                           source_limb_ptr=node["ptr"],capture_local_matrix=True)
+                           source_limb_ptr=node["ptr"],capture_local_matrix=True,
+                           separate_matrix_stack=True)
             try:
                 record["matrix_ieee754_u32"]=validate_matrix_result(data)
                 record["source_instruction_count"]=data["executed"]
@@ -111,7 +116,10 @@ def evaluate_character(rom:bytes,slot:int)->tuple[dict,dict]:
         })
     summary=classify_progress_changes(limbs)
     file_doc={
-        "format":"goemon-owner-rom-original-mips-isolated-bone-matrices-v1",
+        "format":"goemon-owner-rom-original-mips-isolated-bone-matrices-v2",
+        "original_mtxf_output_pointer_global":"D_80168530",
+        "output_stack_separate_from_current_mtxf":True,
+        "previous_alias_based_matrix_samples_invalidated":True,
         "character":CHARACTER_NAMES[slot],
         "character_slot":slot,
         "source_original_skeleton_header":

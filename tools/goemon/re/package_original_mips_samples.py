@@ -44,8 +44,12 @@ def validate_original_sample(sample:dict,progress:float)->list[int]|None:
 
 def build_original_isolated_mips_binary(rig:bytes,samples:dict)->bytes:
     slot,_,rigs=parse_rig_descriptors(rig)
-    if samples.get("format")!="goemon-owner-rom-original-mips-isolated-bone-matrices-v1":
-        raise ValueError("not source-MIPS-controlled isolated matrices")
+    if samples.get("format")!="goemon-owner-rom-original-mips-isolated-bone-matrices-v2":
+        raise ValueError("not current source-MIPS-controlled isolated matrices")
+    if (samples.get("original_mtxf_output_pointer_global")!="D_80168530" or
+        samples.get("output_stack_separate_from_current_mtxf") is not True or
+        samples.get("previous_alias_based_matrix_samples_invalidated") is not True):
+        raise ValueError("obsolete aliased original MIPS matrix samples must not be packaged")
     if samples.get("character_slot")!=slot or samples.get("character")!=CHARACTER_NAMES[slot]:
         raise ValueError("original source character/sample identity mismatch")
     if (samples.get("source_game_action_verified") is not False or
