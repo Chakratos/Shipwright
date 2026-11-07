@@ -49,5 +49,18 @@ class OfflineOriginalAnimationBuildContract(unittest.TestCase):
         self.assertIn("C:\\actions-runner-goemon\\original-rig-limbs",source)
 
 
+    def test_private_mips_report_has_branch_flow_for_codec_reverse_engineering(self):
+        decoder=(ROOT / "tools/goemon/re/disasm_original_animation_mips.py"
+                ).read_text(encoding="utf-8")
+        analysis=(ROOT / "tools/goemon/re/original_mips_animation_flow.py"
+                 ).read_text(encoding="utf-8")
+        self.assertIn("original_mips_animation_flow.json",decoder)
+        self.assertIn("source_mips_flow_report",decoder)
+        self.assertIn("D_80168520",analysis) if "D_80168520" in analysis else self.assertIn(
+            "0x80168520",analysis)
+        self.assertIn("source_animation_data_pointer",analysis)
+        self.assertNotIn("requests.post",decoder)
+
+
 if __name__ == "__main__":
     unittest.main()
