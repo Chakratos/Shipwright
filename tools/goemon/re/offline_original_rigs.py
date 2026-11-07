@@ -11,7 +11,7 @@ func_80016C44_17844 (type 0x60000000) dereferences AnimatedSkeleton
 at the current overlay base.
 
 This is a structural pointer-graph analyzer, NOT proof of an active player
-skeleton or decoded keyframe clip. Results are grounded to exact ROM offsets.
+skeleton or decoded keyframe clip. Original S/R/T fields contain encoded\n0xB000/0xB100 animation controls, NOT necessarily physical angles/scales.\nResults are grounded to exact ROM offsets.
 """
 from __future__ import annotations
 
@@ -163,7 +163,7 @@ def candidate_animated_skeletons(
         "first_valid_candidates":good,
         "min_limb_count":min_limbs,
         "runtime_player_identity_proven":False,
-        "animation_sequence_decoded":False
+        "animation_sequence_decoded":False,\n        "physical_channel_decoder_verified":False
     }
 
 
