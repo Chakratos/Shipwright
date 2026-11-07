@@ -1,5 +1,6 @@
 #include "soh/soh/Enhancements/Goemon/OriginalIsolatedMipsPreview.hpp"
 #include <cassert>
+#include <array>
 #include <bit>
 #include <cstdint>
 #include <cstdio>
@@ -99,6 +100,8 @@ static int CheckOwnerOriginalPreview(const std::filesystem::path& root) {
             bool ready=false;
             for(int mode=0;mode<2;++mode) {
                 bool bothSamplesValid=true;
+                std::array<std::uint64_t,2> floatFingerprint{};
+                std::array<std::uint64_t,2> nativeFingerprint{};
                 for(unsigned sample=0;sample<2;++sample) {
                     try {
                         const auto layout=(mode==0
@@ -108,16 +111,29 @@ static int CheckOwnerOriginalPreview(const std::filesystem::path& root) {
                             rig,source,sample,layout);
                         std::size_t vertices=0;
                         bool withinRange=true;
+                        std::uint64_t floatHash=14695981039346656037ULL;
+                        std::uint64_t nativeHash=14695981039346656037ULL;
                         for(const auto& limb:frame.limbs) {
                             vertices+=limb.triangleVertices.size();
-                            for(const auto& v:limb.triangleVertices)
-                                if(!std::isfinite(v.x)||!std::isfinite(v.y)||
-                                   !std::isfinite(v.z)||
-                                   std::fabs(v.x)>32767.0f||
-                                   std::fabs(v.y)>32767.0f||
-                                   std::fabs(v.z)>32767.0f)
-                                    withinRange=false;
+                            for(const auto& v:limb.triangleVertices) {
+                                const std::array<float,3> axes{v.x,v.y,v.z};
+                                for(const float axis:axes) {
+                                    if(!std::isfinite(axis) || std::fabs(axis)>32767.0f) {
+                                        withinRange=false;
+                                        continue;
+                                    }
+                                    // Hash in memory only: do not print or
+                                    // upload original ROM mesh coordinates.
+                                    floatHash ^= std::bit_cast<std::uint32_t>(axis);
+                                    floatHash *= 1099511628211ULL;
+                                    nativeHash ^= static_cast<std::uint32_t>(
+                                        std::lround(axis));
+                                    nativeHash *= 1099511628211ULL;
+                                }
+                            }
                         }
+                        floatFingerprint[sample]=floatHash;
+                        nativeFingerprint[sample]=nativeHash;
                         const bool sampleReady=withinRange && vertices>0;
                         std::cout<<"GOEMON_NATIVE_SOURCE_RENDER "
                                  <<names[slot]<<" layout="<<mode
@@ -138,6 +154,14 @@ static int CheckOwnerOriginalPreview(const std::filesystem::path& root) {
                                  <<" ERROR="<<ex.what()<<'\n';
                     }
                 }
+                std::cout<<"GOEMON_NATIVE_SOURCE_PROGRESS_VARIATION "
+                         <<names[slot]<<" layout="<<mode
+                         <<" both_drawable="<<(bothSamplesValid?1:0)
+                         <<" source_float_vertices_change="
+                         <<(floatFingerprint[0]!=floatFingerprint[1]?1:0)
+                         <<" n64_vertex_positions_change="
+                         <<(nativeFingerprint[0]!=nativeFingerprint[1]?1:0)
+                         <<'\n';
                 ready=ready||bothSamplesValid;
             }
             if(ready) ++readyCharacters;
