@@ -70,6 +70,7 @@ def run_matrix_abi(rom:bytes,slot:int)->dict:
                 "current_mtxf_digest":data.get("matrix_fingerprint_sha256_prefix"),
                 "stack_digest":data.get("original_mtxf_stack_sha256_prefix"),
                 "stack_modified":data.get("original_mtxf_stack_changed_from_input"),
+                "stack_pointer_delta":data.get("original_mtxf_destination_pointer_delta"),
                 "stack_finite_floats":data.get("original_mtxf_stack_finite_elements"),
                 "stack_nonidentity_floats":data.get("original_mtxf_stack_nonidentity_elements"),
             } for key,data in cases.items()

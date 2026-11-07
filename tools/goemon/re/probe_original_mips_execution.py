@@ -177,6 +177,9 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
         matrix_bytes).hexdigest()[:16]
     result["output_matrix_layout_verified"]=False
     result["separate_original_matrix_stack_probe"]=separate_matrix_stack
+    after_ptr=vm.load(0x80168530)
+    result["original_mtxf_destination_pointer_after"]=f"0x{after_ptr:08X}"
+    result["original_mtxf_destination_pointer_delta"]=after_ptr-matrix_stack
     if separate_matrix_stack:
         stack_words=tuple(vm.load(matrix_stack+index*4) for index in range(16))
         result["original_mtxf_stack_sha256_prefix"]=hashlib.sha256(
