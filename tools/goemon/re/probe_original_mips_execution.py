@@ -50,6 +50,12 @@ def run_probe(rom:bytes,progress:float=0.0)->dict:
     anim=SOURCE+(int(candidate["original_animation_pointer"],16)&0xFFFFFF)
     flags=int(candidate["original_animated_skeleton_flags"],16)
     vm.store(0x801684A0,ACTOR)
+    # Original func_800192D0 reads D_80168530 as the destination
+    # MtxF pointer, then passes it in a0 to func_80019ED8.
+    # A null value caused the first real source-ROM MIPS execution fault.
+    # Supply an isolated identity MtxF at the known original matrix region.
+    # This is test-context initialization, NOT a verified game runtime state.
+    vm.store(0x80168530,0x801684B0)
     vm.store(0x801684F0,anim)
     vm.store(0x80168520,anim)
     vm.put_float(0x80168510,progress)
