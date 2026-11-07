@@ -204,7 +204,7 @@ jobs:
 
       - name: Extract original skeleton-owned limb 3D meshes
         # Writes real source-ROM per-limb geometry to owner's Windows PC only.
-        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-rig-limbs]') }}
+        if: ${{ always() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-rig-limbs]') }}
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -217,7 +217,7 @@ jobs:
       - name: Decode original animation MIPS and archive compressed ROM streams
         # Both input and outputs stay on the private Windows runner.
         # Log contains ONLY high-level instruction metadata, no ROM bytes.
-        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-animation-codec]') }}
+        if: ${{ always() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-animation-codec]') }}
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -232,6 +232,24 @@ jobs:
           Write-Host 'Original MIPS algorithm: C:\actions-runner-goemon\original-animation-mips'
           Write-Host 'Actual source animation streams: C:\actions-runner-goemon\original-animation-streams'
           Write-Host 'No gameplay recording, manual assets, or GitHub uploads.'
+
+      - name: Package genuine original character rig data locally
+        # Preserve exact decoded N64 limb meshes plus raw Skeleton channel words.
+        # The 261 structures are unverified descriptors, NOT animation frames.
+        if: ${{ always() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-rig-package]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\package_original_rig.py
+          if ($LASTEXITCODE -ne 0) {
+            throw "Original ROM GOSKEL01 package generation failed: $LASTEXITCODE"
+          }
+          $manifest = 'C:\actions-runner-goemon\original-rom-rigs\manifest.json'
+          if (-not (Test-Path -LiteralPath $manifest -PathType Leaf)) {
+            throw "Original local rig archive manifest missing: $manifest"
+          }
+          Write-Host "Original articulated rig packages available locally: $manifest"
+          Write-Host 'No source ROM assets or geometry uploaded.'
 
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
