@@ -75,7 +75,8 @@ def inspect_source_pose_bank(banks: dict[int,bytes],
             "animation_frame_index":None,
             "original_action_id":None,
             "animation_clip_owner":None,
-            "correctly_decoded_pose_transformations":True,
+            "raw_animation_channel_fields_preserved":True,
+            "literal_affine_transforms_decoded":False,
             "animation_timeline_decoded":False,
         }
         clips.append(record)
@@ -95,7 +96,7 @@ def inspect_source_pose_bank(banks: dict[int,bytes],
         "original_source_poses":clips,
         "actual_animation_frames_recovered":0,
         "gameplay_capture_required":False,
-        "note":"All transform values are original-ROM authored. Source action/timing and animation interpolation still need offline decoding from main MIPS."
+        "note":"Source 16-bit fields are raw encoded animation-channel controls (not proven physical S/R/T). Actual transforms, timing and actions require original func_800192D0 MIPS decode."
     }
 
 
