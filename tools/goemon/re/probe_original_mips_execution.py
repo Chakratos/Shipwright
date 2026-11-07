@@ -60,7 +60,8 @@ def original_source_context(rom:bytes,slot:int)->tuple[dict,dict]:
 
 def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
               slot:int=0,source_limb_ptr:int|None=None,
-              capture_local_matrix:bool=False)->dict:
+              capture_local_matrix:bool=False,
+              initial_matrix_u32:list[int]|tuple[int,...]|None=None)->dict:
     decoded=verified_decoded_original_rom(rom)
     banks,candidate=original_source_context(rom,slot)
     vm=OriginalMipsCPU()
@@ -95,10 +96,18 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
     vm.put_float(0x80168514,0.0)
     vm.put_float(0x80168518,float(flags&255))
     vm.store(0x8016851C,(flags>>31)&1)
-    for row in range(4):
-        for col in range(4):
-            vm.put_float(0x801684B0+(row*4+col)*4,
-                         1.0 if row==col else 0.0)
+    if initial_matrix_u32 is not None:
+        if (len(initial_matrix_u32)!=16 or
+            any(type(bit)!=int or not 0<=bit<=0xFFFFFFFF or
+                not math.isfinite(f32(bit)) for bit in initial_matrix_u32)):
+            raise ValueError("invalid externally supplied original source MtxF matrix")
+        start_matrix=initial_matrix_u32
+    else:
+        start_matrix=[
+            (0x3F800000 if row==col else 0)
+            for row in range(4) for col in range(4)]
+    for idx,bits in enumerate(start_matrix):
+        vm.store(0x801684B0+idx*4,bits)
     for axis in range(3):
         vm.put_float(ACTOR+0x1c+4*axis,1.0)
     vm.put_float(ACTOR+0x28,progress)
@@ -147,6 +156,7 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
         "selected_limb_numeric_channels":numeric_channels(chosen),
         "selected_limb_has_source_graphics":bool(chosen["gfx"]),
         "controlled_progress":progress,
+        "controlled_source_parent_matrix":initial_matrix_u32 is not None,
         "live_gameplay_object_state_verified":False,
         "animation_bone_matrices_verified":False,
         "actual_clip_owner_verified":False,
