@@ -41,6 +41,7 @@ class OriginalAnimationChannelTests(unittest.TestCase):
         r=analyze_raw_original_animation_descriptors(pose(),bytes(0x300))
         self.assertEqual(r["original_animation_descriptors"],1)
         self.assertEqual(r["stats"]["0xB100_markers"],6)
+        self.assertFalse(r["literal_scale_rotation_claim_valid"])
         self.assertEqual(r["stats"]["0xB000_markers"],6)
         self.assertEqual(r["stats"]["numeric_channel_references"],6)
         self.assertEqual(r["stats"]["references_inside_candidate_payload"],6)
