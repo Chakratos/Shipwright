@@ -216,7 +216,7 @@ def main(argv=None)->int:
             if key!="mips_instructions"
         }
         (target/"original_mips_animation_flow.json").write_text(
-            json.dumps(flow,indent=2)+"\\n",encoding="utf-8")
+            json.dumps(flow,indent=2)+"\n",encoding="utf-8")
         (target/"original_animation_matrix_function_summary.json").write_text(
             json.dumps(metadata,indent=2)+"\n",encoding="utf-8")
         print("GOEMON_MIPS_MATRIX_FUNCTION "+json.dumps({
