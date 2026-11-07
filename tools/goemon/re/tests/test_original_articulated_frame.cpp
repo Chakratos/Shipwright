@@ -22,16 +22,16 @@ static SourceRig MakeRealGeometryFixture() {
     SourceRigLimbMesh rightArm{};
     rightArm.sourceGfxPointer=0x09000100;
     rightArm.vertices={
-        {1,0,0,0,0,{255,0,0,255}},
-        {0,1,0,32,0,{0,255,0,255}},
-        {0,0,1,0,32,{0,0,255,255}}
+        {1,0,0,0,0,0,{255,0,0,255}},
+        {0,1,0,0,32,0,{0,255,0,255}},
+        {0,0,1,0,0,32,{0,0,255,255}}
     };
     SourceRigLimbMesh leftArm{};
     leftArm.sourceGfxPointer=0x09000200;
     leftArm.vertices={
-        {1,0,0,0,0,{255,255,0,255}},
-        {0,1,0,32,0,{255,255,0,255}},
-        {0,0,1,0,32,{255,255,0,255}}
+        {1,0,0,0,0,0,{255,255,0,255}},
+        {0,1,0,0,32,0,{255,255,0,255}},
+        {0,0,1,0,0,32,{255,255,0,255}}
     };
     rig.meshes={rightArm,leftArm};
     return rig;
