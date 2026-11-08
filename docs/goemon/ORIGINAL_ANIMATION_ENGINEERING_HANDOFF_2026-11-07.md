@@ -532,3 +532,50 @@ non-rendered pivot matrices. Do not promote isolated samples to
 real action/tick animation or produce an artificial motion loop.
 No additional full Windows build warranted until C++ rendering changes.
 Preserve the separate SoH AP install.
+
+## Correction: IEEE-754 signed-zero false motion, 8 Nov 2026
+
+All prior claims that 69 ROM skeleton descriptors had actual
+progress-dependent animation, or that source bodypart vertices changed,
+were WRONG. Differences observed earlier were purely IEEE +0.0/-0.0
+sign-bit flips. Numerically the original matrices remain the same.
+
+Verified current facts:
+- Original MIPS player evaluator runs on hash-confirmed owner ROM.
+- Matrix stack destination D_80168530 normally advances +64 bytes;
+  two Sasuke source nodes advance +128 bytes.
+- One CPU retaining RDRAM and global MtxF state evaluates 14/15/18/24
+  skeleton nodes for Goemon/Ebisumaru/Sasuke/Yae (71 total), all valid.
+  Windows run 42473523620.
+- Native experimental GOMIPS01 v4 with exact source CPU progress
+  values 0 and 4 built and staged privately, 142/142 valid matrices;
+  original ROM source geometry and C++ smoke test pass. Run 42473943648.
+- Native renderer per-vertex checksum at source progress 0 and 4
+  is NUMERICALLY IDENTICAL for all four figures, both matrix layouts.
+- Focused native test 42474227448 proves maximum absolute numeric
+  change among all changed matrix bit patterns equals 0.0.
+  Only the sign bit of zero changed.
+- Corrected signed-zero-normalized sweep re-tested all 371 original
+  AnimatedSkeleton structural candidates with original machine code:
+  Goemon 0/89, Ebisumaru 0/81, Sasuke 0/83, Yae 0/118
+  NUMERICALLY time-sensitive descriptors. Run 42474422364.
+  Previously claimed 69 time-sensitive descriptors are false positives.
+  Previously chosen source headers are unverified player clip owners.
+
+Current blocker: authentic runtime AnimatedSkeleton/animation owner
+and active Object configuration, not ROM skeleton mesh decoding.
+Public Goemon64Recomp patches/anime.c player branch 0x60000000
+resolves Object.graphics_1, AnimatedSkeleton.animation and
+overlay_info[].vram_addr into global D_80168520, with actual
+Object.animation_progress, Object.unknown_70 and flags. Current
+isolated MIPS CPU initializes controlled approximations, so cannot yet
+produce true original game animation despite running the code.
+
+Next high priority: instrument ORIGINAL animation stream memory reads
+through D_80168520 and recover real player Object/animation ownership,
+including overlay relocation and action dispatch. Only after numeric
+nonzero source bone matrix movement is verified should automatic
+motion playback and real game animation frames be enabled. Do not
+invent gait or interpolated animations. Existing SoH Test preview only
+renders static authentic original source skeletal geometry. No full
+Ship build needed until renderer code changes; keep SoH AP untouched.
