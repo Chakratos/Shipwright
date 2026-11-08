@@ -59,9 +59,11 @@ class MipsCFGProvenanceTests(unittest.TestCase):
         words = [0, 0, ins(4, 2, 3, -3), 0, ins(40, 4, 9, 0xCC)]
         self.assertEqual(origin_at(words, BASE, 2, 4, 4)['origin'], 'incomplete_cfg')
 
-    def test_unsupported_branch_likely_fails_closed(self):
+    def test_supported_branch_likely_joins_taken_and_skipped_slot_paths(self):
         words = [ins(0x14, 2, 3, 1), 0, ins(40, 4, 9, 0xCC)]
-        self.assertFalse(origin_at(words, BASE, 0, 2, 4)['complete'])
+        result = origin_at(words, BASE, 0, 2, 4)
+        self.assertTrue(result['complete'])
+        self.assertEqual(result['origin'], 'entry_a0')
 
     def test_pinned_symbol_map_covers_all_action_and_caller_sites(self):
         from trace_player_writer_cfg import read_pinned_player_overlay_functions
