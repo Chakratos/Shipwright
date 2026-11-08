@@ -83,7 +83,8 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
               initial_matrix_u32:list[int]|tuple[int,...]|None=None,
               separate_matrix_stack:bool=False,
               stack_initial_matrix_u32:list[int]|tuple[int,...]|None=None,
-              source_header_offset:int|None=None)->dict:
+              source_header_offset:int|None=None,
+              previous_stack_matrix_u32:list[int]|tuple[int,...]|None=None)->dict:
     decoded=verified_decoded_original_rom(rom)
     banks,candidates=original_source_catalog(rom,slot)
     candidate=choose_source_candidate(candidates,source_header_offset)
@@ -112,7 +113,10 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
     # A null value caused the first real source-ROM MIPS execution fault.
     # Supply an isolated identity MtxF at the known original matrix region.
     # This is test-context initialization, NOT a verified game runtime state.
-    matrix_stack=0x80510000 if separate_matrix_stack else 0x801684B0
+    matrix_stack=0x80510040 if previous_stack_matrix_u32 is not None else (
+        0x80510000 if separate_matrix_stack else 0x801684B0)
+    if previous_stack_matrix_u32 is not None and not separate_matrix_stack:
+        raise ValueError("previous source MtxF requires separated destination")
     vm.store(0x80168530,matrix_stack)
     vm.store(0x801684F0,anim)
     vm.store(0x80168520,anim)
@@ -142,6 +146,13 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
             raise ValueError("unverified source MIPS matrix stack input")
         for idx,bits in enumerate(matrix_source):
             vm.store(matrix_stack+idx*4,bits)
+        if previous_stack_matrix_u32 is not None:
+            if (len(previous_stack_matrix_u32)!=16 or
+                any(type(bits)!=int or not 0<=bits<=0xFFFFFFFF or
+                    not math.isfinite(f32(bits)) for bits in previous_stack_matrix_u32)):
+                raise ValueError("invalid original source predecessor MtxF")
+            for idx,bits in enumerate(previous_stack_matrix_u32):
+                vm.store(matrix_stack-64+idx*4,bits)
     for axis in range(3):
         vm.put_float(ACTOR+0x1c+4*axis,1.0)
     vm.put_float(ACTOR+0x28,progress)
@@ -208,6 +219,7 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
         "selected_limb_has_source_graphics":bool(chosen["gfx"]),
         "controlled_progress":progress,
         "controlled_source_parent_matrix":initial_matrix_u32 is not None,
+        "controlled_predecessor_stack_matrix":previous_stack_matrix_u32 is not None,
         "live_gameplay_object_state_verified":False,
         "animation_bone_matrices_verified":False,
         "actual_clip_owner_verified":False,
