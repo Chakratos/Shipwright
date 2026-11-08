@@ -503,6 +503,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Original player writer provenance scan failed' }
           Write-Host 'ROM-private writer register and caller metadata retained locally, no proprietary payload uploaded.'
 
+      - name: Diagnose original player indirect JR jump tables using owner-private ROM
+        # Emit PC/count summaries only; raw ROM, table words and disassembly
+        # remain off GitHub. Does not assert a live switch animation.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-player-jump-tables]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\inspect_original_player_jump_tables.py
+          if ($LASTEXITCODE -ne 0) { throw 'Original indirect JR player switch investigation failed' }
+          Write-Host 'Original-game JR table metadata retained only on private PC.'
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
