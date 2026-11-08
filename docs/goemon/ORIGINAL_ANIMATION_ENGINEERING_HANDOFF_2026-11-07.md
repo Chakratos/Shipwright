@@ -491,3 +491,44 @@ game visually, do NOT claim original gameplay animations function:
 the preview only displays exact source-calculated isolated matrices,
 not recovered action IDs or original timed clips. Link/OoT quest
 integration remains incomplete. Never modify SoH AP/Archipelago.
+
+## Original MIPS predecessor-stack inheritance, 8 November 2026
+
+Actual ROM-MIPS evaluator pushes 64-byte matrices; its destination
+D_80168530 advances by 64 bytes on each original bone evaluation.
+The private source probe now accepts a previous-stack matrix staged
+at D_80168530 minus 64 bytes, rather than aliasing current MtxF.
+
+Verified real ROM run 42472657686: Goemon 5/13, Ebisumaru 4/14,
+Sasuke 9/17, Yae 9/23 rendered-parent-child pairs depend on the
+previous MtxF. 2 Sasuke and 3 Yae pairs further demonstrate an
+actual source-parent progress change propagating into a child matrix.
+
+An experimental parent-chain exporter runs exact owner-ROM MIPS code
+in source parent order for the four time-dependent source headers
+0x07014F30 / 0x07001CF8 / 0x070105B0 / 0x07023F60.
+New raw sample schema is predecessor-bone-matrices-v3; the
+GOMIPS01 packager rejects missing lineage provenance.
+Run 42472908167: 71 source bone records, 142 of 142 original
+CPU matrix evaluations valid, all four native C++ source render
+smoke tests pass. Non-identical source matrices: 5 Goemon,
+3 Ebisumaru, 1 Sasuke, 3 Yae bones.
+
+CRITICAL LIMITATION: actual source-ROM transformed vertex hashes
+are STILL IDENTICAL between progress 0 and 1 in every character,
+both matrix-memory conventions. This is not a visible moving model.
+Original Game player renderer func_80018CA0_198A0 in public
+Goemon64Recomp patches/anime.c has custom relative right/left
+traversal, object transitions, conditional 0x4000 matrix-pop,
+and multiple stack pops via func_800196A4_1A2A4.
+A simple static source parent graph is insufficient.
+
+NEXT: emulate original traversal and stack push/pop sequence across
+the whole source player Skeleton with correct Object state; record
+the per-limb original matrix at its display-list draw point.
+A valid preview requires a DRAWABLE source limb whose vertex
+coordinates differ under original input progress, not merely
+non-rendered pivot matrices. Do not promote isolated samples to
+real action/tick animation or produce an artificial motion loop.
+No additional full Windows build warranted until C++ rendering changes.
+Preserve the separate SoH AP install.
