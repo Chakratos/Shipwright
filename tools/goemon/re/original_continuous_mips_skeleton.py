@@ -84,7 +84,7 @@ def setup_original_n64_cpu(rom:bytes,slot:int,progress:float,
     return vm
 
 
-def run_source_stack_sequence(rom:bytes,slot:int,progress:float)->dict:
+def run_source_stack_sequence(rom:bytes,slot:int,progress:float,*,capture_private_matrices:bool=False)->dict:
     banks,candidates=original_source_catalog(rom,slot)
     record=choose_source_candidate(candidates,HEADERS[slot])
     plan=build_source_stack_plan(record["limbs"])
@@ -123,12 +123,15 @@ def run_source_stack_sequence(rom:bytes,slot:int,progress:float)->dict:
             digest=hashlib.sha256(b"".join(
                 v.to_bytes(4,"big") for v in words)).hexdigest()[:16]
             output_stack_pointers[node["ptr"]]=after
-            rows.append({
+            item={
                 "ptr":node["ptr"],"gfx":node["gfx"],"depth":node["depth"],
                 "source_original_mips_matrix_digest":digest,
                 "original_mips_stack_push_bytes":push_size,
                 "mips_instructions":vm.executed,
-            })
+            }
+            if capture_private_matrices:
+                item["private_original_mips_matrix_words"]=words
+            rows.append(item)
         except (MipsFault,ValueError,TypeError,OverflowError) as e:
             failure=str(e)
             break
