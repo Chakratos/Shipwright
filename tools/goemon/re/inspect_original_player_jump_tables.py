@@ -140,6 +140,8 @@ def trace_index_register_load(payload: bytes, base_pc: int,
         'selector_load_width': None,
         'selector_field_offset': None,
         'selector_object_register': None,
+        'selector_transform_chain': [],
+        'selector_chain_stop_reason': None,
         'selector_offset_cc_syntactic_candidate': False,
         'index_ancestry_within_source_function': False,
         'effective_address_definition_kind': None,
@@ -185,23 +187,46 @@ def trace_index_register_load(payload: bytes, base_pc: int,
         report['index_scale_shift_pc'] = f'0x{base_pc + shift_idx * 4:08X}'
         report['index_scale'] = scale
         report['index_source_register'] = f'r{source_reg}'
-        load_idx, load = definition(source_reg, shift_idx)
-        if load_idx is None:
-            return report
-        op = load >> 26
-        # Byte and halfword instructions are field syntax clues only.
-        widths = {0x20: 'lb', 0x24: 'lbu', 0x21: 'lh',
-                  0x25: 'lhu', 0x23: 'lw'}
-        if op not in widths:
-            return report
-        offset = sign16(load)
-        report['selector_load_pc'] = f'0x{base_pc + load_idx * 4:08X}'
-        report['selector_load_width'] = widths[op]
-        report['selector_field_offset'] = offset
-        report['selector_object_register'] = f'r{(load >> 21) & 31}'
-        report['selector_offset_cc_syntactic_candidate'] = (
-            offset == 0xCC and widths[op] in ('lbu', 'lb'))
-        report['index_ancestry_within_source_function'] = True
+        cursor_reg, cursor = source_reg, shift_idx
+        for _ in range(8):
+            load_idx, load = definition(cursor_reg, cursor)
+            if load_idx is None:
+                report['selector_chain_stop_reason'] = 'inherited_or_no_local_definition'
+                return report
+            op, rs, rt = load >> 26, (load >> 21) & 31, (load >> 16) & 31
+            widths = {0x20: 'lb', 0x24: 'lbu', 0x21: 'lh',
+                      0x25: 'lhu', 0x23: 'lw'}
+            if op in widths:
+                offset = sign16(load)
+                report['selector_load_pc'] = f'0x{base_pc + load_idx * 4:08X}'
+                report['selector_load_width'] = widths[op]
+                report['selector_field_offset'] = offset
+                report['selector_object_register'] = f'r{rs}'
+                report['selector_offset_cc_syntactic_candidate'] = (
+                    offset == 0xCC and widths[op] in ('lbu', 'lb'))
+                report['index_ancestry_within_source_function'] = True
+                report['selector_chain_stop_reason'] = 'memory_field_load'
+                return report
+            name = None
+            next_reg = None
+            if op in (8, 9, 10, 11, 12, 13, 14) and rt == cursor_reg:
+                name = {8: 'addi', 9: 'addiu', 10: 'slti', 11: 'sltiu',
+                        12: 'andi', 13: 'ori', 14: 'xori'}[op]
+                next_reg = rs
+            elif op == 0 and (load & 63) in (0x21, 0x25):
+                a, b = rs, rt
+                if a == 0 or b == 0:
+                    name = 'move_via_addu_or'
+                    next_reg = b if a == 0 else a
+            if next_reg is None:
+                report['selector_chain_stop_reason'] = 'unmodeled_register_transform'
+                return report
+            report['selector_transform_chain'].append({
+                'pc': f'0x{base_pc + load_idx * 4:08X}',
+                'operation': name,
+            })
+            cursor_reg, cursor = next_reg, load_idx
+        report['selector_chain_stop_reason'] = 'bounded_hop_limit'
         return report
     return report
 
@@ -392,6 +417,10 @@ def main(argv=None) -> int:
                   'index_operand_reg=', row['syntactic_jump_index_ancestry']['indexed_operand_registers']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'index_operand_def=', row['syntactic_jump_index_ancestry']['indexed_operand_definition_kinds']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'selector_chain=', row['syntactic_jump_index_ancestry']['selector_transform_chain']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'selector_stop=', row['syntactic_jump_index_ancestry']['selector_chain_stop_reason']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'absolute_vram_table_candidates=',
                   len(row['possible_absolute_vram_target_pointer_runs']))

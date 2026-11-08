@@ -111,6 +111,20 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertEqual(report['indexed_operand_definition_kinds'], ['lui', 'sll'])
         self.assertIsNone(report['selector_load_pc'])
 
+    def test_selector_through_andi_then_lbu_is_structural_offset_candidate(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 14
+        words[0] = (0x24 << 26) | (4 << 21) | (9 << 16) | 0xCC
+        words[1] = (0x0C << 26) | (9 << 21) | (11 << 16) | 0xF  # andi r11,r9,15
+        words[2] = (11 << 16) | (10 << 11) | (2 << 6)
+        words[3] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[4] = (0x23 << 26) | (8 << 21) | (12 << 16)
+        r = trace_index_register_load(blob(words), BASE, BASE, BASE + 16)
+        self.assertEqual(r['selector_chain_stop_reason'], 'memory_field_load')
+        self.assertEqual(r['selector_transform_chain'][0]['operation'], 'andi')
+        self.assertEqual(r['selector_field_offset'], 0xCC)
+        self.assertTrue(r['selector_offset_cc_syntactic_candidate'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8
