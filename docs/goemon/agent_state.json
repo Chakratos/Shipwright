@@ -26,7 +26,8 @@
     "numerically_changing_original_player_pose_verified": false,
     "original_timed_character_animations_play_in_ship": false,
     "all_four_characters_playable_in_oot": false,
-    "randomizer_integrated": false
+    "randomizer_integrated": false,
+    "original_live_owner_capture_observed": false
   },
   "critical_negative_evidence": {
     "description": "Signed-zero-normalized scan: no numerically time-dependent MtxF matrices in controlled synthetic original Object context",
@@ -40,9 +41,11 @@
     "numeric_zero_delta_native": 42474227448,
     "signed_zero_corrected_rom_sweep": 42474422364,
     "source_memory_reads_probe": 42474726311,
-    "exact_candidate_pointer_provenance": 42478639378
+    "exact_candidate_pointer_provenance": 42478639378,
+    "original_runtime_owner_mod_compilation": 42479222793,
+    "live_owner_parser_synthetic_tests": 42479506702
   },
-  "next_task": "Resolve actual live Object.graphics_1 and overlay_info relocation to active AnimatedSkeleton.animation and D_80168520; exact ROM PC/address read trace shows only 1/12 static candidate pointers read within first 128 bytes, none numerically animate.",
+  "next_task": "New original-game owner hook/mod is compiled and staged, runtime log not yet captured. Obtain one genuine original player-model GOEMON_ANIM_OWNER+GOEMON_ANIM_ACTIVE trace; correlate graphics_1/overlay_info/AnimatedSkeleton.animation to D_80168520, then prove nonzero numeric source MtxF motion for a real action. If user runtime not available, continue offline writers/dispatch tracing.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
   "last_known_limitation": "12 static candidate pointer contexts tested; 1/12 near candidate source loads, 0/12 numeric MtxF movement; actual live player animation owner unresolved."

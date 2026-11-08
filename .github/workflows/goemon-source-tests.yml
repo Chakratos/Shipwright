@@ -6,6 +6,10 @@ on:
       - feature/goemon-original-controller
     paths:
       - "tools/goemon/re/**"
+      - "AGENTS.md"
+      - "README.md"
+      - "docs/goemon/**"
+      - "tools/goemon/tests/test_agent_handoff.py"
       - "soh/soh/Enhancements/Goemon/OriginalSourceRig.hpp"
       - "soh/soh/Enhancements/Goemon/OriginalAnimationStreams.hpp"
       - "soh/soh/Enhancements/Goemon/OriginalArticulatedFrame.hpp"
@@ -13,6 +17,20 @@ on:
   workflow_dispatch:
 
 jobs:
+  agent-handoff-contract:
+    name: Validate GitHub-only Goemon agent project state
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          persist-credentials: false
+      - name: Check required agent documents, machine-readable state and evidence links
+        run: |
+          set -euo pipefail
+          python3 tools/goemon/tests/test_agent_handoff.py
+
   offline-codec-unit-tests:
     name: Source ROM codec tests (no game ROM, no self-hosted PC)
     runs-on: ubuntu-latest

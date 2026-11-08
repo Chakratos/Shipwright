@@ -42,3 +42,10 @@ Do not conflate stages or claim later ones from earlier ones.
 - This TECHNICAL_DECISIONS.md records stable constraints and root causes.
 - The long ORIGINAL_ANIMATION_ENGINEERING_HANDOFF_2026-11-07.md remains historical chronological investigation; it includes disproven hypotheses and is NOT the status document.
 - For every meaningful commit: update tests and these docs when facts changed. Do not leave important reasoning only in comments, GitHub issues or chat. Add one concise reproducible test/evidence note and the exact next blocker to repo docs.
+
+## New original-game owner capture, 2026-11-08
+
+- Pinned Goemon64Recomp patches/variables.h proves D_801FC60C is player model Object and D_801FC614 a separate root; D_80168520 is live resolved animation pointer and D_80168530 is MtxF stack cursor. Previous capture gated only root and read D_801684B0 current/root MtxF; now fixed.
+- Original-game diagnostic mod accepts both known player Object identities and emits GOEMON_ANIM_OWNER, GOEMON_ANIM_ACTIVE and GOEMON_ANIM_MATRIX_CURSOR metadata; captures (D_80168530 - 64 bytes) final original MIPS pushed matrix rather than D_801684B0. Compile/stage passed run 42479222793.
+- New source-free owner correlator integrated into reprocess_log.py (run 42479506702) but no actual live original-game owner log is verified yet. See docs/goemon/LIVE_ORIGINAL_ANIMATION_OWNER_2026-11-08.md.
+- GitHub Issues endpoint is **disabled for this repository** (HTTP 410 on 2026-11-08). Do not retry issue creation as the task tracker; use NEXT_TASKS.md, agent_state.json and CURRENT_STATE.md instead. All coordination remains in Git-tracked source files.

@@ -2,6 +2,14 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Latest original-game capture instrumentation (2026-11-08)
+
+- **Real runtime owner instrument is prepared and compiled, NOT played:** diagnostic_mod/src/goemon_skeletal_capture.c now accepts actual player-model Object D_801FC60C as well as root D_801FC614, resolves live tagged graphics_1 through overlay_info into AnimatedSkeleton and the animation pointer, emits GOEMON_ANIM_OWNER / GOEMON_ANIM_ACTIVE, and captures the actual per-limb final stack MtxF from D_80168530-64, with a cursor event for 64/128-byte pushes. Original model/root gate had been too restrictive.
+- Windows mod compilation and staging [run 42479222793](https://github.com/Chakratos/Shipwright/actions/runs/42479222793), 313/313 Python tests and native checks passed. New NRM is locally staged under SoH Goemon Test, not yet known to be executed in-game.
+- New automatic live owner/action and pointer-match parser, integrated with local original-game reprocess_log.py; source-free parser+pipeline tests [run 42479506702](https://github.com/Chakratos/Shipwright/actions/runs/42479506702), **317/317** Python tests and native C++20 checks passed.
+- **No actual GOEMON_ANIM_OWNER/ACTIVE trace captured yet.** Pointer ownership from real game remains unknown, and therefore numerical animated original bone motion also unknown.
+- Complete technical instructions: [LIVE_ORIGINAL_ANIMATION_OWNER_2026-11-08.md](LIVE_ORIGINAL_ANIMATION_OWNER_2026-11-08.md).
+
 ## Latest ROM experiment — exact source pointer provenance (2026-11-08)
 
 - New exact-PC/read-address/width tracing: tools/goemon/re/trace_original_animation_pointers.py and original_mips_vm.py; proven source-free regression in test_original_mips_vm.py and test_trace_original_animation_pointers.py.
