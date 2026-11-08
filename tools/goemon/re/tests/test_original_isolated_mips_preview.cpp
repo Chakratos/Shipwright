@@ -100,6 +100,8 @@ static int CheckOwnerOriginalPreview(const std::filesystem::path& root) {
             std::array<int,16> changedMatrixElements{};
             int changedSourceBones=0;
             int changedDrawableBones=0;
+            double maxChangedFloatDelta=0.0;
+            double maxChangedFloatMagnitude=0.0;
             for(const auto& bone:source.bones) {
                 if(!bone.available[0] || !bone.available[1]) continue;
                 bool modified=false;
@@ -108,6 +110,12 @@ static int CheckOwnerOriginalPreview(const std::filesystem::path& root) {
                        std::bit_cast<std::uint32_t>(bone.sourceMipsMatrix[1][field])) {
                         modified=true;
                         ++changedMatrixElements[field];
+                        const double before=bone.sourceMipsMatrix[0][field];
+                        const double after=bone.sourceMipsMatrix[1][field];
+                        maxChangedFloatDelta=std::max(maxChangedFloatDelta,
+                            std::abs(after-before));
+                        maxChangedFloatMagnitude=std::max(maxChangedFloatMagnitude,
+                            std::max(std::abs(before),std::abs(after)));
                     }
                 }
                 if(!modified) continue;
@@ -126,6 +134,8 @@ static int CheckOwnerOriginalPreview(const std::filesystem::path& root) {
                      <<" source_progress_1="<<source.controlledProgress[1]
                      <<" changed_bones="<<changedSourceBones
                      <<" changed_drawable_bones="<<changedDrawableBones
+                     <<" max_source_mtxf_delta="<<maxChangedFloatDelta
+                     <<" max_source_mtxf_magnitude="<<maxChangedFloatMagnitude
                      <<" changed_float_fields=";
             for(int field=0;field<16;++field)
                 if(changedMatrixElements[field])
