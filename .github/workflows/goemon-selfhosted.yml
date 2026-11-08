@@ -482,6 +482,16 @@ jobs:
             throw 'Original MIPS candidate pointer provenance experiment failed'
           }
 
+      - name: Find original player graphics and action ID writer candidate MIPS instructions
+        # Static syntactic matches in owner-private hash-verified ROM, not
+        # proven live Object/PlayerTask writes. Logs metadata/PC only.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-player-writer-scan]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\scan_player_object_writers.py
+          if ($LASTEXITCODE -ne 0) { throw 'Original NG5E player writer site scan failed' }
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
