@@ -192,6 +192,17 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertFalse(result['index_ancestry_within_source_function'])
         self.assertIsNone(result['selector_load_pc'])
 
+    def test_selector_object_pointer_definition_is_source_load_metadata(self):
+        from inspect_original_player_jump_tables import inspect_selector_object_base
+        words = [0] * 12
+        words[1] = (0x23 << 26) | (4 << 21) | (3 << 16) | 0x2C
+        words[3] = (0x25 << 26) | (3 << 21) | (9 << 16) | 0x30
+        report = inspect_selector_object_base(blob(words), BASE, BASE, BASE + 12)
+        self.assertEqual(report['selector_object_nearest_definition_kind'], 'lw')
+        self.assertEqual(report['selector_object_nearest_definition_offset'], 0x2C)
+        self.assertEqual(report['selector_object_nearest_definition_base_register'], 'r4')
+        self.assertFalse(report['actual_player_object_owner_verified'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

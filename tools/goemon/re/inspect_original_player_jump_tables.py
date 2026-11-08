@@ -266,6 +266,61 @@ def trace_index_register_load(payload: bytes, base_pc: int,
         return report
     return report
 
+
+
+def inspect_selector_object_base(payload: bytes, base_vram: int,
+                                 function_start: int, selector_load_pc: int) -> dict:
+    """Nearest syntactic definition of the pointer used by source selector load.
+
+    Not a dataflow proof across branches; records only PC, instruction class,
+    offset and registers, and never exports original instruction words.
+    """
+    from trace_player_writer_provenance import sign16, written_register
+    words = struct.unpack('>' + 'I' * (len(payload) // 4), payload)
+    i = (selector_load_pc - base_vram) // 4
+    first = (function_start - base_vram) // 4
+    if not (0 <= first <= i < len(words)):
+        raise ValueError('selector base load outside source function')
+    source = words[i]
+    if source >> 26 not in (0x20, 0x21, 0x23, 0x24, 0x25):
+        raise ValueError('selector instruction is not source memory load')
+    register = (source >> 21) & 31
+    report = {
+        'selector_source_object_register': f'r{register}',
+        'selector_object_nearest_definition_pc': None,
+        'selector_object_nearest_definition_kind': 'inherited_or_unknown',
+        'selector_object_nearest_definition_base_register': None,
+        'selector_object_nearest_definition_offset': None,
+        'actual_player_object_owner_verified': False,
+    }
+    if register == 0:
+        report['selector_object_nearest_definition_kind'] = 'zero_register'
+        return report
+    for idx in range(i - 1, first - 1, -1):
+        word = words[idx]
+        if written_register(word) != register:
+            continue
+        op = word >> 26
+        report['selector_object_nearest_definition_pc'] = f'0x{base_vram + idx * 4:08X}'
+        if op in (0x20, 0x21, 0x23, 0x24, 0x25):
+            report['selector_object_nearest_definition_kind'] = {
+                0x20:'lb',0x21:'lh',0x23:'lw',0x24:'lbu',0x25:'lhu'}[op]
+            report['selector_object_nearest_definition_base_register'] = (
+                f'r{(word >> 21) & 31}')
+            report['selector_object_nearest_definition_offset'] = sign16(word)
+        elif op in (8, 9, 12, 13, 14, 15):
+            report['selector_object_nearest_definition_kind'] = {
+                8:'addi',9:'addiu',12:'andi',13:'ori',14:'xori',15:'lui'}[op]
+            report['selector_object_nearest_definition_base_register'] = (
+                f'r{(word >> 21) & 31}')
+        elif op == 0 and (word & 63) in (0x21, 0x25):
+            report['selector_object_nearest_definition_kind'] = (
+                'addu' if (word & 63) == 0x21 else 'or')
+        else:
+            report['selector_object_nearest_definition_kind'] = 'other'
+        return report
+    return report
+
 def inspect_indirect_jump(payload: bytes, base_vram: int, jump_pc: int,
                           function_start: int, function_size: int) -> dict:
     if len(payload) % 4 or not (function_start <= jump_pc <
@@ -364,6 +419,9 @@ def analyze_original_overlay(payload: bytes, base_vram: int,
             ancestry['selector_object_base_cfg_origin'] = ptr['origin']
             ancestry['selector_object_base_cfg_symbol'] = ptr.get('symbol')
             ancestry['selector_object_base_cfg_complete'] = ptr['complete']
+            ancestry['selector_object_nearest_source_definition'] = (
+                inspect_selector_object_base(
+                    payload, base_vram, entry_pc, selector_pc))
         cases = []
         for site in action_sites:
             pc = int(site['pc'], 16)
@@ -462,6 +520,9 @@ def main(argv=None) -> int:
                       if row['syntactic_jump_index_ancestry'] else None,
                   'selector_stop_category=', row['syntactic_jump_index_ancestry']['selector_chain_stop_instruction_category']
                       if row['syntactic_jump_index_ancestry'] else None,
+                  'selector_object_nearest_def=', (
+                      row['syntactic_jump_index_ancestry'].get('selector_object_nearest_source_definition')
+                      if row['syntactic_jump_index_ancestry'] else None),
                   'source_path_controls=', row['syntactic_jump_index_ancestry']['selector_load_to_jr_control_transfer_count']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'straight_line=', row['syntactic_jump_index_ancestry']['selector_source_straight_line_proven']
