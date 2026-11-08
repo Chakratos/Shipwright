@@ -91,10 +91,16 @@ def run_source_stack_sequence(rom:bytes,slot:int,progress:float)->dict:
     vm=setup_original_n64_cpu(rom,slot,progress,record,banks)
     rows=[]
     failure=None
+    output_stack_pointers={}
     for node in plan:
-        original_destination=BASE+node["depth"]*64
-        # This is an approximated source parent graph stack restore,
-        # not a claim that it reproduces the original right/left traversal.
+        if node["parent"] is None:
+            original_destination=BASE
+        else:
+            original_destination=output_stack_pointers.get(node["parent"])
+            if original_destination is None:
+                raise ValueError("missing original source parent stack cursor")
+        # Source renderer's right and left object transitions remain
+        # unverified; preserve each parent's actual MIPS stack-end cursor.
         vm.store(0x80168530,original_destination)
         vm.r[4]=SOURCE+(node["ptr"]&0xFFFFFF)
         vm.r[5]=ACTOR
@@ -102,20 +108,25 @@ def run_source_stack_sequence(rom:bytes,slot:int,progress:float)->dict:
         try:
             vm.run(ENTRY,budget=200000)
             after=vm.load(0x80168530)
-            if after!=original_destination+64:
+            push_size=after-original_destination
+            if push_size not in (64,128):
                 raise MipsFault(
-                    "source original N64 MtxF pointer delta "+
-                    str(after-original_destination)+
-                    " at limb "+f"0x{node['ptr']:08X}"+
-                    " depth "+str(node["depth"]))
-            words=[vm.load(original_destination+4*i) for i in range(16)]
+                    "unsupported source MIPS stack push delta "+
+                    str(push_size)+" at limb "+f"0x{node['ptr']:08X}")
+            # Use the final MtxF before next push as a candidate
+            # display-list draw matrix. The original renderer's
+            # conditional intermediate pop still requires verification.
+            draw_slot=after-64
+            words=[vm.load(draw_slot+4*i) for i in range(16)]
             if any(not math.isfinite(f32(w)) for w in words):
                 raise MipsFault("original MIPS output matrix contains nonfinite values")
             digest=hashlib.sha256(b"".join(
                 v.to_bytes(4,"big") for v in words)).hexdigest()[:16]
+            output_stack_pointers[node["ptr"]]=after
             rows.append({
                 "ptr":node["ptr"],"gfx":node["gfx"],"depth":node["depth"],
                 "source_original_mips_matrix_digest":digest,
+                "original_mips_stack_push_bytes":push_size,
                 "mips_instructions":vm.executed,
             })
         except (MipsFault,ValueError,TypeError,OverflowError) as e:
@@ -157,6 +168,9 @@ def summarize_character_rows(records:list[dict],meshes:set[int])->dict:
         "source_nodes_executed_all_samples":n,
         "source_stack_sequence_completed_all_three":complete,
         "source_mips_matrix_nodes_changed":changed,
+        "source_bones_with_original_double_matrix_push":sum(
+            row.get("original_mips_stack_push_bytes")==128
+            for row in records[0]["results"]),
         "original_mesh_drawable_nodes":drawable,
         "original_mesh_drawable_nodes_with_changed_matrix":drawable_changed,
         "first_blockers":[r["first_blocker"] for r in records if r["first_blocker"]],

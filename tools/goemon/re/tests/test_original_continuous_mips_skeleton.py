@@ -17,6 +17,15 @@ class OriginalContinuousSourceStackTests(unittest.TestCase):
         ]
         self.assertEqual([x["depth"] for x in build_source_stack_plan(nodes)],
                          [0,1,2,1])
+    def test_source_push_slot_output_tracks_original_per_bone_stack_cursor(self):
+        nodes=[
+            {"ptr":0x07000100,"parent":None,"gfx":0},
+            {"ptr":0x07000118,"parent":0x07000100,"gfx":0x09000010},
+            {"ptr":0x07000130,"parent":0x07000100,"gfx":0x09000020}
+        ]
+        self.assertEqual([n["depth"] for n in build_source_stack_plan(nodes)],
+                         [0,1,1])
+
     def test_reject_cross_branch_unseen_parent(self):
         with self.assertRaisesRegex(ValueError,"unresolved"):
             build_source_stack_plan([
