@@ -1,6 +1,6 @@
 # Original player writer provenance (2026-11-08)
 
-**Status: original Windows ROM scan completed [run 42481382788](https://github.com/Chakratos/Shipwright/actions/runs/42481382788) successfully, 327/327 Python + C++20 checks. Extended static caller-a0 analysis has 9 synthetic tests passed locally, Windows rerun pending. G1 OPEN.**
+**Status: original Windows ROM scan completed [run 42481382788](https://github.com/Chakratos/Shipwright/actions/runs/42481382788) successfully, 327/327 Python + C++20 checks. Extended static caller-a0 analysis verified by [run 42481566704](https://github.com/Chakratos/Shipwright/actions/runs/42481566704), 329/329 Python tests and native C++20 success. G1 OPEN.**
 
 ## Method
 
@@ -15,7 +15,7 @@
 
 Local synthetic unit tests: 9 cases passing (including new caller a0 and delay-slot overrides). They exercise signed-16 pointer loads, aliased r16, model-Object global, stack false positives, intervening JAL barrier, register clobber, guessed call-site flags, and a bare literal global address. The synthetic test pass does **not** establish the actual game action writer.
 
-First private Windows ROM scan [run 42481382788](https://github.com/Chakratos/Shipwright/actions/runs/42481382788) passed. It found 10 action +0xCC candidate stores and 21 non-r29 graphics +0x2C candidate stores; **zero exact local player-global-pointer load proofs in both categories**. For action stores, local origin stopped at a control-flow boundary for nine sites and remained unresolved for one. Nearest-stack-allocation direct-JAL caller counts were 1, 1, 0, 3, 2, 0, 0, 0, 0, 0; these are not proven function callers. A second source update records a0 origin at those possible callers and rejects a0-setting JAL delay slots; its private ROM rerun must still be inspected. A result of zero local known-global loads would only mean no *intra-basic-block* proof; original game code may pass r4/r16 from callers or preserve s0 across JAL. Prologue matching has false-positive risk. **Do not change action/animation ownership gates based solely on this scan.**
+First private Windows ROM scan [run 42481382788](https://github.com/Chakratos/Shipwright/actions/runs/42481382788) passed. It found 10 action +0xCC candidate stores and 21 non-r29 graphics +0x2C candidate stores; **zero exact local player-global-pointer load proofs in both categories**. For action stores, local origin stopped at a control-flow boundary for nine sites and remained unresolved for one. Nearest-stack-allocation direct-JAL caller counts were 1, 1, 0, 3, 2, 0, 0, 0, 0, 0; these are not proven function callers. The second owner ROM run [42481566704](https://github.com/Chakratos/Shipwright/actions/runs/42481566704) shows **0 locally proven exact player-global a0 caller arguments** among seven JAL-to-heuristic-prologue caller PCs: 0x801CB7DC, 0x801D9F88, 0x801DAC9C, 0x801DACF0, 0x801DAD24, 0x801DD4E8, 0x801DD5A0. Delay-slot writes can invalidate pre-JAL observations; no function entry or dynamic player-ownership claim follows. A result of zero local known-global loads would only mean no *intra-basic-block* proof; original game code may pass r4/r16 from callers or preserve s0 across JAL. Prologue matching has false-positive risk. **Do not change action/animation ownership gates based solely on this scan.**
 
 ## Next falsifiable step
 
