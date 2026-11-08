@@ -251,6 +251,13 @@ def main(argv: list[str] | None = None) -> int:
         from trace_player_writer_cfg import inspect_pinned_caller_a0
         result['pinned_direct_caller_a0'] = inspect_pinned_caller_a0(
             words, base_pc, pinned, functions)
+        from trace_player_writer_cfg import follow_direct_call_a0_origin
+        entry_a0_functions = sorted({
+            v['pinned_function_pc'] for v in result['pinned_function_cfg'].values()
+            if v['origin'] == 'entry_a0' and v.get('pinned_function_pc')
+        })
+        result['transitive_player_a0_provenance'] = follow_direct_call_a0_origin(
+            words, base_pc, functions, entry_a0_functions)
         result['source_file_id'] = overlay.file_id
         checkout_root = Path(__file__).resolve().parents[3]
         out = args.output.resolve()
@@ -305,6 +312,14 @@ def main(argv: list[str] | None = None) -> int:
                   'global=', caller['a0_pre_delay_slot_symbol'],
                   'cfg_complete=', caller['cfg_complete'],
                   'blockers=', json.dumps(caller['control_blocker_classes'], sort_keys=True))
+        for function_pc, finding in result['transitive_player_a0_provenance'].items():
+            print('GOEMON_TRANSITIVE_A0_ROOT', function_pc,
+                  'direct_edges=', finding['verified_direct_call_edges_traversed'],
+                  'global_roots=', finding['known_global_path_count'],
+                  'endings=', json.dumps(finding['terminal_reasons'], sort_keys=True))
+            for root in finding['static_global_entry_paths'][:8]:
+                print('GOEMON_TRANSITIVE_A0_CANDIDATE', function_pc,
+                      root['global'], 'jal_pcs=', root['direct_jal_chain_pcs'])
         print('GOEMON_WRITER_PROVENANCE COMPLETE: static evidence only; no live owner confirmed')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_WRITER_PROVENANCE FAILED:', exc, file=sys.stderr)

@@ -334,3 +334,98 @@ def inspect_pinned_caller_a0(words, base_pc, source, functions):
             'control_blocker_classes': pre.get('blocker_classes', {}),
         })
     return results
+
+
+def index_direct_jal_callers(words, base_pc, functions):
+    """Exact original overlay JAL destinations, indexed by known source function."""
+    from bisect import bisect_right
+    starts = [f['start'] for f in functions]
+    reverse = {}
+    for idx, word in enumerate(words):
+        if word >> 26 != 3:
+            continue
+        pc = base_pc + idx * 4
+        target = ((pc + 4) & 0xF0000000) | ((word & 0x3FFFFFF) << 2)
+        if target not in starts:
+            continue
+        loc = bisect_right(starts, pc) - 1
+        if loc < 0 or pc >= functions[loc]['start'] + functions[loc]['size']:
+            continue
+        reverse.setdefault(target, []).append({
+            'jal_pc': f'0x{pc:08X}',
+            'jal_index': idx,
+            'source_function_pc': f"0x{functions[loc]['start']:08X}",
+            'source_function_start_index': (functions[loc]['start'] - base_pc) // 4,
+        })
+    return reverse
+
+
+def follow_direct_call_a0_origin(words, base_pc, functions, action_function_pcs,
+                                 *, max_depth=5, max_explored=400):
+    """Bounded inverse direct-JAL chain for inherited a0, never dynamic execution.
+
+    A path qualifies only when each local entry-to-callsite analysis is
+    complete and passes a0 unchanged through the call delay slot.
+    """
+    reverse = index_direct_jal_callers(words, base_pc, functions)
+    result = {}
+    for original_target in action_function_pcs:
+        start = int(original_target, 16)
+        visited = set()
+        stack = [(start, tuple())]
+        roots, endings = [], []
+        traversed = 0
+        while stack and traversed < max_explored:
+            target, path = stack.pop(0)
+            if (target, len(path)) in visited:
+                continue
+            visited.add((target, len(path)))
+            edges = reverse.get(target, [])
+            if not edges:
+                endings.append('no_pinned_direct_callers')
+            for edge in edges:
+                traversed += 1
+                caller_pc = int(edge['jal_pc'], 16)
+                idx = edge['jal_index']
+                local = origin_at(words, base_pc,
+                                  edge['source_function_start_index'], idx, 4)
+                delay_word = words[idx + 1] if idx + 1 < len(words) else 0
+                cop_writes_a0 = (
+                    (delay_word >> 26) in (0x10, 0x11, 0x12, 0x13)
+                    and ((delay_word >> 21) & 31) in (0, 2)
+                    and ((delay_word >> 16) & 31) == 4)
+                clobber = written_register(delay_word) == 4 or cop_writes_a0
+                route = (edge['jal_pc'],) + path
+                if clobber:
+                    endings.append('delay_slot_overwrites_a0')
+                elif not local['complete']:
+                    endings.append('incomplete_caller_cfg')
+                elif local['origin'] == 'player_global_load':
+                    roots.append({
+                        'global': local.get('symbol'),
+                        'caller_function_pc': edge['source_function_pc'],
+                        'direct_jal_chain_pcs': list(route),
+                        'depth': len(route),
+                        'proven_live_player_owner': False,
+                    })
+                elif local['origin'] == 'entry_a0' and len(route) < max_depth:
+                    stack.append((int(edge['source_function_pc'], 16), route))
+                elif local['origin'] == 'entry_a0':
+                    endings.append('depth_limit')
+                else:
+                    endings.append(local['origin'])
+                if traversed >= max_explored:
+                    break
+        if stack:
+            endings.append('exploration_limit')
+        from collections import Counter
+        result[original_target] = {
+            'verified_direct_call_edges_traversed': traversed,
+            'static_global_entry_paths': roots[:30],
+            'known_global_path_count': len(roots),
+            'terminal_reasons': dict(sorted(Counter(endings).items())),
+            'all_function_boundaries_from_pinned_symbols': True,
+            'only_direct_jal_in_same_overlay': True,
+            'verified_live_player_action_owner': False,
+        }
+    return result

@@ -174,6 +174,43 @@ class MipsCFGProvenanceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'does not target'):
             inspect_pinned_caller_a0(words, base, source, [{'start': base, 'size': 8}])
 
+    def test_two_level_direct_jal_provenance_finds_player_task_global(self):
+        from trace_player_writer_cfg import follow_direct_call_a0_origin
+        base = 0x80100000
+        words = [0] * 40
+        target = lambda offset: (3 << 26) | (((base + offset) >> 2) & 0x3ffffff)
+        words[0] = ins(15, 0, 8, 0x8020)
+        words[1] = ins(35, 8, 4, 0xC604)
+        words[2] = target(0x40)   # caller root -> middle
+        words[0x48 // 4] = target(0x80)  # middle -> action
+        words[0x80 // 4] = ins(40, 4, 9, 0xCC)
+        functions = [{'start': base, 'size': 0x20},
+                     {'start': base + 0x40, 'size': 0x20},
+                     {'start': base + 0x80, 'size': 0x20}]
+        result = follow_direct_call_a0_origin(
+            words, base, functions, [f'0x{base+0x80:08X}'])
+        found = result[f'0x{base+0x80:08X}']
+        self.assertEqual(found['known_global_path_count'], 1)
+        self.assertEqual(found['static_global_entry_paths'][0]['global'], 'player_1_task')
+        self.assertEqual(found['static_global_entry_paths'][0]['depth'], 2)
+        self.assertFalse(found['verified_live_player_action_owner'])
+
+    def test_caller_delay_slot_override_blocks_transitive_global_claim(self):
+        from trace_player_writer_cfg import follow_direct_call_a0_origin
+        base = 0x80100000
+        words = [0] * 24
+        words[0] = ins(15, 0, 8, 0x8020)
+        words[1] = ins(35, 8, 4, 0xC604)
+        words[2] = (3 << 26) | (((base + 0x40) >> 2) & 0x3ffffff)
+        words[3] = ins(9, 0, 4, 7)
+        functions = [{'start': base, 'size': 0x20},
+                     {'start': base + 0x40, 'size': 0x20}]
+        result = follow_direct_call_a0_origin(
+            words, base, functions, [f'0x{base+0x40:08X}'])
+        found = result[f'0x{base+0x40:08X}']
+        self.assertEqual(found['known_global_path_count'], 0)
+        self.assertIn('delay_slot_overwrites_a0', found['terminal_reasons'])
+
     def test_no_entry_hint_no_proof(self):
         site = {'pc': f'0x{BASE:08X}', 'base_register': 'r4',
                 'nearby_function_prologue_hint': None}
