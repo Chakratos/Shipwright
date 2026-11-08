@@ -42,12 +42,15 @@ def classify_descriptor_samples(cases:list[dict])->dict:
         case.get("returned") is True and
         case.get("separate_original_matrix_stack_probe") is True and
         case.get("original_mtxf_stack_finite_elements")==16 and
-        isinstance(case.get("original_mtxf_stack_sha256_prefix"),str)
+        isinstance(case.get("original_mtxf_numeric_digest"),str)
         for case in cases)
     if not valid:
         return {"valid":False,"changed_at_1":False,
                 "changed_at_4":False,"changed_any":False}
-    keys=[case["original_mtxf_stack_sha256_prefix"] for case in cases]
+    keys=[case.get("original_mtxf_numeric_digest")
+          for case in cases]
+    if any(not isinstance(key,str) for key in keys):
+        raise ValueError("real original MIPS numeric-zero-normalized matrix digest missing")
     return {
         "valid":True,
         "changed_at_1":keys[0]!=keys[1],

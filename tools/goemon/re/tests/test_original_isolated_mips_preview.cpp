@@ -106,8 +106,8 @@ static int CheckOwnerOriginalPreview(const std::filesystem::path& root) {
                 if(!bone.available[0] || !bone.available[1]) continue;
                 bool modified=false;
                 for(int field=0;field<16;++field) {
-                    if(std::bit_cast<std::uint32_t>(bone.sourceMipsMatrix[0][field]) !=
-                       std::bit_cast<std::uint32_t>(bone.sourceMipsMatrix[1][field])) {
+                    if(bone.sourceMipsMatrix[0][field] !=
+                       bone.sourceMipsMatrix[1][field]) {
                         modified=true;
                         ++changedMatrixElements[field];
                         const double before=bone.sourceMipsMatrix[0][field];

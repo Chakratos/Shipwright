@@ -196,6 +196,14 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
         result["original_mtxf_stack_sha256_prefix"]=hashlib.sha256(
             b"".join(word.to_bytes(4,"big") for word in stack_words)
         ).hexdigest()[:16]
+        # IEEE-754 -0.0 and +0.0 have different bits but are THE SAME
+        # numerical matrix. Canonicalize zero before testing animation.
+        numeric_words=tuple(
+            0 if (word&0x7FFFFFFF)==0 else word
+            for word in stack_words)
+        result["original_mtxf_numeric_digest"]=hashlib.sha256(
+            b"".join(word.to_bytes(4,"big") for word in numeric_words)
+        ).hexdigest()[:16]
         result["original_mtxf_stack_changed_from_input"]=stack_words!=tuple(matrix_source)
         result["original_mtxf_stack_finite_elements"]=sum(
             math.isfinite(f32(word)) for word in stack_words)

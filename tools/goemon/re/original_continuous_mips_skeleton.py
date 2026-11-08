@@ -121,7 +121,8 @@ def run_source_stack_sequence(rom:bytes,slot:int,progress:float,*,capture_privat
             if any(not math.isfinite(f32(w)) for w in words):
                 raise MipsFault("original MIPS output matrix contains nonfinite values")
             digest=hashlib.sha256(b"".join(
-                v.to_bytes(4,"big") for v in words)).hexdigest()[:16]
+                (0 if (v&0x7FFFFFFF)==0 else v).to_bytes(4,"big")
+                for v in words)).hexdigest()[:16]
             output_stack_pointers[node["ptr"]]=after
             item={
                 "ptr":node["ptr"],"gfx":node["gfx"],"depth":node["depth"],
