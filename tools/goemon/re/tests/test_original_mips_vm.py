@@ -84,6 +84,17 @@ class MipsEmulatorTests(unittest.TestCase):
         self.execute(cvt,R(31,0,0,0,8),0)
         self.assertEqual(f64(self.cpu.f[6],self.cpu.f[7]),-7.0)
 
+    def test_source_rom_read_provenance_includes_exact_pc_address_and_width(self):
+        self.cpu.source_region=(0x80400100,0x80400200)
+        self.cpu.store(0x80400110,0x12345678)
+        self.cpu.r[8]=0x80400110
+        self.execute(I(0x23,8,9,0),R(31,0,0,0,8),0)
+        self.assertEqual(self.cpu.r[9],0x12345678)
+        self.assertEqual(self.cpu.original_source_read_offsets[0x80400110],1)
+        self.assertEqual(self.cpu.original_source_read_sites[
+            (0x80002000,0x80400110,4)],1)
+        self.assertEqual(len(self.cpu.original_source_read_sites),1)
+
     def test_unsupported_code_and_invalid_pointer_fail_closed(self):
         with self.assertRaisesRegex(MipsFault,"unknown MIPS opcode"):
             self.execute(0xfc000000)

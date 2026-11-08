@@ -84,7 +84,8 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
               separate_matrix_stack:bool=False,
               stack_initial_matrix_u32:list[int]|tuple[int,...]|None=None,
               source_header_offset:int|None=None,
-              previous_stack_matrix_u32:list[int]|tuple[int,...]|None=None)->dict:
+              previous_stack_matrix_u32:list[int]|tuple[int,...]|None=None,
+              capture_source_read_sites:bool=False)->dict:
     decoded=verified_decoded_original_rom(rom)
     banks,candidates=original_source_catalog(rom,slot)
     candidate=choose_source_candidate(candidates,source_header_offset)
@@ -200,6 +201,16 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
     result["original_source_skeleton_region_reads"]=skeleton_words
     result["total_source_bank_data_reads"]=sum(vm.original_source_read_offsets.values())
     result["original_animation_owner_verified"]=False
+    if capture_source_read_sites:
+        # PRIVATE caller only: original source read locations and MIPS
+        # instruction addresses; no original ROM bytes or fetched values.
+        result["private_original_source_read_sites"]=[
+            {"pc":pc,"address":address,"width":width,"count":count}
+            for (pc,address,width),count in sorted(
+                vm.original_source_read_sites.items())]
+        result["private_candidate_animation_pointer"]=anim
+        result["private_source_bank_bounds"]=[
+            SOURCE,SOURCE+len(banks[7])]
     result["output_matrix_layout_verified"]=False
     result["separate_original_matrix_stack_probe"]=separate_matrix_stack
     after_ptr=vm.load(0x80168530)

@@ -72,6 +72,9 @@ class OriginalMipsCPU:
         self.first_calls=[]
         self.reads=Counter()
         self.original_source_read_offsets=Counter()
+        # CPU instruction PC, exact N64 source address and load width only.
+        # No source-ROM values or original instruction words are retained.
+        self.original_source_read_sites=Counter()
         self.writes=Counter()
         self.visited=set()
         self.initial_memory_reads=[]
@@ -221,12 +224,15 @@ class OriginalMipsCPU:
             label=self.region(address)
             if op in (0x20,0x21,0x23,0x24,0x25,0x31,0x35):
                 self.reads[label]+=1
-                if label=="source_07":
-                    self.original_source_read_offsets[address]+=1
                 try:
                     val=self.load(address,width)
                 except MipsFault as fault:
                     raise MipsFault(f"{fault}; original PC=0x{pc:08X} op=0x{op:02X} base=r{rs}=0x{a:08X} imm={s16(imm)}") from fault
+                if label=="source_07":
+                    self.original_source_read_offsets[address]+=1
+                    key=(pc,address,width)
+                    if key in self.original_source_read_sites or len(self.original_source_read_sites)<4096:
+                        self.original_source_read_sites[key]+=1
                 if len(self.initial_memory_reads)<24:
                     self.initial_memory_reads.append({
                         'pc':f'0x{pc:08X}',
