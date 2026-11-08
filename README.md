@@ -1,3 +1,5 @@
+> **Goemon × OoT development branch:** The four-character original Goemon port has a [repository-only agent entry point](AGENTS.md) and [Goemon project restart guide](docs/goemon/START_HERE.md). Before continuing this branch, read those files, [current verified status](docs/goemon/CURRENT_STATE.md), and [next tasks](docs/goemon/NEXT_TASKS.md). Old chat histories are not required.
+
 ![Ship of Harkinian](docs/shiptitle.darkmode.png#gh-dark-mode-only)
 ![Ship of Harkinian](docs/shiptitle.lightmode.png#gh-light-mode-only)
 

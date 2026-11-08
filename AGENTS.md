@@ -1,0 +1,24 @@
+# AGENTS.md — authoritative instructions for all agents on this branch
+
+**Project:** Original Mystical Ninja Starring Goemon (N64) characters inside Ship of Harkinian (OoT), including real animations, controls, character-specific abilities and eventual Randomizer compatibility.
+
+**START HERE:** [docs/goemon/START_HERE.md](docs/goemon/START_HERE.md). Then read [docs/goemon/CURRENT_STATE.md](docs/goemon/CURRENT_STATE.md), [docs/goemon/NEXT_TASKS.md](docs/goemon/NEXT_TASKS.md), and [docs/goemon/TECHNICAL_DECISIONS.md](docs/goemon/TECHNICAL_DECISIONS.md). Check source code and latest CI runs. These are canonical and MUST be updated whenever work changes verified status. Historical reports are **not** authoritative if contradicted by CURRENT_STATE.
+
+## Non-negotiables
+
+1. **The repo, not any AI chat, holds project knowledge.** Start every session by reading the documents above and confirming the current branch HEAD. Never ask the owner to replay past chats. At session end commit source changes, verification evidence, blockers, next commands, and status into Git.
+2. **Do actual work.** Pick the highest-priority actionable task in NEXT_TASKS, execute it, test it, and commit a useful increment. Do not halt at a status summary when available GitHub and runner tools permit progress. Never invent successful tests or full builds.
+3. **Original character fidelity:** the target is playable **Goemon, Ebisumaru, Sasuke and Yae** in OoT, using original N64 geometry, skeletons, real movement/animations/abilities. An OBJ swap, Link animations, synthetic bone movements or the diagnostic ball are not an acceptable final solution.
+4. **Scientific provenance:** separate raw original code execution, structural candidate data, inferred matrices, numerically moving actual vertices, visually validated in-game poses, and genuine playable action clips. These are separate gates. **IEEE-754 signed zero is NOT motion.** 2026-11-08 numeric ROM sweep found **0/371** progress-dependent source matrices under the current *synthetic* object state; earlier “69 animated candidates” were false positives.
+5. **Private assets:** the user-owned original NG5E ROM, decompressed data, copied model assets, textures, and extracted proprietary binary animations stay **on the owner's PC**. Never commit or upload source ROM bytes or extracted copyright materials as GitHub code, Actions artifacts or chat attachments. GitHub stores tools, source changes, hashes/evidence, derived *metadata*, and tests only. Do not log raw commercial MIPS instructions, source matrices or vertex tables.
+6. **Do not touch** the separate Archipelago installation: C:\Users\Chakratos\Desktop\SoH AP. The only intended Ship test installation is C:\Users\Chakratos\Desktop\SoH Goemon Test.
+7. **Windows build cost matters:** regular pushes run Python/C++ source tests via self-hosted runner, not the ~10-minute Ship build. Trigger **one** full build only after engine-facing code changes merit it (commit marker [goemon-build] or explicit workflow_dispatch full_build:true). Use commit-marker opt-ins for ROM-private experiments documented in NEXT_TASKS. The linked self-hosted Windows runner already has private ROM access; prefer automatic offline jobs instead of asking owner to build manually.
+8. **Branch:** feature/goemon-original-controller in Chakratos/Shipwright. Do not blindly work on upstream/default branch. Preserve the current test configuration and existing player integration until replacements pass.
+9. **Accuracy beats optimism:** 2026-11-08 status: original source geometry and MIPS evaluator integration compiled successfully; **actual original animations are NOT functioning yet**. Correct old false claims explicitly; never repeat old progress statistics as current truth.
+10. **End every meaningful work unit** by updating CURRENT_STATE (what is proven, evidence link and blocker), NEXT_TASKS (what is next), and technical notes if changed; add or update tests; push commit; describe concrete outcome and any failures to the user. If interrupted, the following agent should recover by inspecting Git HEAD and these files alone.
+
+## Entry point for a new agent
+
+> Work in Chakratos/Shipwright, branch feature/goemon-original-controller. Read AGENTS.md and docs/goemon/START_HERE.md and everything it links. Treat repo + latest CI as the only authority, ignore obsolete chat claims, and execute NEXT_TASKS from the first unfinished gate. Commit code, tests, evidence and updated handoff docs before ending. Continue to real playable Goemon/Ebisumaru/Sasuke/Yae in OoT without manually requesting details already documented.
+
+If GitHub tools are not connected, ask the user to connect GitHub; do not claim repo modifications occurred.

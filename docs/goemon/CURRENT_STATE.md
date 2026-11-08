@@ -1,0 +1,52 @@
+# CURRENT_STATE — authoritative verified status
+
+**Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
+
+## Product state
+
+| Area | What is implemented and proven | What is NOT proven / not done |
+| --- | --- | --- |
+| Original movement physics | Original Goemon horizontal controls, heading, jump/gravity and bounded trace comparisons were investigated; source-specific C++ tests exist. Ship controller ghost / prototype actor and basic reference character steering have compiled. | Complete seamless playable controller parity in all OoT scenes, camera/collision correctness, quest integration, all four original abilities. Do not re-invest time debugging the old cyan ball. |
+| Reference models / source geometry | Source-aligned original ROM meshes, parts and structural GOSKEL01 rigs, with four characters and native geometry preview in a Windows Ship build. | Authentic complete rendering material/texture rig, all missing bodypart meshes, all original animation playing in game, verified source root skeleton owner. |
+| Original MIPS executor | Executes N64 matrix evaluator func_800192D0 at 0x800192D0. Correctly separate current MtxF from D_80168530 destination. 64-byte matrix pushes ordinarily; two Sasuke cases 128-byte pushes. 71 source bones and 142 MtxF evaluations for two controlled samples were completed. | Authentic active player Object/AnimatedSkeleton/overlay configuration and full renderer object-transition, 0x4000 stack-pop semantics. |
+| Binary integration | GOSKEL01 source geometry and GOMIPS01 C++ reader and source vertex preview; private original.goskel + isolated.gomips staged into separate Goemon Test installation. Ship compiled and installed with opt-in preview. | Native game animation is not visually confirmed. The preview is not a real running/jumping animation, even though it compiles and draws source geometry. |
+| Original animation | Code paths for original animated 0x60000000 player graphics, Object.graphics_1, animation_progress and D_80168520 identified in public Goemon64Recomp patches/anime.c. Original MIPS executor reads original source-bank data for some numeric-channel test cases. | Live animated player ownership, clip/action table, correct original animation key decoding/time base, numerically moving source vertices. |
+| Abilities / Randomizer | Mapping/intent in docs/goemon/GOEMON_ZELDA_ABILITY_MAPPING.md. | Gameplay and Randomizer completion; not currently implemented. |
+
+## Crucial disproven claims
+
+- **“69 animation descriptors changing”: FALSE.** On 2026-11-08 exact numeric comparison canonicalizing IEEE signed-zero, all 371 structural candidates yielded **ZERO** numerically changing source matrices at artificial source animation progress 0,1,4. Split: Goemon 0/89, Ebisumaru 0/81, Sasuke 0/83, Yae 0/118.
+- **“3 Goemon / 3 Ebisumaru / 2 Sasuke / 8 Yae bodyparts animate”: FALSE AS ANIMATION CLAIM.** Earlier raw matrix bit differences were signed-zero artifacts, not actual floating-point movement. Numeric transformed vertex hashes are identical at controlled 0 vs 4 in both tested matrix conventions.
+- **“142 MIPS matrices pass”: TRUE AS EXECUTION/PACKAGING.** It is NOT proof of authored motion. Original MIPS machine instructions run and return, but current object context doesn't activate actual movement.
+- The four “best animated” descriptor headers 0x07014F30, 0x07001CF8, 0x070105B0, 0x07023F60 are only structural/geometry-compatible candidates, **not confirmed action owners**.
+- The source-bank read counter uses an approximate region boundary (animation pointer through earliest skeleton pointer). **It is NOT exact proof that a particular live animation keyframe was used.** Further memory provenance and actual object pointer resolution required.
+
+## Evidence index
+
+- Original ROM extraction / native rig + source owner tests: [run 42368756132](https://github.com/Chakratos/Shipwright/actions/runs/42368756132).
+- Original C++ native source-rig reading and offline geometry pairing: [run 42396694311](https://github.com/Chakratos/Shipwright/actions/runs/42396694311).
+- First successful full Windows Ship source-geometry preview build and copy into isolated Test installation: [run 42396981715](https://github.com/Chakratos/Shipwright/actions/runs/42396981715).
+- Four original source graphics from owner ROM in native renderer (not visible animation): [run 42397502772](https://github.com/Chakratos/Shipwright/actions/runs/42397502772).
+- Source MIPS destination fixes; full original MIPS matrices valid: [run 42398554677](https://github.com/Chakratos/Shipwright/actions/runs/42398554677).
+- Original MIPS source parent matrix/pointer experiments: [run 42472657686](https://github.com/Chakratos/Shipwright/actions/runs/42472657686).
+- One CPU across full source Skeleton, 64 and 128 byte native pushes: [run 42473523620](https://github.com/Chakratos/Shipwright/actions/runs/42473523620).
+- 0 vs 4 preview, native N64 vertices unchanged: [run 42473943648](https://github.com/Chakratos/Shipwright/actions/runs/42473943648).
+- Definitive numeric signed-zero finding: [run 42474227448](https://github.com/Chakratos/Shipwright/actions/runs/42474227448).
+- **Corrected 371-source descriptor sweep: zero numeric time-dependent poses**: [run 42474422364](https://github.com/Chakratos/Shipwright/actions/runs/42474422364).
+- Source-bank read instrumentation: [run 42474726311](https://github.com/Chakratos/Shipwright/actions/runs/42474726311). First Goemon structural node: 0 candidate animation reads/12 skeleton reads. Other chosen nodes: Ebisumaru 13, Sasuke 14, Yae 14 *region-classified* source reads. This does not identify active live player action.
+
+## Immediately relevant source
+
+- tools/goemon/re/probe_original_mips_execution.py: artificially initializes candidate source skeleton MIPS globals.
+- tools/goemon/re/original_mips_vm.py: bounded original N64 instruction interpreter, RDRAM source read counters.
+- tools/goemon/re/sweep_original_mips_descriptors.py: source-skeleton progress scan; compares numerical zero-normalized hashes.
+- tools/goemon/re/original_continuous_mips_skeleton.py: one-CPU source graph stack experiment with dynamic push width; does not replicate original object transitions.
+- tools/goemon/re/export_original_continuous_mips_preview.py and package_original_mips_samples.py: controlled 0 and 4 previews (not live action clips).
+- soh/soh/Enhancements/Goemon/OriginalReferenceCharacterActor.cpp and OriginalIsolatedMipsPreview.hpp: source-geometry native preview.
+- docs/goemon/ORIGINAL_ANIMATION_ENGINEERING_HANDOFF_2026-11-07.md: detailed historical source comments plus corrections. Read last, not first.
+
+## Last confirmed gate and next step
+
+**Gate G1: find a real current player AnimatedSkeleton owner and correctly dereferenced animation stream. OPEN.** Current source bank guesses may not be an active animation. The renderer resolves Object.graphics_1 through overlay_info to AnimatedSkeleton, then AnimatedSkeleton.animation to D_80168520. Need to instrument a valid object/action or resolve runtime dispatch in original decompressed game to demonstrate nonzero numerical MtxF changes.
+
+**No newer verified native gameplay build.** Any future agent should check Actions and git HEAD for newer evidence. Historical status should never override this file.
