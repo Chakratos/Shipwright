@@ -142,6 +142,8 @@ def trace_index_register_load(payload: bytes, base_pc: int,
         'selector_object_register': None,
         'selector_transform_chain': [],
         'selector_chain_stop_reason': None,
+        'selector_chain_stop_pc': None,
+        'selector_chain_stop_instruction_category': None,
         'selector_offset_cc_syntactic_candidate': False,
         'index_ancestry_within_source_function': False,
         'effective_address_definition_kind': None,
@@ -219,7 +221,18 @@ def trace_index_register_load(payload: bytes, base_pc: int,
                     name = 'move_via_addu_or'
                     next_reg = b if a == 0 else a
             if next_reg is None:
+                fun = load & 63
+                category = (
+                    'comparison' if op == 0 and fun in (0x2A, 0x2B) else
+                    'shift' if op == 0 and fun in (0, 2, 3, 4, 6, 7) else
+                    'arithmetic' if op == 0 and fun in (0x20, 0x21, 0x22, 0x23) else
+                    'bitwise' if op == 0 and fun in (0x24, 0x25, 0x26, 0x27) else
+                    'special_unhandled' if op == 0 else
+                    'immediate_unhandled' if op < 0x20 else
+                    'memory_or_coprocessor')
                 report['selector_chain_stop_reason'] = 'unmodeled_register_transform'
+                report['selector_chain_stop_pc'] = f'0x{base_pc + load_idx * 4:08X}'
+                report['selector_chain_stop_instruction_category'] = category
                 return report
             report['selector_transform_chain'].append({
                 'pc': f'0x{base_pc + load_idx * 4:08X}',
@@ -421,6 +434,10 @@ def main(argv=None) -> int:
                   'selector_chain=', row['syntactic_jump_index_ancestry']['selector_transform_chain']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'selector_stop=', row['syntactic_jump_index_ancestry']['selector_chain_stop_reason']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'selector_stop_pc=', row['syntactic_jump_index_ancestry']['selector_chain_stop_pc']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'selector_stop_category=', row['syntactic_jump_index_ancestry']['selector_chain_stop_instruction_category']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'absolute_vram_table_candidates=',
                   len(row['possible_absolute_vram_target_pointer_runs']))

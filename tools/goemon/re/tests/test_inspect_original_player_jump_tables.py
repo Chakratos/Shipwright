@@ -125,6 +125,19 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertEqual(r['selector_field_offset'], 0xCC)
         self.assertTrue(r['selector_offset_cc_syntactic_candidate'])
 
+    def test_unmodeled_comparison_is_reported_as_metadata_only(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 9
+        words[0] = (8 << 21) | (11 << 16) | (9 << 11) | 0x2B  # sltu r9,r8,r11
+        words[1] = (9 << 21) | (10 << 16) | (9 << 11) | 9  # addiu r9,r9,9
+        words[2] = (9 << 16) | (12 << 11) | (2 << 6)
+        words[3] = (1 << 21) | (12 << 16) | (1 << 11) | 0x21
+        words[4] = (35 << 26) | (1 << 21) | (12 << 16)
+        result = trace_index_register_load(blob(words), BASE, BASE, BASE + 16)
+        self.assertEqual(result['selector_chain_stop_instruction_category'], 'comparison')
+        self.assertEqual(result['selector_chain_stop_pc'], f'0x{BASE:08X}')
+        self.assertFalse(result['index_ancestry_within_source_function'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8
