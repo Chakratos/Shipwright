@@ -97,6 +97,40 @@ static int CheckOwnerOriginalPreview(const std::filesystem::path& root) {
             if(rig.character!=slot || source.sourceCharacterSlot!=slot)
                 throw std::runtime_error("original character slot mismatch");
             (void)ValidateIsolatedMipsRig(rig,source);
+            std::array<int,16> changedMatrixElements{};
+            int changedSourceBones=0;
+            int changedDrawableBones=0;
+            for(const auto& bone:source.bones) {
+                if(!bone.available[0] || !bone.available[1]) continue;
+                bool modified=false;
+                for(int field=0;field<16;++field) {
+                    if(std::bit_cast<std::uint32_t>(bone.sourceMipsMatrix[0][field]) !=
+                       std::bit_cast<std::uint32_t>(bone.sourceMipsMatrix[1][field])) {
+                        modified=true;
+                        ++changedMatrixElements[field];
+                    }
+                }
+                if(!modified) continue;
+                ++changedSourceBones;
+                const auto mapped=OriginalSourceNormalizedGfxWord(
+                    bone.originalGraphicsPointer);
+                for(const auto& mesh:rig.meshes) {
+                    if(mesh.sourceGfxPointer==mapped) {
+                        ++changedDrawableBones;
+                        break;
+                    }
+                }
+            }
+            std::cout<<"GOEMON_NATIVE_MTXF_DIFFERENCE "<<names[slot]
+                     <<" source_progress_0="<<source.controlledProgress[0]
+                     <<" source_progress_1="<<source.controlledProgress[1]
+                     <<" changed_bones="<<changedSourceBones
+                     <<" changed_drawable_bones="<<changedDrawableBones
+                     <<" changed_float_fields=";
+            for(int field=0;field<16;++field)
+                if(changedMatrixElements[field])
+                    std::cout<<field<<":"<<changedMatrixElements[field]<<",";
+            std::cout<<'\n';
             bool ready=false;
             for(int mode=0;mode<2;++mode) {
                 bool bothSamplesValid=true;
