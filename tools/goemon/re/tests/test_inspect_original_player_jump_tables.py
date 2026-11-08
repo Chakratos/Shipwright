@@ -52,6 +52,28 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
             inspect_indirect_jump(blob(words), BASE, BASE + 12,
                                   BASE, 0x40)
 
+    def test_lui_index_addu_and_lw_low_immediate_match_table_base(self):
+        from inspect_original_player_jump_tables import link_candidate_table_to_lui
+        words = [0] * 16
+        words[0] = (15 << 26) | (1 << 16) | 0x8011  # lui at,0x8011
+        words[1] = (2 << 16) | (3 << 11) | (2 << 6)  # sll v1,v0,2
+        words[2] = (1 << 21) | (3 << 16) | (1 << 11) | 0x21  # addu at,at,v1
+        words[3] = (35 << 26) | (1 << 21) | (12 << 16) | 0xF0C0  # lw t4,-0xF40(at)
+        evidence = link_candidate_table_to_lui(
+            blob(words), BASE, BASE, BASE + 12, 0x8010F0C0)
+        self.assertEqual(evidence['exact_lui_plus_lw_offset_match_count'], 1)
+        self.assertEqual(evidence['direct_or_indexed_base_register_chain_count'], 1)
+        self.assertFalse(evidence['actual_runtime_jump_table_verified'])
+
+    def test_mismatched_lui_high_not_linked_to_table(self):
+        from inspect_original_player_jump_tables import link_candidate_table_to_lui
+        words = [0] * 8
+        words[0] = (15 << 26) | (1 << 16) | 0x8030
+        words[1] = (35 << 26) | (1 << 21) | (12 << 16) | 0xF0C0
+        evidence = link_candidate_table_to_lui(
+            blob(words), BASE, BASE, BASE + 4, 0x8010F0C0)
+        self.assertEqual(evidence['exact_lui_plus_lw_offset_match_count'], 0)
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

@@ -50,6 +50,56 @@ def table_runs(payload: bytes, low_pc: int, high_pc: int, *,
     return runs[:max_results]
 
 
+
+
+def link_candidate_table_to_lui(payload: bytes, base_vram: int,
+                                function_start: int, lw_pc: int,
+                                candidate_table_vram: int) -> dict:
+    """Match exact LUI high+LW signed offset; source register flow still a hint."""
+    from trace_player_writer_provenance import sign16, written_register
+    lw_offset = lw_pc - base_vram
+    lw = struct.unpack_from('>I', payload, lw_offset)[0]
+    if lw >> 26 != 0x23:
+        raise ValueError('candidate jump source is not LW')
+    load_rs = (lw >> 21) & 31
+    desired_lui_base = (candidate_table_vram - sign16(lw)) & 0xFFFFFFFF
+    result = {
+        'candidate_table_vram': f'0x{candidate_table_vram:08X}',
+        'last_lw_base_register': f'r{load_rs}',
+        'exact_lui_plus_lw_offset_match_count': 0,
+        'direct_or_indexed_base_register_chain_count': 0,
+        'first_lui_match_pc': None,
+        'actual_runtime_jump_table_verified': False,
+    }
+    if desired_lui_base & 0xFFFF:
+        return result
+    begin = max((function_start - base_vram) // 4, lw_offset // 4 - 48)
+    end = lw_offset // 4
+    words = struct.unpack_from('>' + 'I' * (end - begin),
+                               payload, begin * 4)
+    expected_high = desired_lui_base >> 16
+    for pos, word in enumerate(words):
+        if word >> 26 != 0x0F or (word & 0xFFFF) != expected_high:
+            continue
+        source_reg = (word >> 16) & 31
+        result['exact_lui_plus_lw_offset_match_count'] += 1
+        if result['first_lui_match_pc'] is None:
+            result['first_lui_match_pc'] = f'0x{base_vram + (begin + pos) * 4:08X}'
+        if source_reg != load_rs:
+            continue
+        writes = [(begin + k, w) for k, w in enumerate(words[pos + 1:], pos + 1)
+                  if written_register(w) == source_reg]
+        # Direct LUI->LW base or exactly one self-referential ADDU (indexed table).
+        if not writes:
+            result['direct_or_indexed_base_register_chain_count'] += 1
+        elif len(writes) == 1:
+            _, update = writes[0]
+            if (update >> 26 == 0 and (update & 63) == 0x21 and
+                    (update >> 11) & 31 == load_rs and
+                    load_rs in (((update >> 21) & 31), ((update >> 16) & 31))):
+                result['direct_or_indexed_base_register_chain_count'] += 1
+    return result
+
 def inspect_indirect_jump(payload: bytes, base_vram: int, jump_pc: int,
                           function_start: int, function_size: int) -> dict:
     if len(payload) % 4 or not (function_start <= jump_pc <
@@ -69,7 +119,7 @@ def inspect_indirect_jump(payload: bytes, base_vram: int, jump_pc: int,
         w = struct.unpack_from('>I', payload, index * 4)[0]
         if w >> 26 == 0x23 and ((w >> 16) & 31) == reg:
             preceding_lw.append(base_vram + index * 4)
-    return {
+    report = {
         'jr_pc': f'0x{jump_pc:08X}',
         'original_function_start_pc': f'0x{function_start:08X}',
         'original_function_size': function_size,
@@ -81,6 +131,15 @@ def inspect_indirect_jump(payload: bytes, base_vram: int, jump_pc: int,
         'possible_absolute_vram_target_pointer_runs': table_runs(
             payload, function_start, function_start + function_size),
     }
+    for run in report['possible_absolute_vram_target_pointer_runs']:
+        table_address = base_vram + int(
+            run['table_offset_within_original_overlay'], 16)
+        run['table_address_provenance'] = (
+            link_candidate_table_to_lui(
+                payload, base_vram, function_start, preceding_lw[-1],
+                table_address)
+            if preceding_lw else None)
+    return report
 
 
 def analyze_original_overlay(payload: bytes, base_vram: int,
@@ -157,7 +216,13 @@ def main(argv=None) -> int:
                       row['jr_pc'],
                       'local_offset=', run['table_offset_within_original_overlay'],
                       'count=', run['entry_count'],
-                      'unique_target_pc_count=', run['unique_in_function_target_count'])
+                      'unique_target_pc_count=', run['unique_in_function_target_count'],
+                      'lui_matches=', (
+                          run['table_address_provenance']['exact_lui_plus_lw_offset_match_count']
+                          if run['table_address_provenance'] else None),
+                      'direct_or_indexed_chains=', (
+                          run['table_address_provenance']['direct_or_indexed_base_register_chain_count']
+                          if run['table_address_provenance'] else None))
         print('GOEMON_INDIRECT_JR COMPLETE: static table hypotheses only')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_INDIRECT_JR FAILED:', exc, file=sys.stderr)
