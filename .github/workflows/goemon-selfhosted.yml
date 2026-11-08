@@ -282,6 +282,18 @@ jobs:
           & py -3 tools\goemon\re\export_original_mips_matrix_samples.py --selected-candidates 'C:\actions-runner-goemon\original-MIPS-visible-motion-candidates.json'
           if ($LASTEXITCODE -ne 0) { throw 'Source CPU inherited MtxF export failed' }
 
+      - name: Export continuous original source MIPS player matrices to native preview
+        # Original RDRAM and CPU persist over all source skeleton limbs.
+        # Does not assert original gameplay action ID or frame rate.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-continuous-preview]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\export_original_continuous_mips_preview.py
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Continuous original N64 MIPS source matrices failed'
+          }
+
       - name: Package original MIPS-evaluated limbs for isolated native preview
         # Requires previously verified original GOSKEL01 and current MIPS
         # per-limb matrix sample run. No private asset uploads.
