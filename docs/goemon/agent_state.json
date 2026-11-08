@@ -52,10 +52,15 @@
     "player_cfg_branch_likely_regression_fix": 42483433237,
     "player_cfg_cop1_corrected": 42483632507,
     "pinned_906_function_overlay_and_callers": 42483948947,
-    "player_a0_bounded_call_graph": 42484165983
+    "player_a0_bounded_call_graph": 42484165983,
+    "original_player_two_jr_tables": 42484532406,
+    "original_player_jr_lui_link": 42484757248,
+    "original_player_jr_case_cfg": 42484877490,
+    "original_player_index_ancestry": 42485168086,
+    "original_player_index_ancestry_latest": 42485758402
   },
-  "next_task": "G1 highest: analyze indirect original player-overlay jr PC 0x801DA23C and 0x801E0980 (jump-table dispatch). Static 906-function symbol map and exact JAL chain currently proves 4 action-store base pointers inherited from entry_a0 but 0 direct known global roots; resolve jump targets/real PlayerTask owner, AnimatedSkeleton.animation and numeric motion. Use one-shot [goemon-player-writer-provenance] and ROM-private metadata only.",
+  "next_task": "G1 next: extend bounded backwards selector trace before PC 0x801DA1FC across the actual pinned .file_11 function, explicitly reporting control-flow ambiguity, and resolve second lhu +0x30(r3) base owner. Then recover true Object.graphics_1 and AnimatedSkeleton.animation and prove numeric bone/vertex motion. One-shot [goemon-player-jump-tables] for owner-private ROM.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "2026-11-08 [42484165983] 353/353 Python + native success; four action stores have source entry-a0 origins, five still blocked by indirect jr, one unknown. Multi-level direct caller scan found zero known player-global roots, no actual animation owner/pose yet."
+  "last_known_limitation": "Private ROM 42485758402: 368 Python and native tests pass; two JR table source addresses verified syntactically; 9/10 candidate action writers reached only under direct or guessed target CFG, none proven actual PlayerTask. First index source and second r3 owner remain unknown; no animated pose."
 }

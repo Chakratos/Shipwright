@@ -2,6 +2,8 @@
 
 > **Authoritative resume document.** Read this page, then CURRENT_STATE.md, NEXT_TASKS.md and TECHNICAL_DECISIONS.md before editing code. Repository state is authoritative over any AI chat history. Last project audit: **2026-11-08**.
 
+**Current note (2026-11-08):** G1 remains OPEN; two player-overlay JR table address/index chains reconstructed offline (private ROM run 42485758402), not an active animation owner. See [CURRENT_STATE.md](CURRENT_STATE.md) and [PLAYER_INDIRECT_DISPATCH_EVIDENCE_2026-11-08.md](PLAYER_INDIRECT_DISPATCH_EVIDENCE_2026-11-08.md). An interactive runtime trace is not a prerequisite for static original ROM reverse engineering, but gameplay must be numerically and visually validated.
+
 ## Mission / definition of done
 
 Port the four original playable characters **Goemon, Ebisumaru, Sasuke, Yae** from *Mystical Ninja Starring Goemon* (N64, NG5E US) into the **Ship of Harkinian** (SoH) OoT world. Use authentic original N64 character geometry and skeletons, real authored motion driven by the original action states, measured movement and character abilities, and allow world quest and Randomizer progression. The game must feel like playing Goemon inside OoT, not Link wearing a skin. The original game is the behavioral source of truth.
