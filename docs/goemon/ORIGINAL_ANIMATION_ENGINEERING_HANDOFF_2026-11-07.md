@@ -579,3 +579,33 @@ motion playback and real game animation frames be enabled. Do not
 invent gait or interpolated animations. Existing SoH Test preview only
 renders static authentic original source skeletal geometry. No full
 Ship build needed until renderer code changes; keep SoH AP untouched.
+
+## Original source animation stream read footprint, 8 Nov 2026
+
+The source N64 CPU interpreter now counts RDRAM loads that enter the
+ROM-derived source 0x07 animation payload region, separately from
+loads of Skeleton node fields, using private owner ROM only.
+
+Native Windows run 42474726311:
+- Goemon *first structural root* had 0 animation payload loads and
+  12 original Skeleton field loads, because the selected root has no
+  numeric animation channels.
+- Ebisumaru selected numeric-channel node had 13 source animation
+  region loads and 12 Skeleton field loads.
+- Sasuke selected numeric-channel node had 14 source animation
+  region loads and 12 Skeleton field loads.
+- Yae selected numeric-channel node had 14 source animation
+  region loads and 12 Skeleton field loads.
+
+This is important: original N64 skeletal evaluator **does reach source
+animation payload** for three characters under controlled runtime
+setup. A missing animation payload read is NOT a universal explanation
+for zero numeric matrix movement. Exact active player ownership,
+correct clip/time and object state are still unverified. Do not
+interpret a change in instruction count or signed-zero bits as a
+physically animated pose.
+
+Next focus: resolve real source Object.graphics_1 AnimatedSkeleton
+selection, overlay_info animation pointer relocation and genuine
+action/tick data. Do not restart geometry extraction or make a new
+full Windows build before verified numeric animation frames.
