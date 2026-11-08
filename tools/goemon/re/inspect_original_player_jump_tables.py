@@ -124,6 +124,10 @@ def trace_index_register_load(payload: bytes, base_pc: int,
     address_reg = (load_word >> 21) & 31
 
     def definition(reg, before):
+        if reg == 0:
+            # MIPS r0 is immutable: decoding NOP (sll r0,r0,0) as a
+            # definition creates a wholly false selector ancestry.
+            return None, None
         # Function-bound search; previously fixed 64 words hid earlier definitions.
         for idx in range(before - 1, begin - 1, -1):
             if written_register(words[idx]) == reg:
@@ -195,6 +199,9 @@ def trace_index_register_load(payload: bytes, base_pc: int,
         report['index_source_register'] = f'r{source_reg}'
         cursor_reg, cursor = source_reg, shift_idx
         for _ in range(8):
+            if cursor_reg == 0:
+                report['selector_chain_stop_reason'] = 'constant_zero_register'
+                return report
             load_idx, load = definition(cursor_reg, cursor)
             if load_idx is None:
                 report['selector_chain_stop_reason'] = 'inherited_or_no_local_definition'

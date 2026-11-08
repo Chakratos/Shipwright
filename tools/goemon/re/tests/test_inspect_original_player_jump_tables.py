@@ -178,6 +178,20 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertFalse(result['selector_source_straight_line_proven'])
         self.assertTrue(result['no_live_player_pointer_or_action_proven'])
 
+    def test_zero_register_does_not_inherit_nop_definitions(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 32
+        words[12] = (9 << 26) | (0 << 21) | (9 << 16) | 3  # addiu r9,r0,3
+        words[13] = (9 << 16) | (10 << 11) | (2 << 6)    # sll r10,r9,2
+        words[14] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[15] = (35 << 26) | (8 << 21) | (12 << 16)
+        result = trace_index_register_load(blob(words), BASE, BASE, BASE + 60)
+        self.assertEqual(result['selector_chain_stop_reason'], 'constant_zero_register')
+        self.assertEqual(len(result['selector_transform_chain']), 1)
+        self.assertEqual(result['selector_transform_chain'][0]['operation'], 'addiu')
+        self.assertFalse(result['index_ancestry_within_source_function'])
+        self.assertIsNone(result['selector_load_pc'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8
