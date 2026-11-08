@@ -97,6 +97,27 @@ class MipsCFGProvenanceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'source symbols mismatch'):
                 read_pinned_player_overlay_functions(path)
 
+    def test_likely_branch_not_taken_skips_delay_store(self):
+        # beql r0,r2 (r2=3) skips its delay-slot store.
+        words = [ins(9, 0, 2, 3), ins(0x14, 0, 2, 2),
+                 ins(40, 4, 9, 0xCC), 0]
+        result = origin_at(words, BASE, 0, 2, 4)
+        self.assertEqual(result['origin'], 'unreachable')
+        self.assertTrue(result['complete'])
+
+    def test_likely_branch_taken_executes_delay_store(self):
+        words = [ins(0x14, 0, 0, 2), ins(40, 4, 9, 0xCC), 0]
+        result = origin_at(words, BASE, 0, 1, 4)
+        self.assertEqual(result['origin'], 'entry_a0')
+
+    def test_unsupported_indirect_jalr_produces_pc_class_metadata(self):
+        # jalr ra,t9 ; nop ; action store.
+        words = [((25 << 21) | (31 << 11) | 9), 0, ins(40, 4, 9, 0xCC)]
+        r = origin_at(words, BASE, 0, 2, 4)
+        self.assertEqual(r['origin'], 'unreachable')
+        self.assertEqual(r['blocker_classes']['indirect_jalr'], 1)
+        self.assertEqual(r['first_blocker_pc_by_class']['indirect_jalr'], '0x80100000')
+
     def test_no_entry_hint_no_proof(self):
         site = {'pc': f'0x{BASE:08X}', 'base_register': 'r4',
                 'nearby_function_prologue_hint': None}

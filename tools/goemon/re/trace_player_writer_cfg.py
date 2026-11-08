@@ -75,29 +75,29 @@ def successors(words, index, base_pc, state):
         return [], True
     after = plain(words[index + 1], state)
     fallthrough = index + 2
-    if op in (4, 5, 6, 7) or (op == 1 and ((w >> 16) & 31) in (0, 1)):
+    if op in (4, 5, 6, 7, 0x14, 0x15, 0x16, 0x17) or (op == 1 and ((w >> 16) & 31) in (0, 1)):
         rs, rt = (w >> 21) & 31, (w >> 16) & 31
         a, b = read(state, rs), read(state, rt)
         taken = None
-        if op in (4, 5) and a[0] == b[0] == 'constant':
-            taken = (a[1] == b[1]) if op == 4 else (a[1] != b[1])
-        if op in (6, 7, 1) and a[0] == 'constant':
+        if op in (4, 5, 0x14, 0x15) and a[0] == b[0] == 'constant':
+            taken = (a[1] == b[1]) if op in (4, 0x14) else (a[1] != b[1])
+        if op in (6, 7, 0x16, 0x17, 1) and a[0] == 'constant':
             v = int(a[1])
             signed = v - 0x100000000 if v & 0x80000000 else v
-            if op == 6:
+            if op in (6, 0x16):
                 taken = signed <= 0
-            elif op == 7:
+            elif op in (7, 0x17):
                 taken = signed > 0
             else:
                 taken = signed >= 0 if rt == 1 else signed < 0
         target = index + 1 + sign16(w)
+        likely = op in (0x14, 0x15, 0x16, 0x17)
+        skipped = state if likely else after
         if taken is True:
             return [(target, after)], False
         if taken is False:
-            return [(fallthrough, after)], False
-        return [(target, after), (fallthrough, after)], False
-    if op in (0x14, 0x15, 0x16, 0x17):
-        return [], True  # branch-likely skips delay slot when not taken
+            return [(fallthrough, skipped)], False
+        return [(target, after), (fallthrough, skipped)], False
     if op in (2, 3):
         pc = base_pc + index * 4
         target_pc = ((pc + 4) & 0xf0000000) | ((w & 0x3ffffff) << 2)
@@ -112,6 +112,20 @@ def successors(words, index, base_pc, state):
     return [], True
 
 
+
+def blocker_kind(w):
+    """Only structural MIPS instruction category, never raw code payload."""
+    op = w >> 26
+    if op == 1:
+        return 'unhandled_regimm_control'
+    if op == 0 and (w & 63) == 9:
+        return 'indirect_jalr'
+    if op == 0 and (w & 63) == 8:
+        return 'indirect_jr' if ((w >> 21) & 31) != 31 else 'return_jr_ra'
+    if op in (0x10, 0x11, 0x12, 0x13):
+        return 'coprocessor_control'
+    return 'unsupported_control_or_delay'
+
 def origin_at(words, base_pc, entry_index, site_index, register,
               *, max_window=2048, max_steps=80000):
     """Join all locally reachable paths from a *hypothetical* entry."""
@@ -122,24 +136,49 @@ def origin_at(words, base_pc, entry_index, site_index, register,
     known = {entry_index: initial_state()}
     queue = deque([entry_index])
     incomplete, steps = False, 0
+    blockers = {}
+    first_blocker = {}
+
+    def record(kind, index):
+        blockers[kind] = blockers.get(kind, 0) + 1
+        first_blocker.setdefault(kind, f'0x{base_pc + 4 * index:08X}')
     while queue:
         index = queue.popleft()
         steps += 1
         if steps > max_steps:
             incomplete = True
+            record('analysis_step_limit', index)
             break
         if index == site_index:
             continue
         if index + 1 == site_index and is_control(words[index]):
-            # The site is itself a branch/call delay-slot store.
-            follow = [(site_index, known[index])]
+            # Delay-slot store executes on ordinary branches, calls and jumps;
+            # for branch-likely it executes ONLY if branch may be taken.
+            word = words[index]
+            op = word >> 26
+            take_slot = True
+            if op in (0x14, 0x15, 0x16, 0x17):
+                rs, rt = (word >> 21) & 31, (word >> 16) & 31
+                a, b = read(known[index], rs), read(known[index], rt)
+                if op in (0x14, 0x15) and a[0] == b[0] == 'constant':
+                    take_slot = (a[1] == b[1]) if op == 0x14 else (a[1] != b[1])
+                if op in (0x16, 0x17) and a[0] == 'constant':
+                    v = int(a[1])
+                    v = v - 0x100000000 if v & 0x80000000 else v
+                    take_slot = v <= 0 if op == 0x16 else v > 0
+            follow = [(site_index, known[index])] if take_slot else []
             unsupported = False
         else:
             follow, unsupported = successors(words, index, base_pc, known[index])
         incomplete |= unsupported
+        if unsupported:
+            record(blocker_kind(words[index]), index)
+        elif not follow and is_control(words[index]):
+            record(blocker_kind(words[index]), index)
         for dest, state in follow:
             if dest < entry_index:
                 incomplete = True
+                record('branch_before_assumed_entry', index)
                 continue
             if dest > site_index:
                 continue
@@ -148,16 +187,20 @@ def origin_at(words, base_pc, entry_index, site_index, register,
             if old is None or merged != old:
                 known[dest] = merged
                 queue.append(dest)
+    diagnostics = {'blocker_classes': dict(sorted(blockers.items())),
+                   'first_blocker_pc_by_class': dict(sorted(first_blocker.items()))}
     if site_index not in known:
-        return {'origin': 'unreachable', 'complete': not incomplete, 'steps': steps}
+        return {'origin': 'unreachable', 'complete': not incomplete, 'steps': steps,
+                **diagnostics}
     origin, symbol = read(known[site_index], register)
     if incomplete:
         return {'origin': 'incomplete_cfg', 'complete': False, 'steps': steps,
                 'bounded_origin': origin,
-                'bounded_symbol': symbol if origin == 'player_global_load' else None}
+                'bounded_symbol': symbol if origin == 'player_global_load' else None,
+                **diagnostics}
     return {'origin': origin,
             'symbol': symbol if origin == 'player_global_load' else None,
-            'complete': True, 'steps': steps}
+            'complete': True, 'steps': steps, **diagnostics}
 
 
 def analyze_cfg(words, base_pc, sites):

@@ -291,7 +291,9 @@ def main(argv: list[str] | None = None) -> int:
                     print('GOEMON_PINNED_ACTION', site['pc'],
                           finding.get('pinned_function_pc'),
                           finding['origin'], finding.get('symbol'),
-                          'complete=', finding['complete'])
+                          'complete=', finding['complete'],
+                          'blockers=', json.dumps(finding.get('blocker_classes', {}), sort_keys=True),
+                          'first_blocker_pcs=', json.dumps(finding.get('first_blocker_pc_by_class', {}), sort_keys=True))
         print('GOEMON_WRITER_PROVENANCE COMPLETE: static evidence only; no live owner confirmed')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_WRITER_PROVENANCE FAILED:', exc, file=sys.stderr)
