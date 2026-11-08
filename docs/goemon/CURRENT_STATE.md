@@ -2,6 +2,12 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Latest original player-overlay original ROM writer scan (2026-11-08)
+
+- Original NG5E source MIPS syntactic field-offset scan identified **player overlay file ID 10** (known player function at ROM 0x5988D8 / VRAM 0x801DC9C8), with 267264 scanned bytes; 10 potential byte stores at PlayerTask.action_id offset +0xCC, and 131 potential word stores at Object.graphics_1 offset +0x2C. These are NOT proven object owners. Main executable had 0 action-offset hits and 248 graphics-offset matches, many stack-based.
+- Original action-offset candidate PCs: 0x801CC3DC, 0x801D9E74, 0x801DA5D8, 0x801DAED4, 0x801DD640, 0x801DD6B4, 0x801E0AEC, 0x801E0B98, 0x801E0BD0, 0x801E0BE0. All base r4 or r16. One first non-stack graphics candidate: PC 0x801CBC70 (base r4, word value r2). See [ORIGINAL_PLAYER_OBJECT_WRITERS_2026-11-08.md](ORIGINAL_PLAYER_OBJECT_WRITERS_2026-11-08.md) for evidence and limitations.
+- Actual private Windows run [42480203308](https://github.com/Chakratos/Shipwright/actions/runs/42480203308) **passed**, 320/320 Python and native C++20 tests. **Next:** prove original MIPS base-register/function-call provenance and actual runtime PlayerTask/Object pointer identities. True active animation owner, exact action mapping and numeric animation remain unverified.
+
 ## Latest original-game capture instrumentation (2026-11-08)
 
 - **Real runtime owner instrument is prepared and compiled, NOT played:** diagnostic_mod/src/goemon_skeletal_capture.c now accepts actual player-model Object D_801FC60C as well as root D_801FC614, resolves live tagged graphics_1 through overlay_info into AnimatedSkeleton and the animation pointer, emits GOEMON_ANIM_OWNER / GOEMON_ANIM_ACTIVE, and captures the actual per-limb final stack MtxF from D_80168530-64, with a cursor event for 64/128-byte pushes. Original model/root gate had been too restrictive.

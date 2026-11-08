@@ -43,10 +43,11 @@
     "source_memory_reads_probe": 42474726311,
     "exact_candidate_pointer_provenance": 42478639378,
     "original_runtime_owner_mod_compilation": 42479222793,
-    "live_owner_parser_synthetic_tests": 42479506702
+    "live_owner_parser_synthetic_tests": 42479506702,
+    "original_player_writer_scan": 42480203308
   },
-  "next_task": "New original-game owner hook/mod is compiled and staged, runtime log not yet captured. Obtain one genuine original player-model GOEMON_ANIM_OWNER+GOEMON_ANIM_ACTIVE trace; correlate graphics_1/overlay_info/AnimatedSkeleton.animation to D_80168520, then prove nonzero numeric source MtxF motion for a real action. If user runtime not available, continue offline writers/dispatch tracing.",
+  "next_task": "Prove original player-overlay file 10 MIPS base-register/call provenance for 10 syntactic action_id +0xCC sb sites and non-stack graphics_1 +0x2C sw sites; correlate confirmed actual player Object.graphics_1 with original runtime AnimatedSkeleton.animation and D_80168520. No numeric animation yet.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "12 static candidate pointer contexts tested; 1/12 near candidate source loads, 0/12 numeric MtxF movement; actual live player animation owner unresolved."
+  "last_known_limitation": "10 original player-overlay action-offset store candidates identified, but register identity and active animation ownership are not proven. No original moving animation clip verified."
 }
