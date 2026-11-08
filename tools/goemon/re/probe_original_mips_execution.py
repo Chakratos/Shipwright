@@ -330,6 +330,10 @@ def main(argv=None):
                 "executed_at_1":second.get("executed"),
                 "matrix_finite_0":first["matrix_finite_elements"],
                 "matrix_finite_1":second["matrix_finite_elements"],
+                "actual_source_animation_region_reads":
+                    first["original_source_animation_region_reads"],
+                "source_skeleton_region_reads":
+                    first["original_source_skeleton_region_reads"],
                 "progress_matrix_changed":sample["matrix_changed"],
                 "blocker_0":first.get("blocker"),
                 "blocker_1":second.get("blocker"),
