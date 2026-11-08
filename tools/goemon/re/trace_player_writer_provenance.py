@@ -236,6 +236,18 @@ def main(argv: list[str] | None = None) -> int:
         from trace_player_writer_cfg import analyze_cfg
         sites = [s for block in result['by_kind'].values() for s in block['sites']]
         result['assumed_entry_cfg'] = analyze_cfg(words, base_pc, sites)
+        from trace_player_writer_cfg import (
+            read_pinned_player_overlay_functions, analyze_cfg_from_pinned_functions)
+        pinned, functions = read_pinned_player_overlay_functions()
+        origin = pinned['provenance']
+        if (overlay.file_id != 10 or
+                overlay.start != int(origin['rom_start'], 16) or
+                base_pc != int(origin['vram_start'], 16) or
+                len(payload) != int(origin['size'], 16)):
+            raise ValueError('owner ROM overlay and pinned player symbol mapping disagree')
+        result['pinned_function_cfg'] = analyze_cfg_from_pinned_functions(
+            words, base_pc, sites, functions)
+        result['pinned_symbols_source_commit'] = origin['commit']
         result['source_file_id'] = overlay.file_id
         checkout_root = Path(__file__).resolve().parents[3]
         out = args.output.resolve()
@@ -267,6 +279,19 @@ def main(argv: list[str] | None = None) -> int:
                           finding['origin'], finding.get('symbol'),
                           'assumed_entry=', finding.get('assumed_entry_pc'),
                           'complete=', finding.get('complete'))
+        for kind, block in result['by_kind'].items():
+            from collections import Counter
+            counts = Counter(result['pinned_function_cfg'][s['pc']]['origin']
+                             for s in block['sites'])
+            print('GOEMON_PINNED_CFG_SUMMARY', kind,
+                  json.dumps(dict(sorted(counts.items())), sort_keys=True))
+            if kind == 'action_id_offset':
+                for site in block['sites']:
+                    finding = result['pinned_function_cfg'][site['pc']]
+                    print('GOEMON_PINNED_ACTION', site['pc'],
+                          finding.get('pinned_function_pc'),
+                          finding['origin'], finding.get('symbol'),
+                          'complete=', finding['complete'])
         print('GOEMON_WRITER_PROVENANCE COMPLETE: static evidence only; no live owner confirmed')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_WRITER_PROVENANCE FAILED:', exc, file=sys.stderr)

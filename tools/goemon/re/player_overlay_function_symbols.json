@@ -1,0 +1,165 @@
+{
+  "schema": "ng5e-player-overlay-pinned-recompiler-functions-v1",
+  "provenance": {
+    "repo": "klorfmorf/Goemon64RecompSyms",
+    "commit": "49f4e3269f05c737cb4bf698b9ef7142c92f1ac7",
+    "file": "mnsg.syms.toml",
+    "blob_sha": "fc8f10018165cc2c1f0fc67f98ca3b27928fd5bc",
+    "section": ".file_11",
+    "rom_start": "0x00587370",
+    "vram_start": "0x801CB460",
+    "size": "0x00041400",
+    "runtime_file_table_id": 10
+  },
+  "functions": [
+    {
+      "start": "0x801CB7D4",
+      "size": "0x00000020",
+      "name": "func_801CB7D4_5876E4"
+    },
+    {
+      "start": "0x801CBC40",
+      "size": "0x000000A4",
+      "name": "func_801CBC40_587B50"
+    },
+    {
+      "start": "0x801CC30C",
+      "size": "0x00000118",
+      "name": "func_801CC30C_58821C"
+    },
+    {
+      "start": "0x801D9E28",
+      "size": "0x00000074",
+      "name": "func_801D9E28_595D38"
+    },
+    {
+      "start": "0x801D9E9C",
+      "size": "0x000007E0",
+      "name": "func_801D9E9C_595DAC"
+    },
+    {
+      "start": "0x801DAC7C",
+      "size": "0x00000060",
+      "name": "func_801DAC7C_596B8C"
+    },
+    {
+      "start": "0x801DACDC",
+      "size": "0x0000002C",
+      "name": "func_801DACDC_596BEC"
+    },
+    {
+      "start": "0x801DAD08",
+      "size": "0x00000060",
+      "name": "func_801DAD08_596C18"
+    },
+    {
+      "start": "0x801DAD68",
+      "size": "0x000001EC",
+      "name": "func_801DAD68_596C78"
+    },
+    {
+      "start": "0x801DD4D8",
+      "size": "0x00000028",
+      "name": "func_801DD4D8_5993E8"
+    },
+    {
+      "start": "0x801DD50C",
+      "size": "0x000000B4",
+      "name": "func_801DD50C_59941C"
+    },
+    {
+      "start": "0x801DD5C0",
+      "size": "0x00000094",
+      "name": "func_801DD5C0_5994D0"
+    },
+    {
+      "start": "0x801DD654",
+      "size": "0x00000084",
+      "name": "func_801DD654_599564"
+    },
+    {
+      "start": "0x801E0944",
+      "size": "0x000002B4",
+      "name": "func_801E0944_59C854"
+    }
+  ],
+  "action_sites": [
+    {
+      "pc": "0x801CC3DC",
+      "start": "0x801CC30C"
+    },
+    {
+      "pc": "0x801D9E74",
+      "start": "0x801D9E28"
+    },
+    {
+      "pc": "0x801DA5D8",
+      "start": "0x801D9E9C"
+    },
+    {
+      "pc": "0x801DAED4",
+      "start": "0x801DAD68"
+    },
+    {
+      "pc": "0x801DD640",
+      "start": "0x801DD5C0"
+    },
+    {
+      "pc": "0x801DD6B4",
+      "start": "0x801DD654"
+    },
+    {
+      "pc": "0x801E0AEC",
+      "start": "0x801E0944"
+    },
+    {
+      "pc": "0x801E0B98",
+      "start": "0x801E0944"
+    },
+    {
+      "pc": "0x801E0BD0",
+      "start": "0x801E0944"
+    },
+    {
+      "pc": "0x801E0BE0",
+      "start": "0x801E0944"
+    }
+  ],
+  "direct_caller_sites": [
+    {
+      "pc": "0x801CB7DC",
+      "start": "0x801CB7D4"
+    },
+    {
+      "pc": "0x801D9F88",
+      "start": "0x801D9E9C"
+    },
+    {
+      "pc": "0x801DAC9C",
+      "start": "0x801DAC7C"
+    },
+    {
+      "pc": "0x801DACF0",
+      "start": "0x801DACDC"
+    },
+    {
+      "pc": "0x801DAD24",
+      "start": "0x801DAD08"
+    },
+    {
+      "pc": "0x801DD4E8",
+      "start": "0x801DD4D8"
+    },
+    {
+      "pc": "0x801DD5A0",
+      "start": "0x801DD50C"
+    }
+  ],
+  "graphics_example_site": [
+    {
+      "pc": "0x801CBC70",
+      "start": "0x801CBC40"
+    }
+  ],
+  "confidence": "verified_pinned_symbol_ranges_only_not_game_execution"
+}

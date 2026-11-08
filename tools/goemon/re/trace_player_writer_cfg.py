@@ -175,3 +175,61 @@ def analyze_cfg(words, base_pc, sites):
         report[pc]['assumed_entry_pc'] = entry_pc
         report[pc]['original_player_owner_verified'] = False
     return report
+
+
+def read_pinned_player_overlay_functions(path=None):
+    """Read source symbol metadata, rejecting overlapping or mismatched overlays."""
+    import json
+    from pathlib import Path
+    location = Path(path) if path is not None else Path(__file__).with_name(
+        'player_overlay_function_symbols.json')
+    data = json.loads(location.read_text(encoding='utf-8'))
+    origin = data['provenance']
+    if (data['schema'] != 'ng5e-player-overlay-pinned-recompiler-functions-v1' or
+            origin['commit'] != '49f4e3269f05c737cb4bf698b9ef7142c92f1ac7' or
+            origin['section'] != '.file_11' or
+            origin['runtime_file_table_id'] != 10 or
+            int(origin['rom_start'], 16) != 0x587370 or
+            int(origin['vram_start'], 16) != 0x801CB460 or
+            int(origin['size'], 16) != 0x41400):
+        raise ValueError('pinned original player source symbols mismatch')
+    functions = []
+    for row in data['functions']:
+        start, size = int(row['start'], 16), int(row['size'], 16)
+        if (start % 4 or size % 4 or size <= 0 or start < 0x801CB460 or
+                start + size > 0x801CB460 + 0x41400):
+            raise ValueError('invalid pinned source function span')
+        functions.append({'start': start, 'size': size, 'name': row['name']})
+    if len({f['start'] for f in functions}) != len(functions):
+        raise ValueError('duplicate source function start')
+    for section in ('action_sites', 'direct_caller_sites', 'graphics_example_site'):
+        for site in data[section]:
+            pc, expected = int(site['pc'], 16), int(site['start'], 16)
+            match = [f for f in functions if f['start'] <= pc < f['start'] + f['size']]
+            if len(match) != 1 or match[0]['start'] != expected:
+                raise ValueError('site not uniquely covered by its source function')
+    if len(data['action_sites']) != 10 or len(data['direct_caller_sites']) != 7:
+        raise ValueError('expected source site inventory incomplete')
+    return data, functions
+
+
+def analyze_cfg_from_pinned_functions(words, base_pc, sites, functions):
+    """Use source-defined function boundaries; never label actual player ownership."""
+    answer = {}
+    for site in sites:
+        pc = int(site['pc'], 16)
+        matches = [f for f in functions
+                   if f['start'] <= pc < f['start'] + f['size']]
+        if len(matches) != 1:
+            answer[site['pc']] = {'origin': 'no_unique_pinned_source_function',
+                                  'complete': False, 'live_player_owner_verified': False}
+            continue
+        f = matches[0]
+        result = origin_at(words, base_pc, (f['start'] - base_pc) // 4,
+                           (pc - base_pc) // 4,
+                           int(site['base_register'][1:]))
+        result['pinned_function_pc'] = f"0x{f['start']:08X}"
+        result['pinned_function_name'] = f['name']
+        result['live_player_owner_verified'] = False
+        answer[site['pc']] = result
+    return answer
