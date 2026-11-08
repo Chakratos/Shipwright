@@ -470,6 +470,18 @@ jobs:
           & py -3 tools\goemon\re\original_continuous_mips_skeleton.py
           if ($LASTEXITCODE -ne 0) { throw 'Original source continuous skeleton stack failed' }
 
+      - name: Trace actual original MIPS source read PCs and candidate animation pointers
+        # Private original NG5E source ROM; logs program counter/read address
+        # metadata only. Does NOT claim player action/animation ownership.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-animation-pointer-provenance]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\trace_original_animation_pointers.py
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Original MIPS candidate pointer provenance experiment failed'
+          }
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
