@@ -153,6 +153,31 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertEqual([item['operation'] for item in report['selector_transform_chain']],
                          ['addiu', 'srl'])
 
+    def test_function_bound_trace_reaches_load_older_than_64_instructions(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 128
+        words[4] = (0x24 << 26) | (4 << 21) | (9 << 16) | 0xCC
+        words[94] = (9 << 16) | (10 << 11) | (2 << 6)
+        words[95] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[96] = (0x23 << 26) | (8 << 21) | (12 << 16)
+        result = trace_index_register_load(blob(words), BASE, BASE, BASE + 96 * 4)
+        self.assertEqual(result['selector_load_pc'], f'0x{BASE + 16:08X}')
+        self.assertEqual(result['selector_field_offset'], 0xCC)
+        self.assertTrue(result['selector_source_straight_line_proven'])
+
+    def test_selector_control_transfer_records_ambiguity_not_proof(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 12
+        words[0] = (0x24 << 26) | (4 << 21) | (9 << 16) | 0xCC
+        words[1] = (0x04 << 26) | (2 << 21) | (3 << 16) | 1
+        words[3] = (9 << 16) | (10 << 11) | (2 << 6)
+        words[4] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[5] = (0x23 << 26) | (8 << 21) | (12 << 16)
+        result = trace_index_register_load(blob(words), BASE, BASE, BASE + 20)
+        self.assertEqual(result['selector_load_to_jr_control_transfer_count'], 1)
+        self.assertFalse(result['selector_source_straight_line_proven'])
+        self.assertTrue(result['no_live_player_pointer_or_action_proven'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

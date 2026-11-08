@@ -111,6 +111,7 @@ def trace_index_register_load(payload: bytes, base_pc: int,
     static instruction PCs only, never original opcode/ROM bytes.
     """
     from trace_player_writer_provenance import sign16, written_register
+    from trace_player_writer_cfg import is_control
     if ((len(payload) & 3) or function_pc < base_pc or
             lw_pc < function_pc or lw_pc + 4 > base_pc + len(payload)):
         raise ValueError('unbounded or unaligned selector trace')
@@ -123,7 +124,8 @@ def trace_index_register_load(payload: bytes, base_pc: int,
     address_reg = (load_word >> 21) & 31
 
     def definition(reg, before):
-        for idx in range(before - 1, max(begin - 1, before - 65), -1):
+        # Function-bound search; previously fixed 64 words hid earlier definitions.
+        for idx in range(before - 1, begin - 1, -1):
             if written_register(words[idx]) == reg:
                 return idx, words[idx]
         return None, None
@@ -149,6 +151,8 @@ def trace_index_register_load(payload: bytes, base_pc: int,
         'effective_address_definition_kind': None,
         'indexed_operand_registers': [],
         'indexed_operand_definition_kinds': [],
+        'selector_load_to_jr_control_transfer_count': None,
+        'selector_source_straight_line_proven': False,
         'no_live_player_pointer_or_action_proven': True,
     }
     if add_idx is None:
@@ -207,6 +211,10 @@ def trace_index_register_load(payload: bytes, base_pc: int,
                 report['selector_offset_cc_syntactic_candidate'] = (
                     offset == 0xCC and widths[op] in ('lbu', 'lb'))
                 report['index_ancestry_within_source_function'] = True
+                report['selector_load_to_jr_control_transfer_count'] = sum(
+                    is_control(w) for w in words[load_idx + 1:lw_idx])
+                report['selector_source_straight_line_proven'] = (
+                    report['selector_load_to_jr_control_transfer_count'] == 0)
                 report['selector_chain_stop_reason'] = 'memory_field_load'
                 return report
             name = None
@@ -446,6 +454,10 @@ def main(argv=None) -> int:
                   'selector_stop_pc=', row['syntactic_jump_index_ancestry']['selector_chain_stop_pc']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'selector_stop_category=', row['syntactic_jump_index_ancestry']['selector_chain_stop_instruction_category']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'source_path_controls=', row['syntactic_jump_index_ancestry']['selector_load_to_jr_control_transfer_count']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'straight_line=', row['syntactic_jump_index_ancestry']['selector_source_straight_line_proven']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'absolute_vram_table_candidates=',
                   len(row['possible_absolute_vram_target_pointer_runs']))
