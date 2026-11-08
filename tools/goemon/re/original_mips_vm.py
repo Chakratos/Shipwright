@@ -71,6 +71,7 @@ class OriginalMipsCPU:
         self.calls=Counter()
         self.first_calls=[]
         self.reads=Counter()
+        self.original_source_read_offsets=Counter()
         self.writes=Counter()
         self.visited=set()
         self.initial_memory_reads=[]
@@ -220,6 +221,8 @@ class OriginalMipsCPU:
             label=self.region(address)
             if op in (0x20,0x21,0x23,0x24,0x25,0x31,0x35):
                 self.reads[label]+=1
+                if label=="source_07":
+                    self.original_source_read_offsets[address]+=1
                 try:
                     val=self.load(address,width)
                 except MipsFault as fault:

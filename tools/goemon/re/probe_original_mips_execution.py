@@ -186,6 +186,20 @@ def run_probe(rom:bytes,progress:float=0.0,*,animated_limb:bool=False,
         a!=b for a,b in zip(matrix_words,identity))
     result["matrix_fingerprint_sha256_prefix"]=hashlib.sha256(
         matrix_bytes).hexdigest()[:16]
+    # Observe whether the original MIPS execution ever dereferences
+    # actual 0x07 source animation bytes rather than only Skeleton fields.
+    first_limb=min(int(node["ptr"]) for node in candidate["limbs"])
+    first_limb_cpu=SOURCE+(first_limb&0xFFFFFF)
+    animation_words=sum(count for address,count in
+                        vm.original_source_read_offsets.items()
+                        if anim<=address<first_limb_cpu)
+    skeleton_words=sum(count for address,count in
+                       vm.original_source_read_offsets.items()
+                       if first_limb_cpu<=address<SOURCE+len(banks[7]))
+    result["original_source_animation_region_reads"]=animation_words
+    result["original_source_skeleton_region_reads"]=skeleton_words
+    result["total_source_bank_data_reads"]=sum(vm.original_source_read_offsets.values())
+    result["original_animation_owner_verified"]=False
     result["output_matrix_layout_verified"]=False
     result["separate_original_matrix_stack_probe"]=separate_matrix_stack
     after_ptr=vm.load(0x80168530)
