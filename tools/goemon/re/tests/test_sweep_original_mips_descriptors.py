@@ -11,7 +11,8 @@ def example(code):
     return {
         "returned":True,"separate_original_matrix_stack_probe":True,
         "original_mtxf_stack_finite_elements":16,
-        "original_mtxf_stack_sha256_prefix":code
+        "original_mtxf_stack_sha256_prefix":code,
+        "original_mtxf_numeric_digest":code
     }
 
 class MipsSourceDescriptorTimeSweepTests(unittest.TestCase):
