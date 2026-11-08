@@ -100,6 +100,90 @@ def link_candidate_table_to_lui(payload: bytes, base_vram: int,
                 result['direct_or_indexed_base_register_chain_count'] += 1
     return result
 
+
+
+def trace_index_register_load(payload: bytes, base_pc: int,
+                              function_pc: int, lw_pc: int) -> dict:
+    """Trace source metadata from JR-target LW base via ADDU, SLL, LBU.
+
+    A backward instruction walk is *syntactic*, not a proof over all original
+    branch paths. It reports source register, field offset, load width and
+    static instruction PCs only, never original opcode/ROM bytes.
+    """
+    from trace_player_writer_provenance import sign16, written_register
+    if ((len(payload) & 3) or function_pc < base_pc or
+            lw_pc < function_pc or lw_pc + 4 > base_pc + len(payload)):
+        raise ValueError('unbounded or unaligned selector trace')
+    words = struct.unpack('>' + 'I' * (len(payload) // 4), payload)
+    begin = (function_pc - base_pc) // 4
+    lw_idx = (lw_pc - base_pc) // 4
+    load_word = words[lw_idx]
+    if load_word >> 26 != 0x23:
+        raise ValueError('indirect target load is not LW')
+    address_reg = (load_word >> 21) & 31
+
+    def definition(reg, before):
+        for idx in range(before - 1, max(begin - 1, before - 65), -1):
+            if written_register(words[idx]) == reg:
+                return idx, words[idx]
+        return None, None
+
+    add_idx, add_word = definition(address_reg, lw_idx)
+    report = {
+        'jr_target_lw_pc': f'0x{lw_pc:08X}',
+        'effective_address_reg': f'r{address_reg}',
+        'indexed_addu_pc': None,
+        'index_scale_shift_pc': None,
+        'index_scale': None,
+        'index_source_register': None,
+        'selector_load_pc': None,
+        'selector_load_width': None,
+        'selector_field_offset': None,
+        'selector_object_register': None,
+        'selector_offset_cc_syntactic_candidate': False,
+        'index_ancestry_within_source_function': False,
+        'no_live_player_pointer_or_action_proven': True,
+    }
+    if add_idx is None or add_word >> 26 != 0 or (add_word & 63) != 0x21:
+        return report
+    if ((add_word >> 11) & 31) != address_reg:
+        return report
+    operands = ((add_word >> 21) & 31, (add_word >> 16) & 31)
+    report['indexed_addu_pc'] = f'0x{base_pc + add_idx * 4:08X}'
+    # Either operand can be the scaled index register.
+    for reg in operands:
+        shift_idx, shift = definition(reg, add_idx)
+        if shift_idx is None:
+            continue
+        if (shift >> 26 != 0 or (shift & 63) != 0 or
+                (shift >> 11) & 31 != reg or
+                (shift >> 21) & 31 != 0):
+            continue
+        scale = (shift >> 6) & 31
+        source_reg = (shift >> 16) & 31
+        report['index_scale_shift_pc'] = f'0x{base_pc + shift_idx * 4:08X}'
+        report['index_scale'] = scale
+        report['index_source_register'] = f'r{source_reg}'
+        load_idx, load = definition(source_reg, shift_idx)
+        if load_idx is None:
+            return report
+        op = load >> 26
+        # Byte and halfword instructions are field syntax clues only.
+        widths = {0x20: 'lb', 0x24: 'lbu', 0x21: 'lh',
+                  0x25: 'lhu', 0x23: 'lw'}
+        if op not in widths:
+            return report
+        offset = sign16(load)
+        report['selector_load_pc'] = f'0x{base_pc + load_idx * 4:08X}'
+        report['selector_load_width'] = widths[op]
+        report['selector_field_offset'] = offset
+        report['selector_object_register'] = f'r{(load >> 21) & 31}'
+        report['selector_offset_cc_syntactic_candidate'] = (
+            offset == 0xCC and widths[op] in ('lbu', 'lb'))
+        report['index_ancestry_within_source_function'] = True
+        return report
+    return report
+
 def inspect_indirect_jump(payload: bytes, base_vram: int, jump_pc: int,
                           function_start: int, function_size: int) -> dict:
     if len(payload) % 4 or not (function_start <= jump_pc <
@@ -131,6 +215,9 @@ def inspect_indirect_jump(payload: bytes, base_vram: int, jump_pc: int,
         'possible_absolute_vram_target_pointer_runs': table_runs(
             payload, function_start, function_start + function_size),
     }
+    report['syntactic_jump_index_ancestry'] = (
+        trace_index_register_load(payload, base_vram, function_start, preceding_lw[-1])
+        if preceding_lw else None)
     for run in report['possible_absolute_vram_target_pointer_runs']:
         table_address = base_vram + int(
             run['table_offset_within_original_overlay'], 16)
@@ -254,6 +341,14 @@ def main(argv=None) -> int:
                   'source_function=', row['original_function_start_pc'],
                   'reg=', row['jr_target_register'],
                   'last_lw_pc=', row['last_syntactic_lw_to_jr_register_pc'],
+                  'index_source=', row['syntactic_jump_index_ancestry']['selector_load_pc']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'index_offset=', row['syntactic_jump_index_ancestry']['selector_field_offset']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'index_base_reg=', row['syntactic_jump_index_ancestry']['selector_object_register']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'index_width=', row['syntactic_jump_index_ancestry']['selector_load_width']
+                      if row['syntactic_jump_index_ancestry'] else None,
                   'absolute_vram_table_candidates=',
                   len(row['possible_absolute_vram_target_pointer_runs']))
             for run in row['possible_absolute_vram_target_pointer_runs'][:5]:

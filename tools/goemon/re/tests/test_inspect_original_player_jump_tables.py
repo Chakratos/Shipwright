@@ -74,6 +74,32 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
             blob(words), BASE, BASE, BASE + 4, 0x8010F0C0)
         self.assertEqual(evidence['exact_lui_plus_lw_offset_match_count'], 0)
 
+    def test_trace_synthetic_action_byte_selector_to_indirect_jr(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 20
+        words[1] = (0x24 << 26) | (4 << 21) | (9 << 16) | 0xCC
+        words[2] = (9 << 16) | (10 << 11) | (2 << 6)
+        words[3] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[4] = (0x23 << 26) | (8 << 21) | (12 << 16)
+        report = trace_index_register_load(blob(words), BASE, BASE, BASE + 16)
+        self.assertTrue(report['index_ancestry_within_source_function'])
+        self.assertTrue(report['selector_offset_cc_syntactic_candidate'])
+        self.assertEqual(report['selector_object_register'], 'r4')
+        self.assertEqual(report['selector_load_width'], 'lbu')
+        self.assertEqual(report['index_scale'], 2)
+        self.assertFalse(not report['no_live_player_pointer_or_action_proven'])
+
+    def test_trace_non_action_selector_retains_offset_without_proof(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 20
+        words[1] = (0x24 << 26) | (16 << 21) | (9 << 16) | 0x60
+        words[2] = (9 << 16) | (10 << 11) | (2 << 6)
+        words[3] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[4] = (0x23 << 26) | (8 << 21) | (12 << 16)
+        report = trace_index_register_load(blob(words), BASE, BASE, BASE + 16)
+        self.assertEqual(report['selector_field_offset'], 0x60)
+        self.assertFalse(report['selector_offset_cc_syntactic_candidate'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8
