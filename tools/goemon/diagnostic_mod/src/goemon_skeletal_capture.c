@@ -31,7 +31,8 @@ extern void *D_801FC604_5B8514; // Original PlayerTask (verified)
 extern void *D_801FC614_5B8524; // Original player render root Object
 extern void *D_801FC60C_5B851C; // Original player render Object
 extern void *D_801684A0_1690A0; // Original current renderer Object
-extern f32 D_801684B0_1690B0[4][4]; // Original renderer MtxF
+extern void *D_80168520_169120; // Original resolved live animation stream
+extern u8 *D_80168530_169130; // Original live MtxF stack destination cursor
 extern SYS_W D_8008CCC0_8D8C0;
 
 #define GOEMON_ANIM_CAPTURE_MAX_FRAMES 1800
@@ -46,6 +47,8 @@ static u32 g_anim_stack_depth;
 static u32 g_anim_last_root;
 static u32 g_anim_last_overlay_signature;
 static u32 g_anim_last_graphics;
+static u32 g_anim_last_action = 0xffffffff;
+static u32 g_anim_pending_matrix_cursor;
 static u32 g_anim_emitted_stop;
 static u32 g_anim_in_transform;
 static GoemonAnimBone *g_anim_pending_bone;
@@ -65,6 +68,27 @@ static u32 ReadObjectU32(const void *object, u32 at) {
     return *(const u32 *)((const u8 *)object + at);
 }
 
+// Mirror the *actual original* 0x60000000 player-graphics and animation
+// pointer relocation in Goemon64Recomp patches/anime.c. Do not treat a
+// 0x07 structural candidate as proof that it belongs to the live player.
+static u32 ResolvePlayerObjectPointer(const void *object, u32 raw) {
+    if (raw == 0)
+        return 0;
+    if ((raw & 0x80000000u) != 0)
+        return raw;
+    u32 slot = 0;
+    if (raw >= 0x08000001u) {
+        const u32 segment = (raw >> 24) & 0x0f;
+        if (segment < 8 || segment > 13)
+            return 0;
+        slot = segment - 8;
+    }
+    const u32 overlay = ReadObjectU32(object, 0x38 + slot * 8);
+    if (overlay == 0)
+        return 0;
+    return overlay + (raw & 0x80ffffffu);
+}
+
 static void ResetAnimationCaptureState(void) {
     g_anim_start_frame = 0;
     g_anim_prior_frame = 0xffffffff;
@@ -75,6 +99,8 @@ static void ResetAnimationCaptureState(void) {
     g_anim_last_root = 0;
     g_anim_last_overlay_signature = 0;
     g_anim_last_graphics = 0;
+    g_anim_last_action = 0xffffffff;
+    g_anim_pending_matrix_cursor = 0;
     g_anim_emitted_stop = 0;
     g_anim_in_transform = 0;
     g_anim_pending_bone = NULL;
@@ -94,7 +120,11 @@ void GoemonAnim_CaptureRoot(void *object) {
     if (object == NULL || D_801FC604_5B8514 == NULL ||
         D_801FC614_5B8524 == NULL)
         return;
-    if (object != D_801FC614_5B8524)
+    // The player model Object and root Object are distinct. The player
+    // animated 0x60000000 graphics may be attached to either, so the
+    // old root-only gate silently missed valid model render callbacks.
+    if (object != D_801FC614_5B8524 &&
+        object != D_801FC60C_5B851C)
         return;
 
     const u32 graphics = ReadObjectU32(object, 0x2C);
@@ -139,7 +169,7 @@ void GoemonAnim_CaptureRoot(void *object) {
     g_anim_model_progress =
         *(const f32 *)((const u8 *)object + 0x28);
 
-    // Each 0x08-0x0D overlay is recorded from the *actual live root*.
+    // Each overlay is recorded from the *actual active player Object*.
     // Use a simple signature to avoid re-logging identical mappings
     // on every frame.
     u32 signature = graphics;
@@ -152,6 +182,7 @@ void GoemonAnim_CaptureRoot(void *object) {
     }
     if ((u32)object != g_anim_last_root ||
         graphics != g_anim_last_graphics ||
+        (u32)g_anim_action != g_anim_last_action ||
         signature != g_anim_last_overlay_signature) {
         recomp_printf(
             "GOEMON_ANIM_ROOT,%u,%u,%u,%08x,%08x,%.9f,"
@@ -164,8 +195,27 @@ void GoemonAnim_CaptureRoot(void *object) {
             (u32)*(u16 *)((u8 *)object+0x4c),ReadObjectU32(object,0x50),
             (u32)*(u16 *)((u8 *)object+0x54),ReadObjectU32(object,0x58),
             (u32)*(u16 *)((u8 *)object+0x5c),ReadObjectU32(object,0x60));
+        // These are **live** source player Object and AnimatedSkeleton
+        // pointers. Only dereference after the original 0x60000000
+        // render gate, as done by the original renderer itself.
+        const u32 encoded = graphics & 0x8ffffffeu;
+        const u32 owner = ResolvePlayerObjectPointer(object, encoded);
+        if (owner != 0) {
+            const u32 flags = *(const u32 *)(owner + 0);
+            const u32 raw_animation = *(const u32 *)(owner + 4);
+            const u32 root_skeleton = *(const u32 *)(owner + 8);
+            const u32 resolved_animation =
+                ResolvePlayerObjectPointer(object, raw_animation);
+            recomp_printf(
+                "GOEMON_ANIM_OWNER,%u,%u,%u,%08x,%08x,%08x,"
+                "%08x,%08x,%08x,%08x\n",
+                frame,(u32)character,(u32)g_anim_action,
+                (u32)object,graphics,owner,flags,
+                raw_animation,resolved_animation,root_skeleton);
+        }
         g_anim_last_root = (u32)object;
         g_anim_last_graphics = graphics;
+        g_anim_last_action = (u32)g_anim_action;
         g_anim_last_overlay_signature = signature;
     }
 }
@@ -186,6 +236,15 @@ void GoemonAnim_EnterLimb(GoemonAnimBone *skeleton, void *object) {
             object != D_801FC614_5B8524 &&
             object != D_801FC60C_5B851C)
             return;
+        if (g_anim_bones_in_frame == 0) {
+            // At original player-limb entry the source renderer has
+            // resolved AnimatedSkeleton.animation into D_80168520.
+            recomp_printf(
+                "GOEMON_ANIM_ACTIVE,%u,%u,%u,%08x,%08x,%08x,%.9f\n",
+                frame,(u32)g_anim_character,(u32)g_anim_action,
+                (u32)object,(u32)D_80168520_169120,
+                (u32)D_80168530_169130,g_anim_model_progress);
+        }
     }
     ++g_anim_stack_depth;
 }
@@ -211,6 +270,7 @@ void GoemonAnim_BeforeMatrix(GoemonAnimBone *bone, void *object) {
         return;
     ++g_anim_bones_in_frame;
     g_anim_pending_bone = bone;
+    g_anim_pending_matrix_cursor = (u32)D_80168530_169130;
     g_anim_in_transform = 1;
     recomp_printf(
         "GOEMON_ANIM_BONE,%u,%u,%u,%08x,%08x,%d,%d,"
@@ -228,7 +288,23 @@ RECOMP_HOOK_RETURN("func_800192D0_19ED0")
 void GoemonAnim_AfterMatrix(void) {
     if (!g_anim_in_transform || g_anim_pending_bone == NULL)
         return;
-    const f32 *m = &D_801684B0_1690B0[0][0];
+    const u32 after = (u32)D_80168530_169130;
+    if (after < 64 || after < g_anim_pending_matrix_cursor ||
+        ((after-g_anim_pending_matrix_cursor) % 64) != 0) {
+        g_anim_in_transform = 0;
+        g_anim_pending_bone = NULL;
+        return;
+    }
+    recomp_printf(
+        "GOEMON_ANIM_MATRIX_CURSOR,%u,%u,%u,%08x,%08x,%08x,%u\n",
+        g_anim_prior_frame,(u32)g_anim_character,(u32)g_anim_action,
+        (u32)g_anim_pending_bone,g_anim_pending_matrix_cursor,after,
+        after-g_anim_pending_matrix_cursor);
+    // D_801684B0 is the current/root MtxF, NOT necessarily the
+    // transformed limb. The original MIPS function pushes a matrix
+    // at D_80168530 (64 bytes, sometimes 128); its final pushed MtxF
+    // starts exactly 64 bytes below the advanced destination pointer.
+    const f32 *m = (const f32 *)(after-64);
     recomp_printf(
         "GOEMON_ANIM_MATRIX,%u,%u,%u,%08x,%.9f,"
         "%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,"

@@ -21,7 +21,9 @@ class OriginalSkeletonCaptureTests(unittest.TestCase):
             "func_800192D0_19ED0",
             'RECOMP_HOOK_RETURN("func_80018CA0_198A0")',
             'RECOMP_HOOK_RETURN("func_800192D0_19ED0")',
-            "D_801684B0_1690B0",
+            "D_80168520_169120",
+            "D_80168530_169130",
+            "D_801FC60C_5B851C",
         ):
             self.assertIn(symbol, c)
 
@@ -40,6 +42,11 @@ class OriginalSkeletonCaptureTests(unittest.TestCase):
     def test_records_render_root_and_real_limb_matrices(self):
         c = C_SOURCE.read_text("utf-8")
         self.assertIn("GOEMON_ANIM_ROOT,", c)
+        self.assertIn("GOEMON_ANIM_OWNER,", c)
+        self.assertIn("GOEMON_ANIM_ACTIVE,", c)
+        self.assertIn("GOEMON_ANIM_MATRIX_CURSOR,", c)
+        self.assertIn("after-64", c)
+        self.assertIn("object != D_801FC60C_5B851C", c)
         self.assertIn("GOEMON_ANIM_BONE,", c)
         self.assertIn("GOEMON_ANIM_MATRIX,", c)
         self.assertIn("GOEMON_ANIM_BEGIN,", c)
