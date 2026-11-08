@@ -46,10 +46,12 @@
     "live_owner_parser_synthetic_tests": 42479506702,
     "original_player_writer_scan": 42480203308,
     "player_writer_static_register_provenance": 42481382788,
-    "player_writer_caller_argument_scan": 42481566704
+    "player_writer_caller_argument_scan": 42481566704,
+    "player_writer_cfg_heuristic": 42482341951,
+    "player_writer_cfg_pinned_symbols": 42482887968
   },
-  "next_task": "G1: correlate candidate action setters (0x801CC3DC, 0x801D9E74, 0x801DAED4, 0x801DD640 etc.) with actual player pointer across CFG and original-game runtime. 7 candidate direct JAL PCs in run 42481566704 have 0 locally proven a0 player-global loads; further identical linear sweeps will not prove ownership. Obtain GOEMON_ANIM_OWNER/ACTIVE or real call-graph/overlay state, then test nonzero numeric animation.",
+  "next_task": "On owner-private original player overlay, characterize the exact MIPS control-flow obstacles in 9 incomplete action writers using PC+opcode-class metadata and pinned .file_11 function bounds. Implement missing dispatch forms, then prove actual PlayerTask/Object owner and AnimatedSkeleton.animation, followed by numerical moving original pose. Opt-in [goemon-player-writer-provenance], no full Ship build.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "Source-only and owner ROM scan success 42481566704: 329 Python and native tests, 10 action offset candidates, 21 non-stack graphics offset candidates, 7 JAL-to-heuristic-prologue caller PCs. Zero local original player-global pointer proof, no live owner or numerically moving original pose."
+  "last_known_limitation": "2026-11-08 successful 342/342 source + native [42482887968]: 10 action sites and 7 JAL callers mapped to original pinned .file_11 functions; 9/10 action sites untraversed in incomplete bounded CFG, 1 unknown. No genuine animation pointer owner or numerical motion proven."
 }
