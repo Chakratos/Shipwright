@@ -492,6 +492,17 @@ jobs:
           & py -3 tools\goemon\re\scan_player_object_writers.py
           if ($LASTEXITCODE -ne 0) { throw 'Original NG5E player writer site scan failed' }
 
+      - name: Trace original player writer register provenance (private ROM metadata only)
+        # Conservative linear MIPS slice + direct jal function-entry hints.
+        # Stores only metadata outside checkout; does not imply live ownership.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-player-writer-provenance]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\trace_player_writer_provenance.py
+          if ($LASTEXITCODE -ne 0) { throw 'Original player writer provenance scan failed' }
+          Write-Host 'ROM-private writer register and caller metadata retained locally, no proprietary payload uploaded.'
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell

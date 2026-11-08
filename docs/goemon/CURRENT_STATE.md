@@ -2,6 +2,12 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Conservative player writer provenance work unit (2026-11-08)
+
+- Added source-free MIPS local register-origin tracing and direct-JAL-to-prologue *hints* for player overlay action_id +0xCC and non-stack graphics_1 +0x2C store candidates. The provenance engine recognizes only exact pinned player pointer globals loaded with lw; it stops at branches, calls and unknown writes rather than inventing interprocedural ownership. Stack r29 graphics stores are excluded.
+- Seven new synthetic regressions passed in the local authoring environment (global pointer load, saved-register alias, stack exclusion, branch/call barriers, overwrite, caller hint, literal-versus-pointer distinction). GitHub Actions and owner-ROM execution are **pending verification** at this commit.
+- Opt-in marker: [goemon-player-writer-provenance]; private report path: C:\actions-runner-goemon\original-player-writer-provenance.json. This is static evidence only, not live original action/animation verification. G1 remains OPEN. See ORIGINAL_PLAYER_WRITER_PROVENANCE_2026-11-08.md.
+
 ## Latest original player-overlay original ROM writer scan (2026-11-08)
 
 - Original NG5E source MIPS syntactic field-offset scan identified **player overlay file ID 10** (known player function at ROM 0x5988D8 / VRAM 0x801DC9C8), with 267264 scanned bytes; 10 potential byte stores at PlayerTask.action_id offset +0xCC, and 131 potential word stores at Object.graphics_1 offset +0x2C. These are NOT proven object owners. Main executable had 0 action-offset hits and 248 graphics-offset matches, many stack-based.
