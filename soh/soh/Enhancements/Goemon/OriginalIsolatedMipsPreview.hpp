@@ -3,9 +3,10 @@
 //
 // GOMIPS01 is deliberately NOT GOPA0001. It has no authentic action ID,
 // gameplay tick, hierarchical matrix stack or verified N64 matrix layout.
-// Samples correspond to original animation_progress = 0 and 1 with a
-// controlled identity parent; raw CPU matrix bits were obtained by executing
-// original ROM MIPS instructions. The asset lives only on the owner's PC.
+// Samples correspond to explicitly encoded original animation_progress
+// pairs 0/1 or 0/4. There is no invented tick spacing or playback rate.
+// In the v4 archive source MIPS CPU and stack are preserved across bones.
+// The asset lives only on the owner's PC.
 //
 // The consumer refuses mismatching GOSKEL01 rigs, unknown source S/R/T
 // selectors, malformed matrices and attempts to claim sample chronology.
@@ -66,7 +67,8 @@ class IsolatedMipsSourceReader {
             result.originalAnimatedSkeletonHeader>>24!=7 ||
             !count || count>128 || samples!=2 ||
             result.controlledProgress[0]!=0.0f ||
-            result.controlledProgress[1]!=1.0f ||
+            (result.controlledProgress[1]!=1.0f &&
+             result.controlledProgress[1]!=4.0f) ||
             bytes_.size()!=32+static_cast<std::size_t>(count)*(30+2*16*4))
             throw std::invalid_argument("inconsistent isolated original MIPS asset");
         result.bones.reserve(count);

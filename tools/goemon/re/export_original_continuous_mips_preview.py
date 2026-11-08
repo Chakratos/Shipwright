@@ -27,7 +27,7 @@ from real_rom_check import locate_rom
 def generate_continuous_source_archive(rom:bytes,slot:int)->tuple[dict,dict]:
     _,candidates=original_source_catalog(rom,slot)
     record=choose_source_candidate(candidates,HEADERS[slot])
-    progress=(0.0,1.0)
+    progress=(0.0,4.0)
     traces=[run_source_stack_sequence(rom,slot,t,capture_private_matrices=True)
             for t in progress]
     if any(not trace["source_mips_sequence_completed"] for trace in traces):
@@ -73,7 +73,7 @@ def generate_continuous_source_archive(rom:bytes,slot:int)->tuple[dict,dict]:
         "source_tick_mapping_verified":False,
         "parent_world_composition_verified":False,
         "engine_matrix_memory_layout_verified":False,
-        "controlled_animation_progress_values":[0.0,1.0],
+        "controlled_animation_progress_values":[0.0,4.0],
         "character":CHARACTER_NAMES[slot],
         "character_slot":slot,
         "source_original_skeleton_header":f"0x{0x07000000|HEADERS[slot]:08X}",

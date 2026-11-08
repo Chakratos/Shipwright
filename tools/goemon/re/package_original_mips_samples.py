@@ -68,7 +68,9 @@ def build_original_isolated_mips_binary(rig:bytes,samples:dict)->bytes:
         samples.get("parent_world_composition_verified") is not False or
         samples.get("engine_matrix_memory_layout_verified") is not False):
         raise ValueError("GOMIPS01 requires unverified isolated matrix provenance")
-    if samples.get("controlled_animation_progress_values")!=list(SAMPLE_PROGRESS):
+    source_progress=((0.0,4.0) if samples.get("format")==allowed[2]
+                     else SAMPLE_PROGRESS)
+    if samples.get("controlled_animation_progress_values")!=list(source_progress):
         raise ValueError("unexpected source sample progress sequence")
     header=int(samples["source_original_skeleton_header"],16)
     if header not in rigs:
@@ -86,7 +88,7 @@ def build_original_isolated_mips_binary(rig:bytes,samples:dict)->bytes:
             raise ValueError("source MIPS Skeleton nodes duplicated/wrong segment")
         source_indices[ptr]=idx
     out=bytearray(HEADER.pack(
-        MAGIC,slot,header,len(nodes),len(SAMPLE_PROGRESS),*SAMPLE_PROGRESS))
+        MAGIC,slot,header,len(nodes),len(source_progress),*source_progress))
     for idx,(node,rig_bone) in enumerate(zip(nodes,rig_bones)):
         gfx,parent,raw=rig_bone
         node_gfx=int(node["raw_original_gfx_pointer"],16)
@@ -99,7 +101,7 @@ def build_original_isolated_mips_binary(rig:bytes,samples:dict)->bytes:
         records=node["samples"]
         if len(records)!=2:
             raise ValueError("missing controlled progress samples")
-        values=[validate_original_sample(record,SAMPLE_PROGRESS[j])
+        values=[validate_original_sample(record,source_progress[j])
                 for j,record in enumerate(records)]
         mask=sum(1<<j for j,words in enumerate(values) if words is not None)
         ptr=int(node["source_limb_pointer"],16)
@@ -117,7 +119,7 @@ def inspect_original_isolated_mips_binary(blob:bytes)->dict:
         raise ValueError("source MIPS preview package truncated")
     magic,slot,header,bones,samples,p0,p1=HEADER.unpack_from(blob)
     if (magic!=MAGIC or slot>3 or header>>24!=7 or
-        not 1<=bones<=128 or samples!=2 or (p0,p1)!=SAMPLE_PROGRESS):
+        not 1<=bones<=128 or samples!=2 or (p0,p1) not in (SAMPLE_PROGRESS,(0.0,4.0))):
         raise ValueError("invalid isolated original MIPS preview header")
     if len(blob)!=HEADER.size+bones*(LIMB.size+samples*MATRIX.size):
         raise ValueError("isolated original MIPS preview package length mismatch")
