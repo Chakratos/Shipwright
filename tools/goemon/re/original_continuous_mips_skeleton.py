@@ -103,7 +103,11 @@ def run_source_stack_sequence(rom:bytes,slot:int,progress:float)->dict:
             vm.run(ENTRY,budget=200000)
             after=vm.load(0x80168530)
             if after!=original_destination+64:
-                raise MipsFault("source original N64 MtxF push width unexpected")
+                raise MipsFault(
+                    "source original N64 MtxF pointer delta "+
+                    str(after-original_destination)+
+                    " at limb "+f"0x{node['ptr']:08X}"+
+                    " depth "+str(node["depth"]))
             words=[vm.load(original_destination+4*i) for i in range(16)]
             if any(not math.isfinite(f32(w)) for w in words):
                 raise MipsFault("original MIPS output matrix contains nonfinite values")
