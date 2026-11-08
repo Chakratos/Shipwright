@@ -248,6 +248,9 @@ def main(argv: list[str] | None = None) -> int:
         result['pinned_function_cfg'] = analyze_cfg_from_pinned_functions(
             words, base_pc, sites, functions)
         result['pinned_symbols_source_commit'] = origin['commit']
+        from trace_player_writer_cfg import inspect_pinned_caller_a0
+        result['pinned_direct_caller_a0'] = inspect_pinned_caller_a0(
+            words, base_pc, pinned, functions)
         result['source_file_id'] = overlay.file_id
         checkout_root = Path(__file__).resolve().parents[3]
         out = args.output.resolve()
@@ -294,6 +297,14 @@ def main(argv: list[str] | None = None) -> int:
                           'complete=', finding['complete'],
                           'blockers=', json.dumps(finding.get('blocker_classes', {}), sort_keys=True),
                           'first_blocker_pcs=', json.dumps(finding.get('first_blocker_pc_by_class', {}), sort_keys=True))
+        for caller in result['pinned_direct_caller_a0']:
+            print('GOEMON_PINNED_CALLER_A0', caller['jal_pc'],
+                  'target=', caller['verified_jal_target_function_pc'],
+                  'source_function=', caller['source_caller_function_pc'],
+                  'origin=', caller['call_argument_candidate_origin'],
+                  'global=', caller['a0_pre_delay_slot_symbol'],
+                  'cfg_complete=', caller['cfg_complete'],
+                  'blockers=', json.dumps(caller['control_blocker_classes'], sort_keys=True))
         print('GOEMON_WRITER_PROVENANCE COMPLETE: static evidence only; no live owner confirmed')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_WRITER_PROVENANCE FAILED:', exc, file=sys.stderr)

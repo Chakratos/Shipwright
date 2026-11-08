@@ -142,6 +142,38 @@ class MipsCFGProvenanceTests(unittest.TestCase):
         self.assertEqual(r['blocker_classes']['indirect_jalr'], 1)
         self.assertEqual(r['first_blocker_pc_by_class']['indirect_jalr'], '0x80100000')
 
+    def test_full_original_player_overlay_symbols_are_unique_nonoverlapping(self):
+        from trace_player_writer_cfg import read_pinned_player_overlay_functions
+        data, functions = read_pinned_player_overlay_functions()
+        self.assertEqual(len(functions), 906)
+        self.assertEqual(data['provenance']['function_count'], 906)
+        self.assertEqual(len(data['direct_caller_sites']), 7)
+
+    def test_exact_jal_target_and_a0_argument_from_pinned_function(self):
+        from trace_player_writer_cfg import inspect_pinned_caller_a0
+        base = 0x80100000
+        start = base
+        target = base + 0x40
+        jal = (3 << 26) | ((target >> 2) & 0x3FFFFFF)
+        words = [ins(15, 0, 8, 0x8020), ins(35, 8, 4, 0xC604),
+                 jal, 0] + [0] * 20
+        source = {'direct_caller_sites': [{'pc': f'0x{base+8:08X}',
+                                          'target': f'0x{target:08X}'}]}
+        funcs = [{'start': base, 'size': 0x30}]
+        row = inspect_pinned_caller_a0(words, base, source, funcs)[0]
+        self.assertEqual(row['call_argument_candidate_origin'], 'player_global_load')
+        self.assertEqual(row['a0_pre_delay_slot_symbol'], 'player_1_task')
+        self.assertFalse(row['live_player_action_owner_verified'])
+
+    def test_wrong_target_jal_is_rejected(self):
+        from trace_player_writer_cfg import inspect_pinned_caller_a0
+        base, target = 0x80100000, 0x80100040
+        words = [(3 << 26) | (((target + 4) >> 2) & 0x3FFFFFF), 0]
+        source = {'direct_caller_sites': [{'pc': f'0x{base:08X}',
+                                          'target': f'0x{target:08X}'}]}
+        with self.assertRaisesRegex(ValueError, 'does not target'):
+            inspect_pinned_caller_a0(words, base, source, [{'start': base, 'size': 8}])
+
     def test_no_entry_hint_no_proof(self):
         site = {'pc': f'0x{BASE:08X}', 'base_register': 'r4',
                 'nearby_function_prologue_hint': None}

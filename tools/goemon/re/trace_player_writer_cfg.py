@@ -249,12 +249,22 @@ def read_pinned_player_overlay_functions(path=None):
         functions.append({'start': start, 'size': size, 'name': row['name']})
     if len({f['start'] for f in functions}) != len(functions):
         raise ValueError('duplicate source function start')
+    functions.sort(key=lambda function: function['start'])
+    if len(functions) != 906 or origin.get('function_count') != 906:
+        raise ValueError('pinned original player function inventory incomplete')
+    for previous, current in zip(functions, functions[1:]):
+        if current['start'] < previous['start'] + previous['size']:
+            raise ValueError('overlapping functions in pinned player overlay')
     for section in ('action_sites', 'direct_caller_sites', 'graphics_example_site'):
         for site in data[section]:
             pc, expected = int(site['pc'], 16), int(site['start'], 16)
             match = [f for f in functions if f['start'] <= pc < f['start'] + f['size']]
             if len(match) != 1 or match[0]['start'] != expected:
                 raise ValueError('site not uniquely covered by its source function')
+    for caller in data['direct_caller_sites']:
+        target = int(caller['target'], 16)
+        if not any(f['start'] == target for f in functions):
+            raise ValueError('direct caller target missing from public source symbols')
     if len(data['action_sites']) != 10 or len(data['direct_caller_sites']) != 7:
         raise ValueError('expected source site inventory incomplete')
     return data, functions
@@ -280,3 +290,47 @@ def analyze_cfg_from_pinned_functions(words, base_pc, sites, functions):
         result['live_player_owner_verified'] = False
         answer[site['pc']] = result
     return answer
+
+
+def inspect_pinned_caller_a0(words, base_pc, source, functions):
+    """Correlate exact JAL source PCs with a0 from their source function spans.
+
+    Delay-slot a0 writes remain unresolved, and no dynamic game ownership is
+    inferred. The verified owner-ROM JAL target must match pinned metadata.
+    """
+    results = []
+    from trace_player_writer_provenance import written_register
+    for caller in source['direct_caller_sites']:
+        pc = int(caller['pc'], 16)
+        idx = (pc - base_pc) // 4
+        expected = int(caller['target'], 16)
+        w = words[idx]
+        target = (((pc + 4) & 0xF0000000) | ((w & 0x3FFFFFF) << 2))
+        if w >> 26 != 3 or target != expected:
+            raise ValueError('original owner ROM JAL does not target expected pinned function')
+        entries = [f for f in functions
+                   if f['start'] <= pc < f['start'] + f['size']]
+        if len(entries) != 1:
+            raise ValueError('direct JAL caller not in unique source function')
+        pre = origin_at(words, base_pc,
+                        (entries[0]['start'] - base_pc) // 4, idx, 4)
+        slot = words[idx + 1]
+        cop_writes_a0 = ((slot >> 26) in (0x10, 0x11, 0x12, 0x13)
+                          and ((slot >> 21) & 31) in (0, 2)
+                          and ((slot >> 16) & 31) == 4)
+        slot_writes_a0 = written_register(slot) == 4 or cop_writes_a0
+        results.append({
+            'jal_pc': caller['pc'],
+            'verified_jal_target_function_pc': caller['target'],
+            'source_caller_function_pc': f"0x{entries[0]['start']:08X}",
+            'a0_pre_delay_slot_origin': pre['origin'],
+            'a0_pre_delay_slot_symbol': pre.get('symbol'),
+            'a0_delay_slot_overwrites': slot_writes_a0,
+            'call_argument_candidate_origin': (
+                'delay_slot_overwrite_unknown' if slot_writes_a0 else pre['origin']),
+            'function_extent_from_pinned_public_symbols': True,
+            'live_player_action_owner_verified': False,
+            'cfg_complete': pre['complete'],
+            'control_blocker_classes': pre.get('blocker_classes', {}),
+        })
+    return results
