@@ -1,0 +1,48 @@
+{
+  "schema": "goemon-agent-handoff-v1",
+  "updated_utc_date": "2026-11-08",
+  "repository": "Chakratos/Shipwright",
+  "branch": "feature/goemon-original-controller",
+  "authoritative_documents": [
+    "AGENTS.md",
+    "docs/goemon/START_HERE.md",
+    "docs/goemon/CURRENT_STATE.md",
+    "docs/goemon/NEXT_TASKS.md",
+    "docs/goemon/TECHNICAL_DECISIONS.md"
+  ],
+  "active_gate": "G1",
+  "gates": {
+    "G1": "open",
+    "G2": "blocked",
+    "G3": "blocked",
+    "G4": "blocked",
+    "G5": "blocked"
+  },
+  "verified": {
+    "original_rom_cpu_evaluator_executes": true,
+    "original_source_character_geometry_decodes": true,
+    "native_ship_source_preview_compiles": true,
+    "original_mips_animated_player_owner_identified": false,
+    "numerically_changing_original_player_pose_verified": false,
+    "original_timed_character_animations_play_in_ship": false,
+    "all_four_characters_playable_in_oot": false,
+    "randomizer_integrated": false
+  },
+  "critical_negative_evidence": {
+    "description": "Signed-zero-normalized scan: no numerically time-dependent MtxF matrices in controlled synthetic original Object context",
+    "source_descriptors_evaluated": 371,
+    "numerically_changing_descriptors": 0,
+    "github_actions_run": 42474422364
+  },
+  "recent_evidence": {
+    "full_ship_source_preview_build": 42396981715,
+    "original_cpu_continuous_stack": 42473523620,
+    "numeric_zero_delta_native": 42474227448,
+    "signed_zero_corrected_rom_sweep": 42474422364,
+    "source_memory_reads_probe": 42474726311
+  },
+  "next_task": "Trace exact original active player AnimatedSkeleton.animation and D_80168520 dereferences from ROM source CPU, reconstruct real source Object.graphics_1 and overlay_info pointer ownership, then demonstrate nonzero numeric matrix motion under real progress and action state",
+  "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
+  "archipelago_test_install_must_remain_untouched": true,
+  "last_known_limitation": "Current source skeleton model/CPU output exists but no genuine moving animated frames have been validated."
+}
