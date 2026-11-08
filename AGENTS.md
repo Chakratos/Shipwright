@@ -2,7 +2,7 @@
 
 **Project:** Original Mystical Ninja Starring Goemon (N64) characters inside Ship of Harkinian (OoT), including real animations, controls, character-specific abilities and eventual Randomizer compatibility.
 
-**START HERE:** [docs/goemon/START_HERE.md](docs/goemon/START_HERE.md). Then read [docs/goemon/CURRENT_STATE.md](docs/goemon/CURRENT_STATE.md), [docs/goemon/NEXT_TASKS.md](docs/goemon/NEXT_TASKS.md), and [docs/goemon/TECHNICAL_DECISIONS.md](docs/goemon/TECHNICAL_DECISIONS.md). Check source code and latest CI runs. These are canonical and MUST be updated whenever work changes verified status. Historical reports are **not** authoritative if contradicted by CURRENT_STATE.
+**START HERE:** [docs/goemon/START_HERE.md](docs/goemon/START_HERE.md). Read machine-readable [docs/goemon/agent_state.json](docs/goemon/agent_state.json), then read [docs/goemon/CURRENT_STATE.md](docs/goemon/CURRENT_STATE.md), [docs/goemon/NEXT_TASKS.md](docs/goemon/NEXT_TASKS.md), and [docs/goemon/TECHNICAL_DECISIONS.md](docs/goemon/TECHNICAL_DECISIONS.md). Check source code and latest CI runs. These are canonical and MUST be updated whenever work changes verified status. Historical reports are **not** authoritative if contradicted by CURRENT_STATE.
 
 ## Non-negotiables
 

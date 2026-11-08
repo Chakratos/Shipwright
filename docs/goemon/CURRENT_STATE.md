@@ -2,6 +2,15 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Latest ROM experiment — exact source pointer provenance (2026-11-08)
+
+- New exact-PC/read-address/width tracing: tools/goemon/re/trace_original_animation_pointers.py and original_mips_vm.py; proven source-free regression in test_original_mips_vm.py and test_trace_original_animation_pointers.py.
+- **Verified Windows run [42478639378](https://github.com/Chakratos/Shipwright/actions/runs/42478639378)**, hosted tests [42478639377](https://github.com/Chakratos/Shipwright/actions/runs/42478639377). Tested three source headers per character (first structural, most numeric channels, historical mesh-matched) at source progress 0/1/4, 12 candidates total.
+- **0 of 3 Goemon, 0 of 3 Sasuke, 0 of 3 Yae, and 1 of 3 Ebisumaru** candidate pointers had any original MIPS source-bank reads in the **first 128 bytes at or after that candidate animation pointer**. Ebisumaru candidate header 0x07029F74, candidate animation pointer 0x070298A0 showed 13 near-pointer reads at each progress value, including original MIPS reader PCs 0x8001B2F8 and 0x8001B3CC.
+- **0/12** candidates produced numeric MtxF change at progress 0/1/4, even though some *read locations* changed with progress. A change of read addresses, instruction paths or signed-zero raw bits is not an animation.
+- The 128-byte vicinity is a **diagnostic window**, not a complete proof of stream absence. The structural candidate header's animation pointer may not be the active player's animation owner; it may reference another table.
+- **Next task is now precise:** recover Object.graphics_1 / actual AnimatedSkeleton.animation from active player Object/overlay dispatch in original game, and compare that address with the static guessed candidate pointers before changing pose decoding. The original F3DEX geometry/rig import does not need repeating.
+
 ## Product state
 
 | Area | What is implemented and proven | What is NOT proven / not done |

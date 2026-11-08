@@ -13,7 +13,7 @@
 - Existing original-game instrumentation: tools/goemon/reference_probe and tools/goemon/diagnostic_mod; private owner runner has the NG5E ROM. Prefer deterministic offline trace first.
 
 **Concrete engineering steps**
-1. Add precise original MIPS CPU read tracing with source address AND original MIPS instruction PC, width and bounded counts. Distinguish exact D_80168520-resolved pointer + actual animation-data reads from broad “before first limb” region heuristic, and distinguish reads from Skeleton node fields.
+1. **DONE (run 42478639378):** precise original MIPS CPU read tracing with PC/address/width and source-bank candidate pointer proximity; all 12 tested candidate contexts return no numeric pose motion. See docs/goemon/ANIMATION_POINTER_PROVENANCE_2026-11-08.md. This is pointer provenance, **not** proof of live D_80168520 ownership.
 2. Decode the REAL private ROM AnimatedSkeleton header/animation pointer **including overlay relocation** as performed in original anime.c. Audit current original_source_context: which candidate is chosen? What is actual object.graphics_1? Why are source candidate “actions” not proven? Do not confuse header indices with action enum values.
 3. Trace writers of PlayerTask.action_id and Object.graphics_1 or instrument the original recompiled runtime to capture authentic player Object.graphics_1, AnimatedSkeleton.animation, flags, and animation_progress for one known idle/move/jump sequence. Prefer source-level automation and existing test assets, not manual user work.
 4. Feed that authentic captured state into the N64 CPU evaluator; test progress across genuine original tick steps and assert actual numeric MtxF element changes. Build a source ROM-only regression with synthetic falsifiable controls.

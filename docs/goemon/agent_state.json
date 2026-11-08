@@ -39,10 +39,11 @@
     "original_cpu_continuous_stack": 42473523620,
     "numeric_zero_delta_native": 42474227448,
     "signed_zero_corrected_rom_sweep": 42474422364,
-    "source_memory_reads_probe": 42474726311
+    "source_memory_reads_probe": 42474726311,
+    "exact_candidate_pointer_provenance": 42478639378
   },
-  "next_task": "Trace exact original active player AnimatedSkeleton.animation and D_80168520 dereferences from ROM source CPU, reconstruct real source Object.graphics_1 and overlay_info pointer ownership, then demonstrate nonzero numeric matrix motion under real progress and action state",
+  "next_task": "Resolve actual live Object.graphics_1 and overlay_info relocation to active AnimatedSkeleton.animation and D_80168520; exact ROM PC/address read trace shows only 1/12 static candidate pointers read within first 128 bytes, none numerically animate.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "Current source skeleton model/CPU output exists but no genuine moving animated frames have been validated."
+  "last_known_limitation": "12 static candidate pointer contexts tested; 1/12 near candidate source loads, 0/12 numeric MtxF movement; actual live player animation owner unresolved."
 }

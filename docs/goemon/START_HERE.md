@@ -25,13 +25,14 @@ Port the four original playable characters **Goemon, Ebisumaru, Sasuke, Yae** fr
 
 ## Reading order (avoid historical contradictions)
 
-1. **CURRENT_STATE.md** — only current *verified* facts and evidence; latest limitations first.
-2. **NEXT_TASKS.md** — priority, exact files/commands, acceptance tests and stop conditions.
-3. **TECHNICAL_DECISIONS.md** — non-negotiable design rationale, source addresses, data formats and build workflow.
-4. docs/goemon/PORTING.md — broader feature target and historical plan; some paragraphs are old.
-5. docs/goemon/ORIGINAL_ANIMATION_ENGINEERING_HANDOFF_2026-11-07.md — detailed *chronological* investigation; contains superseded hypotheses and explicit signed-zero corrections toward the end. It is evidence history, **not** current status.
-6. docs/goemon/RE_TOOLCHAIN.md, docs/goemon/RE_SOURCE_MAP.md, docs/goemon/REAL_ROM_BASELINE.md — tool details and ROM/source layout. If they contradict current state, fix/document discrepancy.
-7. Source code and the CI logs: never trust documentation claims over a failing test or actual source bytes.
+1. **agent_state.json** — machine-readable active gate, verified/not-verified states and evidence links; CI checks it.
+2. **CURRENT_STATE.md** — only current *verified* facts and evidence; latest limitations first.
+3. **NEXT_TASKS.md** — priority, exact files/commands, acceptance tests and stop conditions.
+4. **TECHNICAL_DECISIONS.md** — non-negotiable design rationale, source addresses, data formats and build workflow.
+5. docs/goemon/PORTING.md — broader feature target and historical plan; some paragraphs are old.
+6. docs/goemon/ORIGINAL_ANIMATION_ENGINEERING_HANDOFF_2026-11-07.md — detailed *chronological* investigation; contains superseded hypotheses and explicit signed-zero corrections toward the end. It is evidence history, **not** current status.
+7. docs/goemon/RE_TOOLCHAIN.md, docs/goemon/RE_SOURCE_MAP.md, docs/goemon/REAL_ROM_BASELINE.md — tool details and ROM/source layout. If they contradict current state, fix/document discrepancy.
+8. Source code and the CI logs: never trust documentation claims over a failing test or actual source bytes.
 
 ## Session operating loop
 
