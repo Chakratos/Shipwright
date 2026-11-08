@@ -85,6 +85,16 @@ class NativeSourceMipsPackageTests(unittest.TestCase):
                 meta["limbs"][1][issue]=None
             with self.assertRaisesRegex(ValueError,"source MIPS|original"):
                 build_original_isolated_mips_binary(rig,meta)
+    def test_parent_inherited_mips_source_requires_provenance(self):
+        rig,meta=fixture()
+        meta["format"]="goemon-owner-rom-original-mips-predecessor-bone-matrices-v3"
+        with self.assertRaisesRegex(ValueError,"lineage provenance"):
+            build_original_isolated_mips_binary(rig,meta)
+        meta["controlled_source_parent_stack_inheritance"]=True
+        self.assertEqual(inspect_original_isolated_mips_binary(
+            build_original_isolated_mips_binary(rig,meta))[
+            "valid_original_mips_matrices"],4)
+
     def test_old_alias_based_source_matrices_not_accepted(self):
         rig,meta=fixture()
         meta["format"]="goemon-owner-rom-original-mips-isolated-bone-matrices-v1"

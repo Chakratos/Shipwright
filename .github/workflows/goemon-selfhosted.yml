@@ -272,6 +272,16 @@ jobs:
             throw 'Original MIPS visible-source animation preview extraction failed'
           }
 
+      - name: Export original source CPU MtxF parent-propagated preview
+        # Experimental source child-parent graph; real object stack-pop timing
+        # not yet verified. All MIPS matrices stay private.
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-inherited-source]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\export_original_mips_matrix_samples.py --selected-candidates 'C:\actions-runner-goemon\original-MIPS-visible-motion-candidates.json'
+          if ($LASTEXITCODE -ne 0) { throw 'Source CPU inherited MtxF export failed' }
+
       - name: Package original MIPS-evaluated limbs for isolated native preview
         # Requires previously verified original GOSKEL01 and current MIPS
         # per-limb matrix sample run. No private asset uploads.

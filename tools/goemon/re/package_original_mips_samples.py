@@ -44,8 +44,15 @@ def validate_original_sample(sample:dict,progress:float)->list[int]|None:
 
 def build_original_isolated_mips_binary(rig:bytes,samples:dict)->bytes:
     slot,_,rigs=parse_rig_descriptors(rig)
-    if samples.get("format")!="goemon-owner-rom-original-mips-isolated-bone-matrices-v2":
+    allowed=("goemon-owner-rom-original-mips-isolated-bone-matrices-v2",
+             "goemon-owner-rom-original-mips-predecessor-bone-matrices-v3")
+    if samples.get("format") not in allowed:
         raise ValueError("not current source-MIPS-controlled isolated matrices")
+    if (samples.get("format")==allowed[1] and
+        samples.get("controlled_source_parent_stack_inheritance") is not True):
+        raise ValueError("source predecessor MIPS matrices require lineage provenance")
+    if samples.get("actual_original_renderer_stack_pop_verified") is True:
+        raise ValueError("source experimental predecessor not a verified live game renderer")
     if (samples.get("original_mtxf_output_pointer_global")!="D_80168530" or
         samples.get("output_stack_separate_from_current_mtxf") is not True or
         samples.get("previous_alias_based_matrix_samples_invalidated") is not True):

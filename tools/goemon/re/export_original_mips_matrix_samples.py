@@ -79,7 +79,8 @@ def classify_progress_changes(entries:list[dict])->dict:
 
 
 def evaluate_character(rom:bytes,slot:int,
-                       source_header_offset:int|None=None)->tuple[dict,dict]:
+                       source_header_offset:int|None=None,
+                       inherit_original_stack:bool=False)->tuple[dict,dict]:
     if source_header_offset is None:
         _,catalog=original_source_context(rom,slot)
     else:
@@ -89,6 +90,8 @@ def evaluate_character(rom:bytes,slot:int,
     if not nodes or len({n["ptr"] for n in nodes})!=len(nodes):
         raise ValueError("invalid original source Skeleton limb graph")
     limbs=[]
+    order={n["ptr"]:i for i,n in enumerate(nodes)}
+    lineage={progress:{} for progress in PROGRESS}
     for node in nodes:
         records=[]
         for progress in PROGRESS:
@@ -97,13 +100,26 @@ def evaluate_character(rom:bytes,slot:int,
                 "action_id":None,
                 "physical_matrix_layout_verified":False
             }
+            previous=None
+            if inherit_original_stack and node["parent"] is not None:
+                parent=node["parent"]
+                if parent not in order or order[parent]>=order[node["ptr"]]:
+                    raise ValueError("original source parent order not verified")
+                previous=lineage[progress].get(parent)
+                if previous is None:
+                    record["blocker"]="source parent MtxF unavailable"
+                    records.append(record)
+                    continue
             data=run_probe(rom,progress,slot=slot,
                            source_limb_ptr=node["ptr"],capture_local_matrix=True,
                            separate_matrix_stack=True,
+                           previous_stack_matrix_u32=previous,
                            source_header_offset=source_header_offset)
             try:
                 record["matrix_ieee754_u32"]=validate_matrix_result(data)
                 record["source_instruction_count"]=data["executed"]
+                if inherit_original_stack:
+                    lineage[progress][node["ptr"]]=record["matrix_ieee754_u32"]
             except ValueError as ex:
                 record["blocker"]=data.get("blocker",str(ex))
                 # Only CPU register argument provenance, never source ROM bytes.
@@ -123,7 +139,11 @@ def evaluate_character(rom:bytes,slot:int,
         })
     summary=classify_progress_changes(limbs)
     file_doc={
-        "format":"goemon-owner-rom-original-mips-isolated-bone-matrices-v2",
+        "format":("goemon-owner-rom-original-mips-predecessor-bone-matrices-v3"
+                  if inherit_original_stack else
+                  "goemon-owner-rom-original-mips-isolated-bone-matrices-v2"),
+        "controlled_source_parent_stack_inheritance":inherit_original_stack,
+        "actual_original_renderer_stack_pop_verified":False,
         "original_mtxf_output_pointer_global":"D_80168530",
         "output_stack_separate_from_current_mtxf":True,
         "previous_alias_based_matrix_samples_invalidated":True,
@@ -180,7 +200,8 @@ def generate_local_matrix_samples(rom:bytes,destination:Path,
              if visible_motion_ranking is not None else {})
     for slot,name in enumerate(CHARACTER_NAMES):
         data,summary=evaluate_character(rom,slot,
-            source_header_offset=choices.get(name))
+            source_header_offset=choices.get(name),
+            inherit_original_stack=visible_motion_ranking is not None)
         (target/(name+"_source_mips_matrices.json")).write_text(
             json.dumps(data,indent=2)+"\n",encoding="utf-8")
         summaries.append(summary)
@@ -191,6 +212,8 @@ def generate_local_matrix_samples(rom:bytes,destination:Path,
         "engine":"original Nintendo 64 MIPS CPU",
         "matrix_sample_progress":[0.0,1.0],
         "selected_from_source_visible_motion_rank":visible_motion_ranking is not None,
+        "experimental_source_parent_chain_enabled":visible_motion_ranking is not None,
+        "real_gameplay_stack_traversal_verified":False,
         "characters":summaries,
         "total_source_bones":sum(x["original_limb_count"] for x in summaries),
         "total_evaluations":sum(x["original_limb_count"] for x in summaries)*2,
