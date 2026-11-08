@@ -21,6 +21,9 @@ class AnimationCaptureReprocessingTests(unittest.TestCase):
             matrix="1,0,0,0,0,1,0,0,0,0,1,0,3,2,1,1"
             contents=[
                 "GOEMON_ANIM_BEGIN,1,100,source=func_800192D0_19ED0",
+                "GOEMON_ANIM_OWNER,100,0,15,801fc60c,67000100,80400040,80000111,07002000,80402000,07001000",
+                "GOEMON_ANIM_ACTIVE,100,0,15,801fc60c,80402000,80510000,2.5",
+                "GOEMON_ANIM_MATRIX_CURSOR,100,0,15,80123480,80510000,80510040,64",
                 "GOEMON_ANIM_BONE,100,0,15,80123480,070024A8,1,0,100,100,100,10,20,30,40,50,60",
                 f"GOEMON_ANIM_MATRIX,100,0,15,80123480,2.5,{matrix}",
                 "GOEMON_ANIM_BONE,101,0,23,80123480,070024A8,1,0,100,100,100,11,21,31,40,50,60",
@@ -34,6 +37,13 @@ class AnimationCaptureReprocessingTests(unittest.TestCase):
             summary=json.loads((folder/"capture_summary.json").read_text("utf-8"))
             self.assertEqual(summary["reference_samples"],0)
             self.assertEqual(summary["original_skeletal_matrix_events"],2)
+            self.assertEqual(summary["original_animated_skeleton_owner_events"],1)
+            self.assertEqual(summary["original_active_animation_pointer_events"],1)
+            self.assertEqual(summary["original_matrix_stack_cursor_events"],1)
+            self.assertEqual(summary["parsers"]["original_live_animation_owner"]["status"],"ok")
+            owner=json.loads((folder/"original_live_animation_owner.json").read_text("utf-8"))
+            self.assertTrue(owner["verified_live_original_animation_pointer"])
+            self.assertFalse(owner["verified_real_playback_in_ship"])
             self.assertEqual(summary["original_skeletal_bone_events"],2)
             self.assertEqual(summary["parsers"]["original_skeletal_poses"]["status"],"ok")
             self.assertEqual(summary["parsers"]["original_pose_archive"]["status"],"ok")

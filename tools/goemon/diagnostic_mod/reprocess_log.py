@@ -89,6 +89,9 @@ def reprocess(folder: Path) -> Path:
     original_bone_samples = 0
     original_matrix_samples = 0
     original_root_maps = 0
+    original_owner_events = 0
+    original_active_pointer_events = 0
+    original_matrix_cursor_events = 0
     object_samples = 0
     object_y_by_character: dict[int, list[float]] = {}
     object_animation_by_character: dict[int, list[float]] = {}
@@ -99,6 +102,12 @@ def reprocess(folder: Path) -> Path:
             original_matrix_samples += 1
         if "GOEMON_ANIM_ROOT," in line:
             original_root_maps += 1
+        if "GOEMON_ANIM_OWNER," in line:
+            original_owner_events += 1
+        if "GOEMON_ANIM_ACTIVE," in line:
+            original_active_pointer_events += 1
+        if "GOEMON_ANIM_MATRIX_CURSOR," in line:
+            original_matrix_cursor_events += 1
         if "GOEMON_REF," in line:
             count += 1
         if "GOEMON_TASK," in line:
@@ -139,6 +148,9 @@ def reprocess(folder: Path) -> Path:
         "original_skeletal_bone_events": original_bone_samples,
         "original_skeletal_matrix_events": original_matrix_samples,
         "original_render_root_overlay_mappings": original_root_maps,
+        "original_animated_skeleton_owner_events": original_owner_events,
+        "original_active_animation_pointer_events": original_active_pointer_events,
+        "original_matrix_stack_cursor_events": original_matrix_cursor_events,
         "player_object_samples": object_samples,
         "player_object_y_range_by_character": {
             str(key): [min(values), max(values)]
@@ -254,6 +266,14 @@ def reprocess(folder: Path) -> Path:
                 "Original skeletal capture only. Legacy movement trace was "
                 "disabled, which is valid for animation export."
             )
+
+    if original_owner_events or original_active_pointer_events:
+        parsers["original_live_animation_owner"] = run_parser(
+            "original_live_animation_owner",
+            [str(TOOLS / "animation_owner_trace.py"), str(raw),
+             "--output", str(folder / "original_live_animation_owner.json")],
+            folder,
+        )
 
     # This parser handles original MNSG matrices independently of the
     # older GOEMON_REF physics logs, which may be absent when only the
