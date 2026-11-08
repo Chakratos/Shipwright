@@ -203,6 +203,15 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertEqual(report['selector_object_nearest_definition_base_register'], 'r4')
         self.assertFalse(report['actual_player_object_owner_verified'])
 
+    def test_nested_selector_pointer_base_origin_from_entry_a0(self):
+        from trace_player_writer_cfg import origin_at
+        words = [0] * 12
+        words[0] = (0x23 << 26) | (4 << 21) | (3 << 16) | 0x5C
+        words[4] = (0x25 << 26) | (3 << 21) | (9 << 16) | 0x30
+        r = origin_at(words, BASE, 0, 0, 4)
+        self.assertEqual(r['origin'], 'entry_a0')
+        self.assertTrue(r['complete'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

@@ -419,9 +419,23 @@ def analyze_original_overlay(payload: bytes, base_vram: int,
             ancestry['selector_object_base_cfg_origin'] = ptr['origin']
             ancestry['selector_object_base_cfg_symbol'] = ptr.get('symbol')
             ancestry['selector_object_base_cfg_complete'] = ptr['complete']
-            ancestry['selector_object_nearest_source_definition'] = (
-                inspect_selector_object_base(
-                    payload, base_vram, entry_pc, selector_pc))
+            source_def = inspect_selector_object_base(
+                payload, base_vram, entry_pc, selector_pc)
+            if (source_def['selector_object_nearest_definition_pc'] and
+                    source_def['selector_object_nearest_definition_base_register'] and
+                    source_def['selector_object_nearest_definition_kind'] == 'lw'):
+                def_pc = int(source_def['selector_object_nearest_definition_pc'], 16)
+                base_register = int(
+                    source_def['selector_object_nearest_definition_base_register'][1:])
+                base_origin = origin_at(
+                    original_words, base_vram,
+                    (entry_pc - base_vram) // 4,
+                    (def_pc - base_vram) // 4,
+                    base_register)
+                source_def['nested_pointer_load_base_origin'] = base_origin['origin']
+                source_def['nested_pointer_load_base_symbol'] = base_origin.get('symbol')
+                source_def['nested_pointer_load_base_cfg_complete'] = base_origin['complete']
+            ancestry['selector_object_nearest_source_definition'] = source_def
         cases = []
         for site in action_sites:
             pc = int(site['pc'], 16)
