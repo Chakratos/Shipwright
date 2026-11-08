@@ -143,7 +143,8 @@ def inspect_indirect_jump(payload: bytes, base_vram: int, jump_pc: int,
 
 
 def analyze_original_overlay(payload: bytes, base_vram: int,
-                             symbols: list[dict], dispatch_pcs=PLAYER_DISPATCH_PCS) -> dict:
+                             symbols: list[dict], dispatch_pcs=PLAYER_DISPATCH_PCS,
+                             action_sites=None) -> dict:
     findings = []
     for pc in dispatch_pcs:
         matches = [f for f in symbols if
@@ -155,12 +156,55 @@ def analyze_original_overlay(payload: bytes, base_vram: int,
             payload, base_vram, pc, f['start'], f['size'])
         finding['source_function_name'] = f['name']
         findings.append(finding)
-    return {
+    report = {
         'schema': 'ng5e-player-indirect-jr-address-metadata-v1',
         'source_only_no_original_rom_bytes_serialized': True,
         'confirmed_runtime_action_dispatch': False,
         'indirect_jump_functions': findings,
     }
+    if action_sites is not None:
+        from trace_player_writer_cfg import origin_at
+        from trace_player_writer_provenance import sign16
+        target_map = {}
+        for item in findings:
+            runs = item['possible_absolute_vram_target_pointer_runs']
+            if len(runs) != 1:
+                continue
+            run = runs[0]
+            evidence = run.get('table_address_provenance')
+            if (evidence is None or
+                    evidence['direct_or_indexed_base_register_chain_count'] != 1):
+                continue
+            off = int(run['table_offset_within_original_overlay'], 16)
+            count = run['entry_count']
+            # Original values stay in private memory, never logged or serialized.
+            target_map[int(item['jr_pc'], 16)] = list(set(
+                struct.unpack_from('>' + 'I' * count, payload, off)))
+        cases = []
+        for site in action_sites:
+            pc = int(site['pc'], 16)
+            idx = (pc - base_vram) // 4
+            instr = struct.unpack_from('>I', payload, idx * 4)[0]
+            if instr >> 26 != 0x28 or sign16(instr) != 0xCC:
+                raise ValueError('original action writer differs from source site')
+            owners = [f for f in symbols if f['start'] <= pc < f['start'] + f['size']]
+            if len(owners) != 1:
+                raise ValueError('action site missing unique pinned source function')
+            finding = origin_at(
+                struct.unpack('>' + 'I' * (len(payload) // 4), payload),
+                base_vram, (owners[0]['start'] - base_vram) // 4,
+                idx, (instr >> 21) & 31, indirect_jr_targets=target_map)
+            cases.append({
+                'action_store_pc': site['pc'],
+                'pinned_function_pc': f"0x{owners[0]['start']:08X}",
+                'possible_source_base_origin': finding['origin'],
+                'bounded_symbolic_origin': finding.get('bounded_origin'),
+                'table_hypothesis_blockers': finding.get('blocker_classes', {}),
+                'real_original_player_writer_verified': False,
+            })
+        report['action_sites_with_indirect_table_hypotheses'] = cases
+        report['structural_jr_table_target_map_count'] = len(target_map)
+    return report
 
 
 def main(argv=None) -> int:
@@ -196,7 +240,8 @@ def main(argv=None) -> int:
                 base != int(expected['vram_start'], 16)):
             raise ValueError('owner-ROM player executable differs from pinned symbols')
         payload = original[entry.start:entry.end]
-        report = analyze_original_overlay(payload, base, symbols)
+        report = analyze_original_overlay(
+            payload, base, symbols, action_sites=pinned['action_sites'])
         report['original_overlay_file_id'] = entry.file_id
         root = Path(__file__).resolve().parents[3]
         output = args.output.resolve()
@@ -223,6 +268,11 @@ def main(argv=None) -> int:
                       'direct_or_indexed_chains=', (
                           run['table_address_provenance']['direct_or_indexed_base_register_chain_count']
                           if run['table_address_provenance'] else None))
+        for entry in report.get('action_sites_with_indirect_table_hypotheses', []):
+            print('GOEMON_JR_CASE_CFG', entry['action_store_pc'],
+                  entry['possible_source_base_origin'],
+                  'bounded_origin=', entry['bounded_symbolic_origin'],
+                  'blockers=', json.dumps(entry['table_hypothesis_blockers'], sort_keys=True))
         print('GOEMON_INDIRECT_JR COMPLETE: static table hypotheses only')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_INDIRECT_JR FAILED:', exc, file=sys.stderr)

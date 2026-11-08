@@ -211,6 +211,29 @@ class MipsCFGProvenanceTests(unittest.TestCase):
         self.assertEqual(found['known_global_path_count'], 0)
         self.assertIn('delay_slot_overwrites_a0', found['terminal_reasons'])
 
+    def test_indirect_jr_table_hypothesis_reaches_case_but_not_live_proof(self):
+        words = [0] * 20
+        words[2] = (12 << 21) | 8  # jr t4, without supplied targets stops
+        words[8] = ins(40, 4, 9, 0xCC)
+        original = origin_at(words, BASE, 0, 8, 4)
+        self.assertEqual(original['origin'], 'unreachable')
+        possible = origin_at(words, BASE, 0, 8, 4,
+                             indirect_jr_targets={BASE + 8: [BASE + 32, BASE + 48]})
+        self.assertEqual(possible['origin'], 'incomplete_cfg')
+        self.assertEqual(possible['bounded_origin'], 'entry_a0')
+        self.assertEqual(possible['blocker_classes']['static_table_target_hypothesis'], 1)
+
+    def test_indirect_jr_does_not_prove_pointer_when_case_clobbers_a0(self):
+        words = [0] * 20
+        words[2] = (12 << 21) | 8
+        words[6] = ins(9, 0, 4, 10)
+        words[8] = ins(40, 4, 9, 0xCC)
+        result = origin_at(words, BASE, 0, 8, 4,
+                           indirect_jr_targets={BASE + 8: [BASE + 24]})
+        self.assertEqual(result['origin'], 'incomplete_cfg')
+        self.assertEqual(result['bounded_origin'], 'constant')
+        self.assertIsNone(result.get('symbol'))
+
     def test_no_entry_hint_no_proof(self):
         site = {'pc': f'0x{BASE:08X}', 'base_register': 'r4',
                 'nearby_function_prologue_hint': None}

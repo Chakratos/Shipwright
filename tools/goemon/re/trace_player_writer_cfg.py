@@ -70,7 +70,7 @@ def plain(w, state):
     return tuple(out)
 
 
-def successors(words, index, base_pc, state):
+def successors(words, index, base_pc, state, indirect_jr_targets=None):
     w = words[index]
     op = w >> 26
     if not is_control(w):
@@ -112,7 +112,12 @@ def successors(words, index, base_pc, state):
             out[reg] = UNKNOWN
         return [(fallthrough, tuple(out))], False
     if op == 0 and (w & 63) == 8:
-        return [], ((w >> 21) & 31) != 31  # jr ra vs unknown indirect jump
+        if ((w >> 21) & 31) == 31:
+            return [], False  # jr ra: normal return
+        target_pcs = (indirect_jr_targets or {}).get(base_pc + index * 4)
+        if target_pcs:
+            return [((pc - base_pc) // 4, after) for pc in sorted(set(target_pcs))], False
+        return [], True  # unresolved indirect jr
     return [], True
 
 
@@ -131,7 +136,7 @@ def blocker_kind(w):
     return 'unsupported_control_or_delay'
 
 def origin_at(words, base_pc, entry_index, site_index, register,
-              *, max_window=2048, max_steps=80000):
+              *, max_window=2048, max_steps=80000, indirect_jr_targets=None):
     """Join all locally reachable paths from a *hypothetical* entry."""
     if not (0 <= entry_index <= site_index < len(words)):
         return {'origin': 'invalid_entry', 'complete': False}
@@ -173,7 +178,16 @@ def origin_at(words, base_pc, entry_index, site_index, register,
             follow = [(site_index, known[index])] if take_slot else []
             unsupported = False
         else:
-            follow, unsupported = successors(words, index, base_pc, known[index])
+            follow, unsupported = successors(
+                words, index, base_pc, known[index], indirect_jr_targets)
+            word = words[index]
+            if (word >> 26 == 0 and (word & 63) == 8 and
+                    ((word >> 21) & 31) != 31 and
+                    indirect_jr_targets and base_pc + index * 4 in indirect_jr_targets):
+                # Statically plausible ROM table targets, NOT a runtime-verified
+                # live jump or proof of all future player states.
+                record('static_table_target_hypothesis', index)
+                incomplete = True
         incomplete |= unsupported
         if unsupported:
             record(blocker_kind(words[index]), index)
