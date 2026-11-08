@@ -138,6 +138,21 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertEqual(result['selector_chain_stop_pc'], f'0x{BASE:08X}')
         self.assertFalse(result['index_ancestry_within_source_function'])
 
+    def test_selector_shift_right_then_addiu_lhu_ancestry(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 14
+        words[0] = (0x25 << 26) | (3 << 21) | (9 << 16) | 0x30  # lhu r9,0x30(r3)
+        words[1] = (9 << 16) | (11 << 11) | (4 << 6) | 2       # srl r11,r9,4
+        words[2] = (9 << 26) | (11 << 21) | (11 << 16) | 1    # addiu r11,r11,1
+        words[3] = (11 << 16) | (10 << 11) | (2 << 6)        # sll r10,r11,2
+        words[4] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21 # addu r8,r8,r10
+        words[5] = (35 << 26) | (8 << 21) | (12 << 16)
+        report = trace_index_register_load(blob(words), BASE, BASE, BASE + 20)
+        self.assertTrue(report['index_ancestry_within_source_function'])
+        self.assertEqual(report['selector_field_offset'], 0x30)
+        self.assertEqual([item['operation'] for item in report['selector_transform_chain']],
+                         ['addiu', 'srl'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

@@ -215,6 +215,14 @@ def trace_index_register_load(payload: bytes, base_pc: int,
                 name = {8: 'addi', 9: 'addiu', 10: 'slti', 11: 'sltiu',
                         12: 'andi', 13: 'ori', 14: 'xori'}[op]
                 next_reg = rs
+            elif op == 0 and (load & 63) in (0, 2, 3, 4, 6, 7):
+                fun = load & 63
+                if ((load >> 11) & 31) == cursor_reg:
+                    # Pure bit-shifts change selector value but preserve its
+                    # data ancestry. Variable shift amount is not resolved.
+                    name = {0: 'sll', 2: 'srl', 3: 'sra',
+                            4: 'sllv', 6: 'srlv', 7: 'srav'}[fun]
+                    next_reg = rt
             elif op == 0 and (load & 63) in (0x21, 0x25):
                 a, b = rs, rt
                 if a == 0 or b == 0:
