@@ -450,6 +450,14 @@ jobs:
             throw 'Original source-ROM predecessor matrix experiment failed'
           }
 
+      - name: Execute continuous original MIPS skeleton stack with source sibling-depth restores
+        if: ${{ success() && github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-continuous-stack]') }}
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & py -3 tools\goemon\re\original_continuous_mips_skeleton.py
+          if ($LASTEXITCODE -ne 0) { throw 'Original source continuous skeleton stack failed' }
+
       - name: Configure and build Ship of Harkinian
         if: ${{ ((github.event_name == 'workflow_dispatch' && inputs.full_build) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[goemon-build]'))) }}
         shell: powershell
