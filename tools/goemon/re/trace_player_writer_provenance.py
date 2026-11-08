@@ -253,8 +253,10 @@ def main(argv: list[str] | None = None) -> int:
             words, base_pc, pinned, functions)
         from trace_player_writer_cfg import follow_direct_call_a0_origin
         entry_a0_functions = sorted({
-            v['pinned_function_pc'] for v in result['pinned_function_cfg'].values()
-            if v['origin'] == 'entry_a0' and v.get('pinned_function_pc')
+            result['pinned_function_cfg'][site['pc']]['pinned_function_pc']
+            for site in result['by_kind']['action_id_offset']['sites']
+            if result['pinned_function_cfg'][site['pc']]['origin'] == 'entry_a0'
+            and result['pinned_function_cfg'][site['pc']].get('pinned_function_pc')
         })
         result['transitive_player_a0_provenance'] = follow_direct_call_a0_origin(
             words, base_pc, functions, entry_a0_functions)

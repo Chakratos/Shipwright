@@ -48,10 +48,14 @@
     "player_writer_static_register_provenance": 42481382788,
     "player_writer_caller_argument_scan": 42481566704,
     "player_writer_cfg_heuristic": 42482341951,
-    "player_writer_cfg_pinned_symbols": 42482887968
+    "player_writer_cfg_pinned_symbols": 42482887968,
+    "player_cfg_branch_likely_regression_fix": 42483433237,
+    "player_cfg_cop1_corrected": 42483632507,
+    "pinned_906_function_overlay_and_callers": 42483948947,
+    "player_a0_bounded_call_graph": 42484165983
   },
-  "next_task": "On owner-private original player overlay, characterize the exact MIPS control-flow obstacles in 9 incomplete action writers using PC+opcode-class metadata and pinned .file_11 function bounds. Implement missing dispatch forms, then prove actual PlayerTask/Object owner and AnimatedSkeleton.animation, followed by numerical moving original pose. Opt-in [goemon-player-writer-provenance], no full Ship build.",
+  "next_task": "G1 highest: analyze indirect original player-overlay jr PC 0x801DA23C and 0x801E0980 (jump-table dispatch). Static 906-function symbol map and exact JAL chain currently proves 4 action-store base pointers inherited from entry_a0 but 0 direct known global roots; resolve jump targets/real PlayerTask owner, AnimatedSkeleton.animation and numeric motion. Use one-shot [goemon-player-writer-provenance] and ROM-private metadata only.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "2026-11-08 successful 342/342 source + native [42482887968]: 10 action sites and 7 JAL callers mapped to original pinned .file_11 functions; 9/10 action sites untraversed in incomplete bounded CFG, 1 unknown. No genuine animation pointer owner or numerical motion proven."
+  "last_known_limitation": "2026-11-08 [42484165983] 353/353 Python + native success; four action stores have source entry-a0 origins, five still blocked by indirect jr, one unknown. Multi-level direct caller scan found zero known player-global roots, no actual animation owner/pose yet."
 }
