@@ -44,10 +44,11 @@
     "exact_candidate_pointer_provenance": 42478639378,
     "original_runtime_owner_mod_compilation": 42479222793,
     "live_owner_parser_synthetic_tests": 42479506702,
-    "original_player_writer_scan": 42480203308
+    "original_player_writer_scan": 42480203308,
+    "player_writer_static_register_provenance": 42481382788
   },
-  "next_task": "Run opt-in owner-ROM [goemon-player-writer-provenance] static metadata trace, inspect r4/r16/global load evidence and direct-JAL prologue hints; establish real interprocedural PlayerTask/Object owner or obtain original-game live GOEMON_ANIM_OWNER/ACTIVE. G1 open, no numeric moving animation.",
+  "next_task": "Inspect second owner-ROM caller-a0 provenance run (opt-in [goemon-player-writer-provenance]); 10 action +0xCC and 21 non-stack graphics +0x2C sites have 0 direct local PlayerTask/Object global-load proofs. Prove true interprocedural call/owner state or capture live GOEMON_ANIM_OWNER/ACTIVE. Numeric animation G1 still open.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "Static player writer provenance engine implemented with 7 local synthetic tests; private ROM run not yet verified. 10 action offset sites remain unproven live player writes; active animation unknown."
+  "last_known_limitation": "First ROM static provenance run 42481382788: 10 action and 21 nonstack graphics writer candidates, zero local source-verified global load origins, with 1/1/0/3/2/0/0/0/0/0 tentative function caller counts. Live animation ownership and actual moving source matrices not proven."
 }

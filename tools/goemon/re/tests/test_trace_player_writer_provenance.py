@@ -66,6 +66,30 @@ class ProvenanceTests(unittest.TestCase):
         self.assertEqual(hit['base_origin'], 'constant')
         self.assertIsNone(hit['known_player_global'])
 
+    def test_direct_caller_argument_from_known_global_is_only_hint(self):
+        base = 0x80100000
+        start = base + 4 * 7
+        jal = (3 << 26) | ((start >> 2) & 0x3FFFFFF)
+        words = [ins(15, 0, 8, 0x8020), ins(35, 8, 4, 0xC604),
+                 jal, 0, 0, 0, 0, ins(9, 29, 29, -32),
+                 ins(40, 4, 9, 0xCC)]
+        hit = analyze_words(words, base)['by_kind']['action_id_offset']['sites'][0]
+        self.assertEqual(hit['caller_a0_known_player_global_hint_count'], 1)
+        self.assertTrue(hit['direct_jal_caller_a0_hints'][0]['player_argument_candidate'])
+        self.assertFalse(hit['direct_jal_caller_a0_hints'][0]['callee_identity_verified'])
+        self.assertFalse(hit['live_player_writer_verified'])
+
+    def test_jal_delay_slot_clobber_invalidates_caller_hint(self):
+        base = 0x80100000
+        start = base + 4 * 7
+        jal = (3 << 26) | ((start >> 2) & 0x3FFFFFF)
+        words = [ins(15, 0, 8, 0x8020), ins(35, 8, 4, 0xC604),
+                 jal, ins(9, 5, 4, 8), 0, 0, 0,
+                 ins(9, 29, 29, -32), ins(40, 4, 9, 0xCC)]
+        hit = analyze_words(words, base)['by_kind']['action_id_offset']['sites'][0]
+        self.assertEqual(hit['caller_a0_known_player_global_hint_count'], 0)
+        self.assertTrue(hit['direct_jal_caller_a0_hints'][0]['delay_slot_may_override_a0'])
+
     def test_branch_and_jump_recognized(self):
         self.assertTrue(control_transfer(0x0C000020))
         self.assertTrue(control_transfer(ins(4, 4, 0, 12)))

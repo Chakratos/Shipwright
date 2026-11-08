@@ -152,6 +152,25 @@ def analyze_words(words: tuple[int, ...] | list[int], base_pc: int) -> dict:
         origin, symbol = trace_register(words, idx, base_reg)
         entry = local_function_entry_hint(words, idx, base_pc)
         callers = direct_callers(words, base_pc, entry) if entry is not None else []
+        caller_argument_hints = []
+        for caller_pc in callers:
+            caller_idx = (int(caller_pc, 16) - base_pc) // 4
+            arg_origin, arg_symbol = trace_register(words, caller_idx, 4)
+            # The JAL delay-slot may set a0. Do NOT attribute preceding a0 to
+            # the call without checking that slot (a common source of false proofs).
+            delay_slot_writes_a0 = (caller_idx + 1 < len(words) and
+                                    written_register(words[caller_idx + 1]) == 4)
+            caller_argument_hints.append({
+                'direct_jal_pc': caller_pc,
+                'pre_jal_a0_origin': arg_origin,
+                'pre_jal_known_player_global': (
+                    arg_symbol if arg_origin == 'known_player_pointer_global_load' else None),
+                'delay_slot_may_override_a0': delay_slot_writes_a0,
+                'player_argument_candidate': (
+                    arg_origin == 'known_player_pointer_global_load' and
+                    not delay_slot_writes_a0),
+                'callee_identity_verified': False,
+            })
         sites.append({
             'pc': f'0x{base_pc + 4 * idx:08X}',
             'kind': kind,
@@ -161,6 +180,9 @@ def analyze_words(words: tuple[int, ...] | list[int], base_pc: int) -> dict:
             'nearby_function_prologue_hint': f'0x{entry:08X}' if entry is not None else None,
             'direct_jal_to_prologue_hint_count': len(callers),
             'first_direct_jal_to_prologue_hint_pcs': callers[:8],
+            'caller_a0_known_player_global_hint_count': sum(
+                c['player_argument_candidate'] for c in caller_argument_hints),
+            'direct_jal_caller_a0_hints': caller_argument_hints[:16],
             'prologue_is_verified_function_boundary': False,
             'live_player_writer_verified': False,
         })
@@ -226,7 +248,9 @@ def main(argv: list[str] | None = None) -> int:
                 for s in block['sites']:
                     print('GOEMON_ACTION_SITE', s['pc'], s['base_register'],
                           s['base_origin'], s['known_player_global'],
-                          'direct_prologue_callers=', s['direct_jal_to_prologue_hint_count'])
+                          'direct_prologue_callers=', s['direct_jal_to_prologue_hint_count'],
+                          'candidate_global_a0_callers=', s['caller_a0_known_player_global_hint_count'],
+                          'direct_callsite_pcs=', s['first_direct_jal_to_prologue_hint_pcs'])
         print('GOEMON_WRITER_PROVENANCE COMPLETE: static evidence only; no live owner confirmed')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_WRITER_PROVENANCE FAILED:', exc, file=sys.stderr)
