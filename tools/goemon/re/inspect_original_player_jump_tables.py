@@ -142,14 +142,35 @@ def trace_index_register_load(payload: bytes, base_pc: int,
         'selector_object_register': None,
         'selector_offset_cc_syntactic_candidate': False,
         'index_ancestry_within_source_function': False,
+        'effective_address_definition_kind': None,
+        'indexed_operand_registers': [],
+        'indexed_operand_definition_kinds': [],
         'no_live_player_pointer_or_action_proven': True,
     }
-    if add_idx is None or add_word >> 26 != 0 or (add_word & 63) != 0x21:
+    if add_idx is None:
+        return report
+    report['effective_address_definition_kind'] = (
+        'addu' if add_word >> 26 == 0 and (add_word & 63) == 0x21
+        else 'other_mips_definition')
+    if add_word >> 26 != 0 or (add_word & 63) != 0x21:
         return report
     if ((add_word >> 11) & 31) != address_reg:
         return report
     operands = ((add_word >> 21) & 31, (add_word >> 16) & 31)
     report['indexed_addu_pc'] = f'0x{base_pc + add_idx * 4:08X}'
+    report['indexed_operand_registers'] = [f'r{x}' for x in operands]
+    for reg in operands:
+        def_index, instruction = definition(reg, add_idx)
+        if def_index is None:
+            report['indexed_operand_definition_kinds'].append('inherited')
+            continue
+        op, fun = instruction >> 26, instruction & 63
+        kind = ('sll' if op == 0 and fun == 0 else
+                'addu' if op == 0 and fun == 0x21 else
+                'lui' if op == 15 else
+                'load' if op in (0x20, 0x21, 0x23, 0x24, 0x25) else
+                'other')
+        report['indexed_operand_definition_kinds'].append(kind)
     # Either operand can be the scaled index register.
     for reg in operands:
         shift_idx, shift = definition(reg, add_idx)
@@ -267,6 +288,21 @@ def analyze_original_overlay(payload: bytes, base_vram: int,
             # Original values stay in private memory, never logged or serialized.
             target_map[int(item['jr_pc'], 16)] = list(set(
                 struct.unpack_from('>' + 'I' * count, payload, off)))
+        from trace_player_writer_cfg import origin_at
+        original_words = struct.unpack('>' + 'I' * (len(payload) // 4), payload)
+        for finding in findings:
+            ancestry = finding.get('syntactic_jump_index_ancestry')
+            if not ancestry or not ancestry['selector_load_pc']:
+                continue
+            selector_pc = int(ancestry['selector_load_pc'], 16)
+            owner_register = int(ancestry['selector_object_register'][1:])
+            entry_pc = int(finding['original_function_start_pc'], 16)
+            ptr = origin_at(original_words, base_vram,
+                            (entry_pc - base_vram) // 4,
+                            (selector_pc - base_vram) // 4, owner_register)
+            ancestry['selector_object_base_cfg_origin'] = ptr['origin']
+            ancestry['selector_object_base_cfg_symbol'] = ptr.get('symbol')
+            ancestry['selector_object_base_cfg_complete'] = ptr['complete']
         cases = []
         for site in action_sites:
             pc = int(site['pc'], 16)
@@ -348,6 +384,14 @@ def main(argv=None) -> int:
                   'index_base_reg=', row['syntactic_jump_index_ancestry']['selector_object_register']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'index_width=', row['syntactic_jump_index_ancestry']['selector_load_width']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'selector_base_origin=', row['syntactic_jump_index_ancestry'].get('selector_object_base_cfg_origin')
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'index_addu=', row['syntactic_jump_index_ancestry']['indexed_addu_pc']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'index_operand_reg=', row['syntactic_jump_index_ancestry']['indexed_operand_registers']
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'index_operand_def=', row['syntactic_jump_index_ancestry']['indexed_operand_definition_kinds']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'absolute_vram_table_candidates=',
                   len(row['possible_absolute_vram_target_pointer_runs']))

@@ -100,6 +100,17 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertEqual(report['selector_field_offset'], 0x60)
         self.assertFalse(report['selector_offset_cc_syntactic_candidate'])
 
+    def test_index_ancestry_reports_syntactic_operand_class_not_payload(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 8
+        words[0] = (15 << 26) | (8 << 16) | 0x8011
+        words[1] = (9 << 16) | (10 << 11) | (2 << 6)  # sll r10,r9,2
+        words[2] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[3] = (35 << 26) | (8 << 21) | (12 << 16)
+        report = trace_index_register_load(blob(words), BASE, BASE, BASE + 12)
+        self.assertEqual(report['indexed_operand_definition_kinds'], ['lui', 'sll'])
+        self.assertIsNone(report['selector_load_pc'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8
