@@ -233,6 +233,9 @@ def main(argv: list[str] | None = None) -> int:
                    (PLAYER_ORIGINAL_ROUTINE_ROM - overlay.start))
         words = struct.unpack('>' + 'I' * (len(payload) // 4), payload)
         result = analyze_words(words, base_pc)
+        from trace_player_writer_cfg import analyze_cfg
+        sites = [s for block in result['by_kind'].values() for s in block['sites']]
+        result['assumed_entry_cfg'] = analyze_cfg(words, base_pc, sites)
         result['source_file_id'] = overlay.file_id
         checkout_root = Path(__file__).resolve().parents[3]
         out = args.output.resolve()
@@ -251,6 +254,19 @@ def main(argv: list[str] | None = None) -> int:
                           'direct_prologue_callers=', s['direct_jal_to_prologue_hint_count'],
                           'candidate_global_a0_callers=', s['caller_a0_known_player_global_hint_count'],
                           'direct_callsite_pcs=', s['first_direct_jal_to_prologue_hint_pcs'])
+        for kind, block in result['by_kind'].items():
+            from collections import Counter
+            counts = Counter(result['assumed_entry_cfg'][s['pc']]['origin']
+                             for s in block['sites'])
+            print('GOEMON_CFG_ORIGIN_SUMMARY', kind,
+                  json.dumps(dict(sorted(counts.items())), sort_keys=True))
+            if kind == 'action_id_offset':
+                for site in block['sites']:
+                    finding = result['assumed_entry_cfg'][site['pc']]
+                    print('GOEMON_ACTION_CFG', site['pc'],
+                          finding['origin'], finding.get('symbol'),
+                          'assumed_entry=', finding.get('assumed_entry_pc'),
+                          'complete=', finding.get('complete'))
         print('GOEMON_WRITER_PROVENANCE COMPLETE: static evidence only; no live owner confirmed')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_WRITER_PROVENANCE FAILED:', exc, file=sys.stderr)
