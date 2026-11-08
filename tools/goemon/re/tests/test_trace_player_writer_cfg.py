@@ -99,6 +99,28 @@ class MipsCFGProvenanceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'source symbols mismatch'):
                 read_pinned_player_overlay_functions(path)
 
+    def test_cop1_float_arithmetic_not_control_flow(self):
+        from trace_player_writer_cfg import is_control
+        cop1_adds = ins(0x11, 16, 2, 3)  # fmt=S, FP operation
+        self.assertFalse(is_control(cop1_adds))
+        words = [cop1_adds, ins(40, 4, 9, 0xCC)]
+        r = origin_at(words, BASE, 0, 1, 4)
+        self.assertEqual(r['origin'], 'entry_a0')
+        self.assertTrue(r['complete'])
+
+    def test_cop1_mfc1_clobbers_gpr_provenance(self):
+        words = [ins(0x11, 0, 4, 3), ins(40, 4, 9, 0xCC)]
+        self.assertEqual(origin_at(words, BASE, 0, 1, 4)['origin'], 'unknown')
+
+    def test_cop1_conditional_branch_stays_unsupported(self):
+        # COP1 BC1 branch, unlike ordinary FP arithmetic.
+        from trace_player_writer_cfg import is_control
+        bc1 = ins(0x11, 8, 0, 2)
+        self.assertTrue(is_control(bc1))
+        result = origin_at([bc1, 0, ins(40, 4, 9, 0xCC)], BASE, 0, 2, 4)
+        self.assertFalse(result['complete'])
+        self.assertEqual(result['blocker_classes'], {'coprocessor_branch': 1})
+
     def test_likely_branch_not_taken_skips_delay_store(self):
         # beql r0,r2 (r2=3) skips its delay-slot store.
         words = [ins(9, 0, 2, 3), ins(0x14, 0, 2, 2),

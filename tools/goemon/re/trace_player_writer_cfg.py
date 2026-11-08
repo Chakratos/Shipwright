@@ -28,8 +28,8 @@ def read(state, reg):
 
 def is_control(w):
     op = w >> 26
-    return (op in (1, 2, 3, 4, 5, 6, 7, 0x14, 0x15, 0x16, 0x17,
-                   0x10, 0x11, 0x12, 0x13) or
+    return (op in (1, 2, 3, 4, 5, 6, 7, 0x14, 0x15, 0x16, 0x17) or
+            (op in (0x10, 0x11, 0x12, 0x13) and ((w >> 21) & 31) == 8) or
             (op == 0 and (w & 63) in (8, 9)))
 
 
@@ -38,6 +38,10 @@ def plain(w, state):
     a, b = read(state, rs), read(state, rt)
     dest = written_register(w)
     value = UNKNOWN
+    # COPn MFCx/CFCx read floating/control registers INTO the GPR rt.
+    # Ordinary COP1 floating arithmetic does not modify GPRs or branch.
+    if op in (0x10, 0x11, 0x12, 0x13) and rs in (0, 2):
+        dest = rt
     if op == 15 and rs == 0:
         dest, value = rt, ('constant', imm << 16)
     elif op in (9, 13):
@@ -122,8 +126,8 @@ def blocker_kind(w):
         return 'indirect_jalr'
     if op == 0 and (w & 63) == 8:
         return 'indirect_jr' if ((w >> 21) & 31) != 31 else 'return_jr_ra'
-    if op in (0x10, 0x11, 0x12, 0x13):
-        return 'coprocessor_control'
+    if op in (0x10, 0x11, 0x12, 0x13) and ((w >> 21) & 31) == 8:
+        return 'coprocessor_branch'
     return 'unsupported_control_or_delay'
 
 def origin_at(words, base_pc, entry_index, site_index, register,
