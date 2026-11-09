@@ -261,6 +261,33 @@ class MipsCFGProvenanceTests(unittest.TestCase):
         result = origin_at(words, BASE, 0, 5, 10)
         self.assertIsNone(result['constant_value'])
 
+
+    def test_jal_slot_move_a0_from_s0_recovers_player_global(self):
+        from trace_player_writer_cfg import follow_direct_call_a0_origin
+        words = [0] * 32
+        target = BASE + 0x40
+        words[0] = ins(15, 0, 8, 0x8020)
+        words[1] = ins(35, 8, 16, 0xC604)
+        words[2] = (3 << 26) | ((target >> 2) & 0x3FFFFFF)
+        words[3] = (16 << 21) | (4 << 11) | 0x21
+        functions = [{'start': BASE, 'size': 0x20},
+                     {'start': target, 'size': 0x20}]
+        result = follow_direct_call_a0_origin(words, BASE, functions, [f'0x{target:08X}'])
+        self.assertEqual(result[f'0x{target:08X}']['known_global_path_count'], 1)
+
+    def test_call_slot_constant_replaces_previous_player_pointer(self):
+        words = [ins(15, 0, 8, 0x8020), ins(35, 8, 4, 0xC604), 0]
+        after = origin_at(words, BASE, 0, 2, 4,
+                          post_instruction=ins(9, 0, 4, 7))
+        self.assertEqual(after['constant_value'], 7)
+        self.assertIsNone(after['symbol'])
+
+    def test_call_slot_unknown_register_cannot_invent_player_pointer(self):
+        words = [0] * 4
+        slot = (16 << 21) | (4 << 11) | 0x21
+        after = origin_at(words, BASE, 0, 2, 4, post_instruction=slot)
+        self.assertEqual(after['origin'], 'unknown')
+
     def test_no_entry_hint_no_proof(self):
         site = {'pc': f'0x{BASE:08X}', 'base_register': 'r4',
                 'nearby_function_prologue_hint': None}

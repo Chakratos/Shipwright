@@ -534,6 +534,19 @@ def analyze_original_overlay(payload: bytes, base_vram: int,
                 'table_hypothesis_blockers': finding.get('blocker_classes', {}),
                 'real_original_player_writer_verified': False,
             })
+        from trace_player_writer_cfg import (
+            index_direct_jal_callers, follow_direct_call_a0_origin)
+        dispatch_targets = [row['original_function_start_pc'] for row in findings]
+        reverse_calls = index_direct_jal_callers(original_words, base_vram, symbols)
+        call_graph = follow_direct_call_a0_origin(
+            original_words, base_vram, symbols, dispatch_targets,
+            max_depth=5, max_explored=400)
+        report['dispatch_function_static_caller_provenance'] = {
+            target: {**call_graph[target],
+                     'direct_jal_caller_count': len(reverse_calls.get(int(target, 16), [])),
+                     'actual_original_dispatch_executed': False}
+            for target in dispatch_targets
+        }
         report['action_sites_with_indirect_table_hypotheses'] = cases
         report['structural_jr_table_target_map_count'] = len(target_map)
     return report
@@ -647,6 +660,12 @@ def main(argv=None) -> int:
                   entry['possible_source_base_origin'],
                   'bounded_origin=', entry['bounded_symbolic_origin'],
                   'blockers=', json.dumps(entry['table_hypothesis_blockers'], sort_keys=True))
+        for target, finding in report.get('dispatch_function_static_caller_provenance', {}).items():
+            print('GOEMON_DISPATCH_A0_CALLGRAPH', target,
+                  'direct_jal_callers=', finding['direct_jal_caller_count'],
+                  'bounded_edges=', finding['verified_direct_call_edges_traversed'],
+                  'known_global_paths=', finding['known_global_path_count'],
+                  'terminal_reasons=', json.dumps(finding['terminal_reasons'], sort_keys=True))
         print('GOEMON_INDIRECT_JR COMPLETE: static table hypotheses only')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_INDIRECT_JR FAILED:', exc, file=sys.stderr)

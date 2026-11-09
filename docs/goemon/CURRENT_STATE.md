@@ -2,6 +2,11 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Original-Dispatcher: a0 im MIPS-JAL-Delay-Slot (2026-11-09)
+
+- [42606446315](https://github.com/Chakratos/Shipwright/actions/runs/42606446315) **382 Python und native C++20 bestanden**. Beim ersten JR ergibt der echte lokale CFG-Index UNKNOWN trotz syntaktischem Kandidaten 1; die vorherige Annahme war nicht ausreichend. Beim zweiten JR ist die symbolische entry-a0 -> LW +0x5C -> LHU +0x30-Kette im lokalen Original-ROM-CFG bestätigt; Typ des Parameters unbestätigt.
+- Neue Vorwärtsherkunft führt jetzt den JAL-Delay-Slot aus, bevor sie die übergebene a0-Herkunft klassifiziert. Vorher wurde jeder a0-schreibende Slot pauschal verworfen, obwohl MIPS häufig dort Argumente setzt. Zusätzlich werden gepinnte direkte Aufrufer beider JR-Dispatcher über bis zu fünf Ebenen untersucht. Drei synthetische Regressionen; neue Owner-ROM-Ergebnisse stehen aus. Original-Animation G1 OFFEN.
+
 ## Original-MIPS-CFG: Index- und verschachtelte Feldherkunft (2026-11-09)
 
 - Privater ROM-Lauf [42584776027](https://github.com/Chakratos/Shipwright/actions/runs/42584776027) **377/377 Python + native C++20 erfolgreich**. Erste JR-Tabelle: syntaktischer Indexkandidat 1, ein dazwischenliegender Kontrollflussübergang; nicht als Laufzeitaktion bestätigt.

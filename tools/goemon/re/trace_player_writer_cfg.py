@@ -156,7 +156,8 @@ def blocker_kind(w):
     return 'unsupported_control_or_delay'
 
 def origin_at(words, base_pc, entry_index, site_index, register,
-              *, max_window=2048, max_steps=80000, indirect_jr_targets=None):
+              *, max_window=2048, max_steps=80000, indirect_jr_targets=None,
+              post_instruction=None):
     """Join all locally reachable paths from a *hypothetical* entry."""
     if not (0 <= entry_index <= site_index < len(words)):
         return {'origin': 'invalid_entry', 'complete': False}
@@ -230,7 +231,13 @@ def origin_at(words, base_pc, entry_index, site_index, register,
     if site_index not in known:
         return {'origin': 'unreachable', 'complete': not incomplete, 'steps': steps,
                 **diagnostics}
-    origin, symbol = read(known[site_index], register)
+    selected_state = known[site_index]
+    if post_instruction is not None:
+        if is_control(post_instruction):
+            return {'origin': 'unsupported_delay_slot_control',
+                    'complete': False, 'steps': steps, **diagnostics}
+        selected_state = plain(post_instruction, selected_state)
+    origin, symbol = read(selected_state, register)
     if incomplete:
         return {'origin': 'incomplete_cfg', 'complete': False, 'steps': steps,
                 'bounded_origin': origin,
@@ -352,6 +359,9 @@ def inspect_pinned_caller_a0(words, base_pc, source, functions):
         pre = origin_at(words, base_pc,
                         (entries[0]['start'] - base_pc) // 4, idx, 4)
         slot = words[idx + 1]
+        effective = origin_at(words, base_pc,
+                              (entries[0]['start'] - base_pc) // 4, idx, 4,
+                              post_instruction=slot)
         cop_writes_a0 = ((slot >> 26) in (0x10, 0x11, 0x12, 0x13)
                           and ((slot >> 21) & 31) in (0, 2)
                           and ((slot >> 16) & 31) == 4)
@@ -363,8 +373,9 @@ def inspect_pinned_caller_a0(words, base_pc, source, functions):
             'a0_pre_delay_slot_origin': pre['origin'],
             'a0_pre_delay_slot_symbol': pre.get('symbol'),
             'a0_delay_slot_overwrites': slot_writes_a0,
-            'call_argument_candidate_origin': (
-                'delay_slot_overwrite_unknown' if slot_writes_a0 else pre['origin']),
+            'call_argument_candidate_origin': effective['origin'],
+            'call_argument_candidate_symbol': effective.get('symbol'),
+            'call_argument_candidate_complete': effective['complete'],
             'function_extent_from_pinned_public_symbols': True,
             'live_player_action_owner_verified': False,
             'cfg_complete': pre['complete'],
@@ -424,18 +435,17 @@ def follow_direct_call_a0_origin(words, base_pc, functions, action_function_pcs,
                 traversed += 1
                 caller_pc = int(edge['jal_pc'], 16)
                 idx = edge['jal_index']
-                local = origin_at(words, base_pc,
-                                  edge['source_function_start_index'], idx, 4)
                 delay_word = words[idx + 1] if idx + 1 < len(words) else 0
+                local = origin_at(words, base_pc,
+                                  edge['source_function_start_index'], idx, 4,
+                                  post_instruction=delay_word)
                 cop_writes_a0 = (
                     (delay_word >> 26) in (0x10, 0x11, 0x12, 0x13)
                     and ((delay_word >> 21) & 31) in (0, 2)
                     and ((delay_word >> 16) & 31) == 4)
                 clobber = written_register(delay_word) == 4 or cop_writes_a0
                 route = (edge['jal_pc'],) + path
-                if clobber:
-                    endings.append('delay_slot_overwrites_a0')
-                elif not local['complete']:
+                if not local['complete']:
                     endings.append('incomplete_caller_cfg')
                 elif local['origin'] == 'player_global_load':
                     roots.append({
@@ -449,6 +459,8 @@ def follow_direct_call_a0_origin(words, base_pc, functions, action_function_pcs,
                     stack.append((int(edge['source_function_pc'], 16), route))
                 elif local['origin'] == 'entry_a0':
                     endings.append('depth_limit')
+                elif clobber:
+                    endings.append('delay_slot_overwrites_a0')
                 else:
                     endings.append(local['origin'])
                 if traversed >= max_explored:
