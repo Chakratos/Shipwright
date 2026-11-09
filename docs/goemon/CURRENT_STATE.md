@@ -2,6 +2,11 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Funktionseintrag-Referenzen des originalen JR-Dispatchers (2026-11-09)
+
+- Privater Owner-ROM [42607558009](https://github.com/Chakratos/Shipwright/actions/runs/42607558009), **388/388 Python + native C++20 PASS**. Der zweite JR-Dispatcher 0x801E0944 wird in Original-ROM-Metadaten zweimal syntaktisch referenziert: exaktes unrelociertes Funktionsadresswort bei 0x80203E78, LUI/Low-Konstruktion bei 0x801DD5F8/0x801DD608. Dies ist eine stärkere **statische Funktionsreferenz**, noch kein erwiesener aktiver Callback. Erster JR-Dispatcher 0x801D9E9C zeigt keine solche Referenz im Overlay, aber einen direkten JAL-Aufruf.
+- Neuer CFG-Datenfluss prüft nach diesen Adresskonstruktionen echte MIPS SW-Schreibstellen, deren Register nach allen bekannten lokalen Pfaden exakt die Dispatcher-Funktionsadresse enthält. Ausgabefelder: Speicher-Offset und abstrakte Herkunft des Ziel-Basisregisters; zusätzlich prüft die Analyse, ob das direkte Funktionsadresswort neben weiteren bekannten Funktionsadressen liegt (Callbacktabellen-Kandidat). Drei synthetische Regressionen, Owner-ROM-Rerun per [goemon-player-jump-tables] ausstehend. Das ist keine Bestätigung eines laufenden Spieler-Callbacks. G1 offen.
+
 ## Indirekte Originalspieler-Dispatcher-Registrierung (2026-11-09)
 
 - Owner-ROM [42607234758](https://github.com/Chakratos/Shipwright/actions/runs/42607234758) erfolgreich: **385/385 Python, C++20 bestanden**. Erster Dispatcher 0x801D9E9C: ein direkter JAL-Aufrufer mit unvollständiger Herkunft; zweiter Dispatcher 0x801E0944: **kein einziger direkter JAL-Aufrufer** im Player-Overlay. Keine bekannten originalen Player-Global-Roots. Deshalb ist die vorherige reine JAL-Rekursion nicht ausreichend; indirekte Funktionszeiger bzw. externes Overlay sind zu untersuchen.

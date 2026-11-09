@@ -379,6 +379,73 @@ def inspect_selector_object_base(payload: bytes, base_vram: int,
     return report
 
 
+
+def inspect_static_callback_pointer_uses(words, base_pc, target_pc,
+                                         functions, pair_hints):
+    """Inspect executable SW uses and data adjacency without asserting runtime."""
+    from trace_player_writer_provenance import sign16
+    from trace_player_writer_cfg import origin_at
+    stores = []
+    investigated = set()
+    for pair in pair_hints:
+        if (not pair['same_pinned_function'] or
+                pair['intervening_control_count'] != 0):
+            continue
+        low_pc = int(pair['low_immediate_pc'], 16)
+        owner = [f for f in functions
+                 if f['start'] <= low_pc < f['start'] + f['size']]
+        if len(owner) != 1:
+            continue
+        f = owner[0]
+        entry = (f['start'] - base_pc) // 4
+        begin = (low_pc - base_pc) // 4
+        end = min(len(words), (f['start'] + f['size'] - base_pc) // 4)
+        for idx in range(begin + 1, end):
+            w = words[idx]
+            if w >> 26 != 0x2B or idx in investigated:
+                continue
+            investigated.add(idx)
+            value_reg, base_reg = (w >> 16) & 31, (w >> 21) & 31
+            value = origin_at(words, base_pc, entry, idx, value_reg)
+            if (not value['complete'] or value['origin'] != 'constant' or
+                    value.get('constant_value') != target_pc):
+                continue
+            destination = origin_at(words, base_pc, entry, idx, base_reg)
+            stores.append({
+                'store_pc': f'0x{base_pc + idx*4:08X}',
+                'store_field_offset': sign16(w),
+                'destination_base_register': f'r{base_reg}',
+                'destination_base_origin': destination['origin'],
+                'destination_base_cfg_complete': destination['complete'],
+                'pinned_containing_function_pc': f"0x{f['start']:08X}",
+                'static_function_pointer_value_proven_in_local_cfg': True,
+                'original_callback_registration_executed': False,
+            })
+    starts = {f['start'] for f in functions}
+    starts.add(target_pc)
+    groups = []
+    for idx, word in enumerate(words):
+        if word != target_pc:
+            continue
+        begin, end = idx, idx
+        while begin > 0 and words[begin - 1] in starts:
+            begin -= 1
+        while end + 1 < len(words) and words[end + 1] in starts:
+            end += 1
+        groups.append({
+            'data_word_pc': f'0x{base_pc + idx*4:08X}',
+            'adjacent_pinned_function_pointer_word_count': end - begin + 1,
+            'adjacency_does_not_prove_vtable_or_execution': True,
+        })
+    return {
+        'local_cfg_pointer_sw_count': len(stores),
+        'first_local_cfg_pointer_stores': stores[:12],
+        'raw_word_pinned_function_pointer_adjacency': groups[:12],
+        'scan_covers_only_current_owner_overlay': True,
+        'external_or_relocated_callback_registration_unresolved': True,
+    }
+
+
 def inspect_static_dispatch_entry_refs(words, base_pc: int,
                                        target_pc: int, functions: list[dict]) -> dict:
     """Find unrelocated literal/function-address syntactic references only.
@@ -598,14 +665,22 @@ def analyze_original_overlay(payload: bytes, base_vram: int,
         call_graph = follow_direct_call_a0_origin(
             original_words, base_vram, symbols, dispatch_targets,
             max_depth=5, max_explored=400)
-        report['dispatch_function_static_caller_provenance'] = {
-            target: {**call_graph[target],
-                     'direct_jal_caller_count': len(reverse_calls.get(int(target, 16), [])),
-                     'original_overlay_pointer_reference_candidates': (
-                         inspect_static_dispatch_entry_refs(
-                             original_words, base_vram, int(target, 16), symbols)),
-                     'actual_original_dispatch_executed': False}
+        references = {
+            target: inspect_static_dispatch_entry_refs(
+                original_words, base_vram, int(target, 16), symbols)
             for target in dispatch_targets
+        }
+        report['dispatch_function_static_caller_provenance'] = {
+            target: {
+                **call_graph[target],
+                'direct_jal_caller_count': len(reverse_calls.get(int(target, 16), [])),
+                'original_overlay_pointer_reference_candidates': references[target],
+                'original_overlay_pointer_uses': (
+                    inspect_static_callback_pointer_uses(
+                        original_words, base_vram, int(target, 16), symbols,
+                        references[target]['first_lui_low_constant_pairs'])),
+                'actual_original_dispatch_executed': False,
+            } for target in dispatch_targets
         }
         report['action_sites_with_indirect_table_hypotheses'] = cases
         report['structural_jr_table_target_map_count'] = len(target_map)
@@ -735,6 +810,14 @@ def main(argv=None) -> int:
                       (p['lui_pc'], p['low_immediate_pc'])
                       for p in pointers['first_lui_low_constant_pairs'][:6]],
                   'not_runtime_callback_proof=', True)
+            use = finding['original_overlay_pointer_uses']
+            print('GOEMON_DISPATCH_POINTER_USES', target,
+                  'static_cfg_sw_count=', use['local_cfg_pointer_sw_count'],
+                  'first_sw=', use['first_local_cfg_pointer_stores'][:5],
+                  'literal_neighbor_counts=', [
+                      r['adjacent_pinned_function_pointer_word_count']
+                      for r in use['raw_word_pinned_function_pointer_adjacency'][:6]],
+                  'runtime_callback_verified=', False)
         print('GOEMON_INDIRECT_JR COMPLETE: static table hypotheses only')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_INDIRECT_JR FAILED:', exc, file=sys.stderr)

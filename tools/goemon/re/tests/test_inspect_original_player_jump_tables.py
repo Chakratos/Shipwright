@@ -302,6 +302,50 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
             words, BASE, target, [{'start': BASE, 'size': 12}])
         self.assertEqual(result['lui_low_constant_pair_count'], 0)
 
+
+    def test_cfg_static_pointer_store_into_entry_a0_field(self):
+        from inspect_original_player_jump_tables import (
+            inspect_static_dispatch_entry_refs, inspect_static_callback_pointer_uses)
+        target = 0x80100040
+        words = [(15 << 26) | (8 << 16) | 0x8010,
+                 (9 << 26) | (8 << 21) | (8 << 16) | 0x40,
+                 (0x2B << 26) | (4 << 21) | (8 << 16) | 0x58,
+                 0]
+        functions = [{'start': BASE, 'size': 16, 'name': 'fixture'}]
+        refs = inspect_static_dispatch_entry_refs(words, BASE, target, functions)
+        use = inspect_static_callback_pointer_uses(
+            words, BASE, target, functions, refs['first_lui_low_constant_pairs'])
+        self.assertEqual(use['local_cfg_pointer_sw_count'], 1)
+        self.assertEqual(use['first_local_cfg_pointer_stores'][0]['store_field_offset'], 0x58)
+        self.assertEqual(use['first_local_cfg_pointer_stores'][0]['destination_base_origin'],
+                         'entry_a0')
+        self.assertFalse(use['first_local_cfg_pointer_stores'][0][
+                         'original_callback_registration_executed'])
+
+    def test_cfg_static_pointer_store_clobber_is_rejected(self):
+        from inspect_original_player_jump_tables import (
+            inspect_static_dispatch_entry_refs, inspect_static_callback_pointer_uses)
+        target = 0x80100040
+        words = [(15 << 26) | (8 << 16) | 0x8010,
+                 (9 << 26) | (8 << 21) | (8 << 16) | 0x40,
+                 (9 << 26) | (0 << 21) | (8 << 16) | 0,
+                 (0x2B << 26) | (4 << 21) | (8 << 16) | 0x58]
+        functions = [{'start': BASE, 'size': 16, 'name': 'fixture'}]
+        refs = inspect_static_dispatch_entry_refs(words, BASE, target, functions)
+        use = inspect_static_callback_pointer_uses(
+            words, BASE, target, functions, refs['first_lui_low_constant_pairs'])
+        self.assertEqual(use['local_cfg_pointer_sw_count'], 0)
+
+    def test_callback_data_neighborhood_is_only_adjacency(self):
+        from inspect_original_player_jump_tables import inspect_static_callback_pointer_uses
+        target, other = BASE + 0x40, BASE + 0x60
+        words = [0, target, other, target, 0]
+        funcs = [{'start': target, 'size': 8}, {'start': other, 'size': 8}]
+        r = inspect_static_callback_pointer_uses(words, BASE, target, funcs, [])
+        self.assertEqual(r['raw_word_pinned_function_pointer_adjacency'][0][
+            'adjacent_pinned_function_pointer_word_count'], 3)
+        self.assertTrue(r['external_or_relocated_callback_registration_unresolved'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

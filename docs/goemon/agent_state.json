@@ -60,10 +60,11 @@
     "original_player_index_ancestry_latest": 42485758402,
     "player_jr_literal_index_one": 42584776027,
     "player_jr_forward_cfg_source": 42606446315,
-    "player_dispatch_direct_call_graph": 42607234758
+    "player_dispatch_direct_call_graph": 42607234758,
+    "player_dispatch_static_pointer_refs": 42607558009
   },
-  "next_task": "Read GOEMON_DISPATCH_STATIC_POINTER_REFS from owner-private [goemon-player-jump-tables]. Second dispatcher 0x801E0944 has 0 direct-JAL callers in original overlay; inspect unrelocated function-pointer words/hi-low references, then relocation/external registration and genuine PlayerTask/Object a0. Resolve actual AnimatedSkeleton.animation and nonzero source pose.",
+  "next_task": "Owner-ROM [goemon-player-jump-tables] GOEMON_DISPATCH_POINTER_USES: 0x801E0944 pointer literal at 0x80203E78 and LUI/low at 0x801DD5F8/608. Find original SW destination/offset from path-merged MIPS CFG and callback-table neighbor counts; correlate destination with actual player Object/Task owner and original AnimatedSkeleton.animation. No G1 numeric motion yet.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "Private 42607234758 385 source/native pass. JR function 0x801D9E9C has 1 incomplete direct JAL caller; 0x801E0944 no pinned direct JAL caller, likely indirection or external use. No live animation owner/motion."
+  "last_known_limitation": "Owner 42607558009 passes 388 Python/native. Second JR no direct JAL caller, but one absolute pointer literal and one LUI/low construction identified in owner .file_11; cannot yet prove the callback executes or its actor owner."
 }
