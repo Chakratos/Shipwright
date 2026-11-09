@@ -465,11 +465,30 @@ def analyze_original_overlay(payload: bytes, base_vram: int,
         original_words = struct.unpack('>' + 'I' * (len(payload) // 4), payload)
         for finding in findings:
             ancestry = finding.get('syntactic_jump_index_ancestry')
-            if not ancestry or not ancestry['selector_load_pc']:
+            if not ancestry:
+                continue
+            entry_pc = int(finding['original_function_start_pc'], 16)
+            if ancestry.get('index_scale_shift_pc') and ancestry.get('index_source_register'):
+                reg = int(ancestry['index_source_register'][1:])
+                at = int(ancestry['index_scale_shift_pc'], 16)
+                source = origin_at(original_words, base_vram,
+                                   (entry_pc - base_vram) // 4,
+                                   (at - base_vram) // 4, reg)
+                ancestry['index_source_cfg_origin'] = source['origin']
+                ancestry['index_source_cfg_complete'] = source['complete']
+                ancestry['index_source_cfg_constant_value'] = source.get('constant_value')
+                ancestry['index_source_cfg_entry_a0_fields'] = source.get('entry_a0_field_offsets')
+                ancestry['literal_candidate_matches_complete_cfg'] = (
+                    source['complete'] and source['origin'] == 'constant' and
+                    source.get('constant_value') == ancestry.get('constant_selector_candidate_index'))
+                ancestry['nested_entry_a0_fields_local_cfg'] = (
+                    source['complete'] and source['origin'] == 'entry_a0_lw_lhu_fields' and
+                    source.get('entry_a0_field_offsets') == [0x5C, 0x30])
+                ancestry['actual_player_owner_verified'] = False
+            if not ancestry['selector_load_pc']:
                 continue
             selector_pc = int(ancestry['selector_load_pc'], 16)
             owner_register = int(ancestry['selector_object_register'][1:])
-            entry_pc = int(finding['original_function_start_pc'], 16)
             ptr = origin_at(original_words, base_vram,
                             (entry_pc - base_vram) // 4,
                             (selector_pc - base_vram) // 4, owner_register)
@@ -588,6 +607,12 @@ def main(argv=None) -> int:
                   'literal_index_path_controls=', row['syntactic_jump_index_ancestry'].get('constant_selector_candidate_control_transfers')
                       if row['syntactic_jump_index_ancestry'] else None,
                   'literal_index_not_live_action=', True,
+                  'index_cfg_origin=', row['syntactic_jump_index_ancestry'].get('index_source_cfg_origin') if row['syntactic_jump_index_ancestry'] else None,
+                  'index_cfg_value=', row['syntactic_jump_index_ancestry'].get('index_source_cfg_constant_value') if row['syntactic_jump_index_ancestry'] else None,
+                  'index_cfg_fields=', row['syntactic_jump_index_ancestry'].get('index_source_cfg_entry_a0_fields') if row['syntactic_jump_index_ancestry'] else None,
+                  'index_cfg_complete=', row['syntactic_jump_index_ancestry'].get('index_source_cfg_complete') if row['syntactic_jump_index_ancestry'] else None,
+                  'literal_matches_cfg=', row['syntactic_jump_index_ancestry'].get('literal_candidate_matches_complete_cfg') if row['syntactic_jump_index_ancestry'] else None,
+                  'nested_fields_cfg=', row['syntactic_jump_index_ancestry'].get('nested_entry_a0_fields_local_cfg') if row['syntactic_jump_index_ancestry'] else None,
                   'selector_chain=', row['syntactic_jump_index_ancestry']['selector_transform_chain']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'selector_stop=', row['syntactic_jump_index_ancestry']['selector_chain_stop_reason']

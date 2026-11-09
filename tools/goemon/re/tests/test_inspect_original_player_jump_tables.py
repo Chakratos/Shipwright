@@ -260,6 +260,15 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertIsNone(got['candidate_index'])
         self.assertFalse(got['evaluation_complete'])
 
+    def test_joined_cfg_index_shift_input_is_constant_when_supported(self):
+        from trace_player_writer_cfg import origin_at
+        words = [0] * 6
+        words[0] = (9 << 26) | (9 << 16) | 1
+        words[1] = (9 << 16) | (10 << 11) | (2 << 6)
+        result = origin_at(words, BASE, 0, 1, 9)
+        self.assertEqual(result['constant_value'], 1)
+        self.assertTrue(result['complete'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

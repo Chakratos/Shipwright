@@ -234,6 +234,33 @@ class MipsCFGProvenanceTests(unittest.TestCase):
         self.assertEqual(result['bounded_origin'], 'constant')
         self.assertIsNone(result.get('symbol'))
 
+
+    def test_constant_shift_and_arithmetic_right_shift(self):
+        from trace_player_writer_cfg import initial_state, plain
+        s = plain(ins(9, 0, 9, 3), initial_state())
+        s = plain((9 << 16) | (10 << 11) | (2 << 6), s)
+        self.assertEqual(s[10], ('constant', 12))
+        s = plain(ins(15, 0, 9, 0x8000), s)
+        s = plain((9 << 16) | (10 << 11) | (1 << 6) | 3, s)
+        self.assertEqual(s[10], ('constant', 0xC0000000))
+
+    def test_nested_a0_load_to_halfword_is_structural_not_player_identity(self):
+        words = [ins(35, 4, 3, 0x5C), ins(0x25, 3, 9, 0x30), 0]
+        result = origin_at(words, BASE, 0, 2, 9)
+        self.assertEqual(result['origin'], 'entry_a0_lw_lhu_fields')
+        self.assertEqual(result['entry_a0_field_offsets'], [0x5C, 0x30])
+        self.assertIsNone(result['symbol'])
+
+    def test_overwritten_nested_pointer_cannot_inherit_entry_a0(self):
+        words = [ins(35, 4, 3, 0x5C), ins(35, 5, 3, 0), ins(0x25, 3, 9, 0x30), 0]
+        result = origin_at(words, BASE, 0, 3, 9)
+        self.assertEqual(result['origin'], 'unknown')
+
+    def test_different_branch_source_values_cannot_be_called_constant(self):
+        words = [ins(4, 2, 3, 3), 0, ins(9, 0, 9, 1), 0, ins(9, 9, 10, 0), 0]
+        result = origin_at(words, BASE, 0, 5, 10)
+        self.assertIsNone(result['constant_value'])
+
     def test_no_entry_hint_no_proof(self):
         site = {'pc': f'0x{BASE:08X}', 'base_register': 'r4',
                 'nearby_function_prologue_hint': None}

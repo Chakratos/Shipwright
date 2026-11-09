@@ -57,10 +57,11 @@
     "original_player_jr_lui_link": 42484757248,
     "original_player_jr_case_cfg": 42484877490,
     "original_player_index_ancestry": 42485168086,
-    "original_player_index_ancestry_latest": 42485758402
+    "original_player_index_ancestry_latest": 42485758402,
+    "player_jr_literal_index_one": 42584776027
   },
-  "next_task": "Read new private [goemon-player-jump-tables] literal_index_candidate and literal_index_path_controls logs; use full CFG reaching-definitions (not nearest textual MIPS definition) to establish first switch selector source. Then resolve second r4->LW+0x5C->r3->LHU+0x30 owner and active AnimatedSkeleton.animation. Numerical G1 open.",
+  "next_task": "Inspect owner-ROM [goemon-player-jump-tables] index_cfg_origin/value/fields/complete: prove first JR source and second nested entry-a0 field ancestry under joined MIPS CFG. Then prove actual caller a0 PlayerTask/Object via original source, recover AnimatedSkeleton.animation and nonzero numerical original player pose. No fake motion.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "Baseline Windows 42486722655: 373 Python plus native tests passed; zero-register anchored ADDIU selector evaluation was incomplete. New source-only arithmetic candidate implementation queued for private ROM verification. Live animation ownership still not proven."
+  "last_known_limitation": "ROM 42584776027: 377 source/native pass; first switch syntactic index 1 under one control transfer. CFG at actual index producer and nested field MIPS symbolic source now implemented pending private run; no real animation owner or motion proven."
 }

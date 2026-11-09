@@ -2,6 +2,12 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Original-MIPS-CFG: Index- und verschachtelte Feldherkunft (2026-11-09)
+
+- Privater ROM-Lauf [42584776027](https://github.com/Chakratos/Shipwright/actions/runs/42584776027) **377/377 Python + native C++20 erfolgreich**. Erste JR-Tabelle: syntaktischer Indexkandidat 1, ein dazwischenliegender Kontrollflussübergang; nicht als Laufzeitaktion bestätigt.
+- Neuer echter CFG-Datenfluss am Index-Shift-PC statt nur nächstliegender rückwärts gefundener Definition; wertet konstante ADDIU- und Schiebeoperationen aus. Für zweite JR-Tabelle transportiert die abstrakte Analyse die Feldherkunft aus *Funktionsargument a0* → LW +0x5C → LHU +0x30 auch über Kontrollfluss zusammen. Ergebnis ist ausdrücklich ein Typ-unbestätigter Strukturbeweis, **kein** echter PlayerTask-/Animationsbesitz.
+- Fünf neue synthetische Regressionstests. Windows-ROM-Rerun mit [goemon-player-jump-tables] noch ausstehend. G1 offen; keine Originalbewegung bestätigt.
+
 ## JR selector constant-source correction (2026-11-09)
 
 - Source-free evaluator now reduces a zero-register-anchored ADDIU/ORI/shift chain to a numeric syntactic selector candidate, rather than treating the entire index as zero because its earliest input is r0. Variable shift forms fail closed. Control-transfer count and permanent alternative-path warning remain visible; these are not animation/action proofs.

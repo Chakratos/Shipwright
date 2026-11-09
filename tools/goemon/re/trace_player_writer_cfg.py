@@ -50,10 +50,30 @@ def plain(w, state):
             dest, value = rt, ('constant', n & 0xffffffff)
         elif imm == 0:
             dest, value = rt, a
-    elif op == 35 and a[0] == 'constant':
-        address = (int(a[1]) + sign16(imm)) & 0xffffffff
-        if address in PLAYER_GLOBALS:
-            dest, value = rt, ('player_global_load', PLAYER_GLOBALS[address])
+    elif op == 35:
+        if a[0] == 'constant':
+            address = (int(a[1]) + sign16(imm)) & 0xffffffff
+            if address in PLAYER_GLOBALS:
+                dest, value = rt, ('player_global_load', PLAYER_GLOBALS[address])
+        elif a == PARAM_A0:
+            dest, value = rt, ('entry_a0_lw_field', sign16(imm))
+    elif op == 0x25 and a[0] == 'entry_a0_lw_field':
+        dest, value = rt, ('entry_a0_lw_lhu_fields', (a[1], sign16(imm)))
+    elif op in (0x0C, 0x0E) and a[0] == 'constant':
+        dest = rt
+        value = ('constant', ((int(a[1]) & imm) if op == 0x0C
+                              else (int(a[1]) ^ imm)) & 0xffffffff)
+    elif op == 0 and (w & 63) in (0, 2, 3) and b[0] == 'constant':
+        shift = (w >> 6) & 31
+        n = int(b[1])
+        if (w & 63) == 0:
+            result = n << shift
+        elif (w & 63) == 2:
+            result = n >> shift
+        else:
+            signed = n - 0x100000000 if n & 0x80000000 else n
+            result = signed >> shift
+        dest, value = (w >> 11) & 31, ('constant', result & 0xffffffff)
     elif op == 0 and (w & 63) in (0x21, 0x25) and ((w >> 6) & 31) == 0:
         dest = (w >> 11) & 31
         if a == ZERO:
@@ -215,9 +235,12 @@ def origin_at(words, base_pc, entry_index, site_index, register,
         return {'origin': 'incomplete_cfg', 'complete': False, 'steps': steps,
                 'bounded_origin': origin,
                 'bounded_symbol': symbol if origin == 'player_global_load' else None,
+                'bounded_constant_value': symbol if origin == 'constant' else None,
                 **diagnostics}
     return {'origin': origin,
             'symbol': symbol if origin == 'player_global_load' else None,
+            'constant_value': symbol if origin == 'constant' else None,
+            'entry_a0_field_offsets': list(symbol) if origin == 'entry_a0_lw_lhu_fields' else None,
             'complete': True, 'steps': steps, **diagnostics}
 
 
