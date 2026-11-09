@@ -406,20 +406,24 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         from inspect_original_player_jump_tables import (
             inspect_static_callback_pointer_uses,
             annotate_pointer_run_index_ancestry)
-        target = BASE + 0x40
-        words = [0] * 80
+        base = 0x80200000
+        target = base + 0x40
+        # The private-table address must agree with the synthetic LUI +
+        # LW immediate (0x80200000 + 0x3B90). Old fixture put the literal
+        # at index 60 while the load described index 0x3B90/4.
+        words = [0] * (0x3B90 // 4 + 4)
         words[0] = (15 << 26) | (8 << 16) | 0x8020
         words[1] = (0x24 << 26) | (4 << 21) | (9 << 16) | 0xCC
         words[2] = (9 << 16) | (10 << 11) | (2 << 6)
         words[3] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
         words[4] = (0x23 << 26) | (8 << 21) | (5 << 16) | 0x3B90
-        words[60] = target
-        funcs = [{'start': BASE, 'size': 0x40},
+        words[0x3B90 // 4] = target
+        funcs = [{'start': base, 'size': 0x40},
                  {'start': target, 'size': 0x20}]
         run = inspect_static_callback_pointer_uses(
-            words, BASE, target, funcs, [])
+            words, base, target, funcs, [])
         entry = {'original_overlay_pointer_uses': run}
-        annotate_pointer_run_index_ancestry(blob(words), BASE,
+        annotate_pointer_run_index_ancestry(blob(words), base,
                                             {'0x00000000': entry})
         reads = run['raw_word_pinned_function_pointer_adjacency'][0][
             'syntactic_original_lw_readers']['first_candidate_lw_sites']
