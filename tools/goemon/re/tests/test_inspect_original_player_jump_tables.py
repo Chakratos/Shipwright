@@ -269,6 +269,39 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertEqual(result['constant_value'], 1)
         self.assertTrue(result['complete'])
 
+
+    def test_static_dispatch_entry_pointer_word_and_lui_low_pair_metadata(self):
+        from inspect_original_player_jump_tables import inspect_static_dispatch_entry_refs
+        target = 0x80100040
+        words = [target, (15 << 26) | (8 << 16) | 0x8010,
+                 (9 << 26) | (8 << 21) | (8 << 16) | 0x40, 0]
+        funcs = [{'start': BASE, 'size': 16, 'name': 'fixture'}]
+        result = inspect_static_dispatch_entry_refs(words, BASE, target, funcs)
+        self.assertEqual(result['exact_unrelocated_word_count'], 1)
+        self.assertEqual(result['lui_low_constant_pair_count'], 1)
+        self.assertTrue(result['first_lui_low_constant_pairs'][0]['same_pinned_function'])
+        self.assertFalse(result['function_pointer_usage_at_runtime_verified'])
+
+    def test_static_entry_ref_register_clobber_rejects_false_pair(self):
+        from inspect_original_player_jump_tables import inspect_static_dispatch_entry_refs
+        target = 0x80100040
+        words = [(15 << 26) | (8 << 16) | 0x8010,
+                 (9 << 26) | (0 << 21) | (8 << 16) | 1,
+                 (9 << 26) | (8 << 21) | (8 << 16) | 0x40]
+        result = inspect_static_dispatch_entry_refs(
+            words, BASE, target, [{'start': BASE, 'size': 12}])
+        self.assertEqual(result['lui_low_constant_pair_count'], 0)
+
+    def test_static_entry_ref_branch_barrier_rejects_false_pair(self):
+        from inspect_original_player_jump_tables import inspect_static_dispatch_entry_refs
+        target = 0x80100040
+        words = [(15 << 26) | (8 << 16) | 0x8010,
+                 (4 << 26) | (2 << 21) | (3 << 16) | 1,
+                 (9 << 26) | (8 << 21) | (8 << 16) | 0x40]
+        result = inspect_static_dispatch_entry_refs(
+            words, BASE, target, [{'start': BASE, 'size': 12}])
+        self.assertEqual(result['lui_low_constant_pair_count'], 0)
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

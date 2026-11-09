@@ -378,6 +378,63 @@ def inspect_selector_object_base(payload: bytes, base_vram: int,
         return report
     return report
 
+
+def inspect_static_dispatch_entry_refs(words, base_pc: int,
+                                       target_pc: int, functions: list[dict]) -> dict:
+    """Find unrelocated literal/function-address syntactic references only.
+
+    Pointer relocations, external/main callsites and runtime callback tables
+    are not covered. No original instruction/data words leave private memory.
+    """
+    from trace_player_writer_provenance import sign16, written_register
+    from trace_player_writer_cfg import is_control
+    literal = [i for i, w in enumerate(words) if w == target_pc]
+    pairs = []
+    for idx, w in enumerate(words):
+        if w >> 26 != 15 or ((w >> 21) & 31) != 0:
+            continue
+        reg = (w >> 16) & 31
+        if reg == 0:
+            continue
+        hi = (w & 0xffff) << 16
+        for j in range(idx + 1, min(len(words), idx + 33)):
+            nxt = words[j]
+            op = nxt >> 26
+            if (op in (9, 13) and ((nxt >> 21) & 31) == reg and
+                    ((nxt >> 16) & 31) == reg):
+                low = sign16(nxt) if op == 9 else nxt & 0xffff
+                addr = (hi + low if op == 9 else hi | low) & 0xffffffff
+                if addr == target_pc:
+                    pc = base_pc + idx * 4
+                    end_pc = base_pc + j * 4
+                    source_function = [
+                        f for f in functions
+                        if f['start'] <= pc and end_pc < f['start'] + f['size']]
+                    pairs.append({
+                        'lui_pc': f'0x{pc:08X}',
+                        'low_immediate_pc': f'0x{end_pc:08X}',
+                        'same_pinned_function': len(source_function) == 1,
+                        'intervening_control_count': sum(
+                            is_control(v) for v in words[idx + 1:j]),
+                        'not_runtime_pointer_proof': True,
+                    })
+                break
+            if written_register(nxt) == reg or is_control(nxt):
+                # The register may have been clobbered; do not connect across
+                # call/branch or register overwrite.
+                break
+    return {
+        'entry_pc': f'0x{target_pc:08X}',
+        'exact_unrelocated_word_count': len(literal),
+        'first_exact_word_pcs': [f'0x{base_pc+i*4:08X}' for i in literal[:12]],
+        'lui_low_constant_pair_count': len(pairs),
+        'first_lui_low_constant_pairs': pairs[:12],
+        'unresolved_external_or_relocation_refs': True,
+        'function_pointer_usage_at_runtime_verified': False,
+        'no_original_rom_payload_serialized': True,
+    }
+
+
 def inspect_indirect_jump(payload: bytes, base_vram: int, jump_pc: int,
                           function_start: int, function_size: int) -> dict:
     if len(payload) % 4 or not (function_start <= jump_pc <
@@ -544,6 +601,9 @@ def analyze_original_overlay(payload: bytes, base_vram: int,
         report['dispatch_function_static_caller_provenance'] = {
             target: {**call_graph[target],
                      'direct_jal_caller_count': len(reverse_calls.get(int(target, 16), [])),
+                     'original_overlay_pointer_reference_candidates': (
+                         inspect_static_dispatch_entry_refs(
+                             original_words, base_vram, int(target, 16), symbols)),
                      'actual_original_dispatch_executed': False}
             for target in dispatch_targets
         }
@@ -666,6 +726,15 @@ def main(argv=None) -> int:
                   'bounded_edges=', finding['verified_direct_call_edges_traversed'],
                   'known_global_paths=', finding['known_global_path_count'],
                   'terminal_reasons=', json.dumps(finding['terminal_reasons'], sort_keys=True))
+            pointers = finding['original_overlay_pointer_reference_candidates']
+            print('GOEMON_DISPATCH_STATIC_POINTER_REFS', target,
+                  'raw_word_matches=', pointers['exact_unrelocated_word_count'],
+                  'lui_low_pairs=', pointers['lui_low_constant_pair_count'],
+                  'first_word_pcs=', pointers['first_exact_word_pcs'][:6],
+                  'first_code_pair_pcs=', [
+                      (p['lui_pc'], p['low_immediate_pc'])
+                      for p in pointers['first_lui_low_constant_pairs'][:6]],
+                  'not_runtime_callback_proof=', True)
         print('GOEMON_INDIRECT_JR COMPLETE: static table hypotheses only')
     except (OSError, ValueError, TypeError, KeyError) as exc:
         print('GOEMON_INDIRECT_JR FAILED:', exc, file=sys.stderr)

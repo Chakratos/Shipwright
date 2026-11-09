@@ -2,6 +2,11 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Indirekte Originalspieler-Dispatcher-Registrierung (2026-11-09)
+
+- Owner-ROM [42607234758](https://github.com/Chakratos/Shipwright/actions/runs/42607234758) erfolgreich: **385/385 Python, C++20 bestanden**. Erster Dispatcher 0x801D9E9C: ein direkter JAL-Aufrufer mit unvollständiger Herkunft; zweiter Dispatcher 0x801E0944: **kein einziger direkter JAL-Aufrufer** im Player-Overlay. Keine bekannten originalen Player-Global-Roots. Deshalb ist die vorherige reine JAL-Rekursion nicht ausreichend; indirekte Funktionszeiger bzw. externes Overlay sind zu untersuchen.
+- Neuer privater ROM-Metadaten-Scan sucht direkte, noch nicht relocatete Funktionsadresswörter und ununterbrochene LUI/ADDIU/ORI-Adresskonstruktionen für beide originalen Dispatcher. Drei synthetische Regressionen gegen Register-Clobber/Branch-Fehlzuordnung. Ein fehlender Treffer beweist **nicht** das Fehlen einer Laufzeitregistrierung, weil Relokationen, externe Calls und Callback-Tabellen nicht vollständig erfasst werden. Marker [goemon-player-jump-tables] startet Windows-Prüfung; G1 unverändert offen.
+
 ## Original-Dispatcher: a0 im MIPS-JAL-Delay-Slot (2026-11-09)
 
 - [42606446315](https://github.com/Chakratos/Shipwright/actions/runs/42606446315) **382 Python und native C++20 bestanden**. Beim ersten JR ergibt der echte lokale CFG-Index UNKNOWN trotz syntaktischem Kandidaten 1; die vorherige Annahme war nicht ausreichend. Beim zweiten JR ist die symbolische entry-a0 -> LW +0x5C -> LHU +0x30-Kette im lokalen Original-ROM-CFG bestätigt; Typ des Parameters unbestätigt.

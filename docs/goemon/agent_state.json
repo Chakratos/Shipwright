@@ -59,10 +59,11 @@
     "original_player_index_ancestry": 42485168086,
     "original_player_index_ancestry_latest": 42485758402,
     "player_jr_literal_index_one": 42584776027,
-    "player_jr_forward_cfg_source": 42606446315
+    "player_jr_forward_cfg_source": 42606446315,
+    "player_dispatch_direct_call_graph": 42607234758
   },
-  "next_task": "Read [goemon-player-jump-tables] GOEMON_DISPATCH_A0_CALLGRAPH on owner-ROM; MIPS delay-slot a0 setup may trace static original player global roots. If no direct callers, trace indirect handler pointers. Then live original player Object.graphics_1/AnimatedSkeleton.animation and nonzero numeric animation. G1 open.",
+  "next_task": "Read GOEMON_DISPATCH_STATIC_POINTER_REFS from owner-private [goemon-player-jump-tables]. Second dispatcher 0x801E0944 has 0 direct-JAL callers in original overlay; inspect unrelocated function-pointer words/hi-low references, then relocation/external registration and genuine PlayerTask/Object a0. Resolve actual AnimatedSkeleton.animation and nonzero source pose.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "Owner ROM 42606446315: 382 source/native tests pass; first JR index unknown under path-merged CFG; second entry-a0 LW+0x5C -> LHU+0x30 local CFG proven. New delay-slot/callgraph step pending validation."
+  "last_known_limitation": "Private 42607234758 385 source/native pass. JR function 0x801D9E9C has 1 incomplete direct JAL caller; 0x801E0944 no pinned direct JAL caller, likely indirection or external use. No live animation owner/motion."
 }
