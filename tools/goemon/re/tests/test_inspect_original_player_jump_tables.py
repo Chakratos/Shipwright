@@ -401,6 +401,36 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
             words, BASE, funcs, 0x80203B90, 0x80203C00)
         self.assertEqual(result['syntactic_lw_low_field_match_count'], 0)
 
+
+    def test_pointer_table_reader_index_from_action_byte_field(self):
+        from inspect_original_player_jump_tables import (
+            inspect_static_callback_pointer_uses,
+            annotate_pointer_run_index_ancestry)
+        target = BASE + 0x40
+        words = [0] * 80
+        words[0] = (15 << 26) | (8 << 16) | 0x8020
+        words[1] = (0x24 << 26) | (4 << 21) | (9 << 16) | 0xCC
+        words[2] = (9 << 16) | (10 << 11) | (2 << 6)
+        words[3] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[4] = (0x23 << 26) | (8 << 21) | (5 << 16) | 0x3B90
+        words[60] = target
+        funcs = [{'start': BASE, 'size': 0x40},
+                 {'start': target, 'size': 0x20}]
+        run = inspect_static_callback_pointer_uses(
+            words, BASE, target, funcs, [])
+        entry = {'original_overlay_pointer_uses': run}
+        annotate_pointer_run_index_ancestry(blob(words), BASE,
+                                            {'0x00000000': entry})
+        reads = run['raw_word_pinned_function_pointer_adjacency'][0][
+            'syntactic_original_lw_readers']['first_candidate_lw_sites']
+        self.assertEqual(len(reads), 1)
+        a = reads[0]['index_ancestry']
+        self.assertEqual(a['field_load_offset'], 0xCC)
+        self.assertEqual(a['field_load_width'], 'lbu')
+        self.assertEqual(a['local_cfg_field_base_origin'], 'entry_a0')
+        self.assertTrue(a['local_cfg_field_base_complete'])
+        self.assertFalse(a['original_player_action_verified'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

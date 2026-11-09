@@ -465,6 +465,50 @@ def inspect_pointer_run_loads(words, base_pc: int, functions: list[dict],
     }
 
 
+
+def annotate_pointer_run_index_ancestry(payload: bytes, base_pc: int,
+                                        dispatch_call_provenance: dict) -> None:
+    """Trace table-reader LW index register back to original field metadata.
+
+    Mutates metadata only. The private payload never leaves this function.
+    """
+    from trace_player_writer_cfg import origin_at
+    words = struct.unpack('>' + 'I' * (len(payload) // 4), payload)
+    for entry in dispatch_call_provenance.values():
+        for run in entry['original_overlay_pointer_uses'][
+                'raw_word_pinned_function_pointer_adjacency']:
+            for reader in run['syntactic_original_lw_readers'][
+                    'first_candidate_lw_sites']:
+                ancestry = trace_index_register_load(
+                    payload, base_pc, int(reader['source_function_pc'], 16),
+                    int(reader['lw_pc'], 16))
+                report = {
+                    'reader_pc': reader['lw_pc'],
+                    'indexed_addu_pc': ancestry['indexed_addu_pc'],
+                    'index_source_register': ancestry['index_source_register'],
+                    'field_load_pc': ancestry['selector_load_pc'],
+                    'field_load_width': ancestry['selector_load_width'],
+                    'field_load_offset': ancestry['selector_field_offset'],
+                    'field_object_register': ancestry['selector_object_register'],
+                    'selector_chain_stop_reason': ancestry['selector_chain_stop_reason'],
+                    'local_cfg_field_base_origin': None,
+                    'local_cfg_field_base_symbol': None,
+                    'local_cfg_field_base_complete': None,
+                    'original_player_action_verified': False,
+                }
+                if ancestry['selector_load_pc'] is not None:
+                    obj_reg = int(ancestry['selector_object_register'][1:])
+                    owner = origin_at(
+                        words, base_pc,
+                        (int(reader['source_function_pc'], 16) - base_pc) // 4,
+                        (int(ancestry['selector_load_pc'], 16) - base_pc) // 4,
+                        obj_reg)
+                    report['local_cfg_field_base_origin'] = owner['origin']
+                    report['local_cfg_field_base_symbol'] = owner.get('symbol')
+                    report['local_cfg_field_base_complete'] = owner['complete']
+                reader['index_ancestry'] = report
+
+
 def inspect_static_callback_pointer_uses(words, base_pc, target_pc,
                                          functions, pair_hints, action_sites=None):
     """Inspect executable SW uses and data adjacency without asserting runtime."""
@@ -786,6 +830,9 @@ def analyze_original_overlay(payload: bytes, base_vram: int,
                 'actual_original_dispatch_executed': False,
             } for target in dispatch_targets
         }
+        annotate_pointer_run_index_ancestry(
+            payload, base_vram,
+            report['dispatch_function_static_caller_provenance'])
         report['action_sites_with_indirect_table_hypotheses'] = cases
         report['structural_jr_table_target_map_count'] = len(target_map)
     return report
@@ -932,6 +979,10 @@ def main(argv=None) -> int:
                        r['syntactic_original_lw_readers']['high_lui_matched_count'],
                        r['syntactic_original_lw_readers']['first_candidate_lw_sites'][:4])
                       for r in use['raw_word_pinned_function_pointer_adjacency'][:6]],
+                  'table_index_source=', [
+                      c.get('index_ancestry')
+                      for r in use['raw_word_pinned_function_pointer_adjacency'][:6]
+                      for c in r['syntactic_original_lw_readers']['first_candidate_lw_sites'][:4]],
                   'runtime_callback_verified=', False)
         print('GOEMON_INDIRECT_JR COMPLETE: static table hypotheses only')
     except (OSError, ValueError, TypeError, KeyError) as exc:

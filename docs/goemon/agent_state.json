@@ -63,10 +63,11 @@
     "player_dispatch_direct_call_graph": 42607234758,
     "player_dispatch_static_pointer_refs": 42607558009,
     "player_dispatch_pointer_adjacency": 42607985211,
-    "original_dispatch_pointer_block_bounds": 42608364934
+    "original_dispatch_pointer_block_bounds": 42608364934,
+    "original_232_ptr_table_lw_reader": 42608748950
   },
-  "next_task": "Inspect owner-ROM [goemon-player-jump-tables] table_load_reader_summary for actual MIPS access to 0x80203B90..0x80203F30 (232 function pointers; index186 = 0x801E0944), identify caller and runtime owner; then original AnimatedSkeleton.animation and nonzero source numeric pose.",
+  "next_task": "Run owner-private [goemon-player-jump-tables], inspect GOEMON_DISPATCH_POINTER_USES table_index_source for real LW 0x801DAF28 (function 0x801DAD68) from pointer run 0x80203B90..0x80203F30. Check original field load offset, MIPS register ownership, then callback/state mapping and animation owner/numerical pose.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "Owner 42608364934 392 Python/native pass, pinned function block 0x80203B90..0x80203F30 with 232 distinct function PC literals, target at slot 186. Only one known action-writer function in block; not verified as a unified table or live dispatcher."
+  "last_known_limitation": "Owner 42608748950 395 Python/native pass; exact table LW 0x801DAF28 via LUI 0x801DAF20 and indexed ADDU located inside player function 0x801DAD68. Selector source has not yet been decoded on owner ROM; no live callback or original animation verified."
 }

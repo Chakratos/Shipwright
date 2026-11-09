@@ -2,6 +2,11 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Tabellenleser und MIPS-Indexherkunft aus Original-ROM (2026-11-09)
+
+- Owner-ROM [42608748950](https://github.com/Chakratos/Shipwright/actions/runs/42608748950): **395/395 Python + native C++20 PASS**. Der Block von 232 gepinnten Original-Funktionsadressen wird bei **0x801DAF28** mittels Original-MIPS-LW gelesen; Funktion 0x801DAD68, LUI-Quelle 0x801DAF20, zusätzlich indiziertes ADDU. Dies ist ein konkreter syntaktischer Verweis auf den Tabellenanfang **0x80203B90**, nicht nur eine zufällige Datenansammlung. Noch kein echter Aufruf oder Player-Task-Owner nachgewiesen.
+- Neu ermittelt der bereits existierende Recomp-Switch-Slicer direkt für diesen Tabellen-LW den Index-Producer (MIPS-Schiebeoperationen/LBU/LHU), Feld-Offset und Basisregister mit lokaler CFG-Herkunft; Roh-ROM-Code/Pointer bleiben privat. Ein zusätzlicher synthetischer Test prüft LBU +0xCC aus entry-a0, indiziertes SLL/ADDU und LW derselben Tabelle. Windows [goemon-player-jump-tables] ausstehend. G1 OFFEN.
+
 ## Original-MIPS-Zugriffe auf den 232-Funktionszeigerbereich (2026-11-09)
 
 - Private Owner-ROM [42608364934](https://github.com/Chakratos/Shipwright/actions/runs/42608364934) **392/392 Python + native C++20 bestanden**. Zusammenhängender originaler Bereich 0x80203B90 bis 0x80203F30 mit **232 verschiedenen Funktionsadressen**; der zweite JR-Dispatcher 0x801E0944 liegt auf Slot **186**. In diesem Block befindet sich die Funktionsadresse genau eines identifizierten +0xCC-Action-Writers; das beweist weiterhin weder eine homogene Action-Tabelle noch aktive Original-Spieler-Animation.
