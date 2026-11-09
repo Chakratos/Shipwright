@@ -365,6 +365,42 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertEqual(run['candidate_action_writer_function_pcs_in_run'], [
             f'0x{action:08X}'])
 
+
+    def test_pointer_run_reader_lui_lw_then_indirect_jalr(self):
+        from inspect_original_player_jump_tables import inspect_pointer_run_loads
+        target = 0x80203B90
+        words = [(15 << 26) | (8 << 16) | 0x8020,
+                 (0x23 << 26) | (8 << 21) | (9 << 16) | 0x3B90,
+                 (9 << 21) | 9,
+                 0]
+        funcs = [{'start': BASE, 'size': 16, 'name': 'fixture'}]
+        r = inspect_pointer_run_loads(words, BASE, funcs, target, target + 16)
+        self.assertEqual(r['syntactic_lw_low_field_match_count'], 1)
+        self.assertEqual(r['high_lui_matched_count'], 1)
+        match = r['first_candidate_lw_sites'][0]
+        self.assertEqual(match['high_address_source'], 'direct_lui_hi')
+        self.assertEqual(match['next_indirect_transfer_kind'], 'jalr')
+        self.assertFalse(not match['not_proof_of_execution_or_dispatch'])
+
+    def test_pointer_run_reader_no_lui_is_not_verified_base(self):
+        from inspect_original_player_jump_tables import inspect_pointer_run_loads
+        words = [(0x23 << 26) | (8 << 21) | (9 << 16) | 0x3B90]
+        funcs = [{'start': BASE, 'size': 4}]
+        result = inspect_pointer_run_loads(
+            words, BASE, funcs, 0x80203B90, 0x80203C00)
+        self.assertEqual(result['high_lui_matched_count'], 0)
+        self.assertEqual(result['first_candidate_lw_sites'][0]['high_address_source'],
+                         'unresolved_base')
+
+    def test_pointer_run_reader_rejects_wrong_low_address(self):
+        from inspect_original_player_jump_tables import inspect_pointer_run_loads
+        words = [(15 << 26) | (8 << 16) | 0x8020,
+                 (0x23 << 26) | (8 << 21) | (9 << 16) | 0x2B90]
+        funcs = [{'start': BASE, 'size': 8}]
+        result = inspect_pointer_run_loads(
+            words, BASE, funcs, 0x80203B90, 0x80203C00)
+        self.assertEqual(result['syntactic_lw_low_field_match_count'], 0)
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

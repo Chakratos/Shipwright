@@ -62,10 +62,11 @@
     "player_jr_forward_cfg_source": 42606446315,
     "player_dispatch_direct_call_graph": 42607234758,
     "player_dispatch_static_pointer_refs": 42607558009,
-    "player_dispatch_pointer_adjacency": 42607985211
+    "player_dispatch_pointer_adjacency": 42607985211,
+    "original_dispatch_pointer_block_bounds": 42608364934
   },
-  "next_task": "Owner-ROM [goemon-player-jump-tables] GOEMON_DISPATCH_POINTER_USES pointer_runs to determine boundaries/slot and overlap between 232 adjacent original function PCs and candidate action writer functions; trace real MIPS indexing/callsite and owner to original AnimatedSkeleton.animation and numerical motion.",
+  "next_task": "Inspect owner-ROM [goemon-player-jump-tables] table_load_reader_summary for actual MIPS access to 0x80203B90..0x80203F30 (232 function pointers; index186 = 0x801E0944), identify caller and runtime owner; then original AnimatedSkeleton.animation and nonzero source numeric pose.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "ROM 42607985211 391 source/native PASS; 0x801E0944 static function literal at 0x80203E78 is within 232 neighboring function pointers. This does not prove a unified callback table or live action selection."
+  "last_known_limitation": "Owner 42608364934 392 Python/native pass, pinned function block 0x80203B90..0x80203F30 with 232 distinct function PC literals, target at slot 186. Only one known action-writer function in block; not verified as a unified table or live dispatcher."
 }

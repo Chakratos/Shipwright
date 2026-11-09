@@ -380,6 +380,91 @@ def inspect_selector_object_base(payload: bytes, base_vram: int,
 
 
 
+
+def inspect_pointer_run_loads(words, base_pc: int, functions: list[dict],
+                              run_start_pc: int, run_end_pc: int) -> dict:
+    """Conservatively identify code LW reads of a private pointer-table run.
+
+    A matching low offset and high LUI is address syntax, not a proven call.
+    No raw original MIPS instructions or pointer-table entries are returned.
+    """
+    from trace_player_writer_provenance import sign16, written_register
+    from trace_player_writer_cfg import is_control
+    candidates = []
+
+    def previous_definition(reg, before, start):
+        if reg == 0:
+            return None
+        for j in range(before - 1, max(start - 1, before - 64), -1):
+            w = words[j]
+            if is_control(w):
+                return None  # no claim across unsolved branch/call
+            if written_register(w) == reg:
+                return j, w
+        return None
+
+    for f in functions:
+        begin = max(0, (f['start'] - base_pc) // 4)
+        end = min(len(words), (f['start'] + f['size'] - base_pc) // 4)
+        for idx in range(begin, end):
+            w = words[idx]
+            if w >> 26 != 0x23:
+                continue
+            offset = sign16(w)
+            possible_address = (run_start_pc & 0xFFFF0000) + offset
+            if not run_start_pc <= possible_address < run_end_pc:
+                continue
+            base_reg, loaded_reg = (w >> 21) & 31, (w >> 16) & 31
+            definition = previous_definition(base_reg, idx, begin)
+            source = 'unresolved_base'
+            hi_pc = None
+            if definition:
+                loc, inst = definition
+                if (inst >> 26 == 15 and (inst & 0xffff) ==
+                        ((run_start_pc >> 16) & 0xffff)):
+                    source = 'direct_lui_hi'
+                    hi_pc = f'0x{base_pc+loc*4:08X}'
+                elif inst >> 26 == 0 and (inst & 63) == 0x21:
+                    operands = ((inst >> 21) & 31, (inst >> 16) & 31)
+                    for r in operands:
+                        origin = previous_definition(r, loc, begin)
+                        if origin and (origin[1] >> 26 == 15 and
+                                       (origin[1] & 0xffff) ==
+                                       ((run_start_pc >> 16) & 0xffff)):
+                            source = 'lui_plus_indexed_addu'
+                            hi_pc = f'0x{base_pc+origin[0]*4:08X}'
+                            break
+            consumer = None
+            for j in range(idx + 1, min(end, idx + 17)):
+                following = words[j]
+                if following >> 26 == 0 and (following & 63) in (8, 9):
+                    if ((following >> 21) & 31) == loaded_reg:
+                        consumer = ('jalr' if (following & 63) == 9 else 'jr',
+                                    f'0x{base_pc+j*4:08X}')
+                    break
+                if is_control(following) or written_register(following) == loaded_reg:
+                    break
+            candidates.append({
+                'lw_pc': f'0x{base_pc+idx*4:08X}',
+                'source_function_pc': f"0x{f['start']:08X}",
+                'table_candidate_address': f'0x{possible_address:08X}',
+                'base_register': f'r{base_reg}',
+                'register_loaded': f'r{loaded_reg}',
+                'high_address_source': source,
+                'lui_pc': hi_pc,
+                'next_indirect_transfer_kind': consumer[0] if consumer else None,
+                'next_indirect_transfer_pc': consumer[1] if consumer else None,
+                'not_proof_of_execution_or_dispatch': True,
+            })
+    return {
+        'syntactic_lw_low_field_match_count': len(candidates),
+        'high_lui_matched_count': sum(
+            item['high_address_source'] != 'unresolved_base' for item in candidates),
+        'first_candidate_lw_sites': candidates[:20],
+        'unrelocated_overlay_only': True,
+    }
+
+
 def inspect_static_callback_pointer_uses(words, base_pc, target_pc,
                                          functions, pair_hints, action_sites=None):
     """Inspect executable SW uses and data adjacency without asserting runtime."""
@@ -440,7 +525,10 @@ def inspect_static_callback_pointer_uses(words, base_pc, target_pc,
             end += 1
         run_targets = words[begin:end + 1]
         matching_actions = sorted(action_owner_starts.intersection(run_targets))
+        loads = inspect_pointer_run_loads(
+            words, base_pc, functions, base_pc + begin*4, base_pc + (end+1)*4)
         groups.append({
+            'syntactic_original_lw_readers': loads,
             'data_word_pc': f'0x{base_pc + idx*4:08X}',
             'run_start_pc': f'0x{base_pc + begin*4:08X}',
             'run_end_pc_exclusive': f'0x{base_pc + (end+1)*4:08X}',
@@ -838,6 +926,11 @@ def main(argv=None) -> int:
                        r['index_within_adjacent_function_pointer_run'],
                        r['distinct_pinned_function_pointer_count'],
                        r['candidate_action_writer_function_count_in_run'])
+                      for r in use['raw_word_pinned_function_pointer_adjacency'][:6]],
+                  'table_load_reader_summary=', [
+                      (r['syntactic_original_lw_readers']['syntactic_lw_low_field_match_count'],
+                       r['syntactic_original_lw_readers']['high_lui_matched_count'],
+                       r['syntactic_original_lw_readers']['first_candidate_lw_sites'][:4])
                       for r in use['raw_word_pinned_function_pointer_adjacency'][:6]],
                   'runtime_callback_verified=', False)
         print('GOEMON_INDIRECT_JR COMPLETE: static table hypotheses only')

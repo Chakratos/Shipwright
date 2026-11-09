@@ -2,6 +2,11 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Original-MIPS-Zugriffe auf den 232-Funktionszeigerbereich (2026-11-09)
+
+- Private Owner-ROM [42608364934](https://github.com/Chakratos/Shipwright/actions/runs/42608364934) **392/392 Python + native C++20 bestanden**. Zusammenhängender originaler Bereich 0x80203B90 bis 0x80203F30 mit **232 verschiedenen Funktionsadressen**; der zweite JR-Dispatcher 0x801E0944 liegt auf Slot **186**. In diesem Block befindet sich die Funktionsadresse genau eines identifizierten +0xCC-Action-Writers; das beweist weiterhin weder eine homogene Action-Tabelle noch aktive Original-Spieler-Animation.
+- Neue Quellcodeanalyse durchsucht die gepinnten 906 Originalfunktionen nach MIPS-LW-Lesezugriffen mit Offsets in diesen Bereich, verknüpft ununterbrochene LUI-Herkunft (direkt oder indiziert über ADDU) und notiert mögliche unmittelbar folgende JR/JALR-Verbraucher. Drei synthetische Regressionstests; private ROM-Prüfung folgt über [goemon-player-jump-tables]. Keine Originalbefehlswörter in GitHub-Berichten. G1 offen.
+
 ## Große Original-Funktionszeigerregion (2026-11-09)
 
 - Owner-ROM [42607985211](https://github.com/Chakratos/Shipwright/actions/runs/42607985211) **391/391 Python + native PASS**. Die zweite JR-Funktion 0x801E0944 liegt bei Originaldatenadresse 0x80203E78 in einem zusammenhängenden Block von **232 gepinnten Funktionsanfangsadressen**. Einzig diese statische Adressstruktur ist verifiziert; es ist noch keine logische Gameplay-Action-Tabelle nachgewiesen.
