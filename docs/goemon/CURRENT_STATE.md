@@ -2,6 +2,11 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## Echter Tabellenleser: Registerindex und Funktionszeiger-Sink (2026-11-09)
+
+- Privater Original-ROM-Durchlauf [42609767243](https://github.com/Chakratos/Shipwright/actions/runs/42609767243) **396/396 Python plus native C++20 PASS** nach Korrektur der synthetischen Adresse. Der Tabelle-LW bei 0x801DAF28 in Originalfunktion 0x801DAD68 benutzt den skalierten Index aus r17; der rückwärts naheliegende Produzent ist r0-basiert, aber eine echten Kontrollpfad-Übereinstimmung wurde noch nicht geprüft. Kein direkter Feld-LBU/LHU-Producer in diesem rückwärtigen Slice gefunden.
+- Neu überprüft die CFG den r17-Wert direkt an der ursprünglichen Index-Schiebeoperation, unabhängig vom nächstliegenden rückwärts gefundenen Produzenten. Eine zusätzliche originalfunktionsbegrenzte Alias-/Senkensuche protokolliert SW auf Feld-Offsets, JR/JALR über den Tabellenzeiger oder dessen Rückgabe in v0, ohne die Originaldaten zu exportieren. Drei Quelltests hinzugefügt. Windows [goemon-player-jump-tables] wird erneut getestet; bis zu einem tatsächlichen Originalspieler-Anim-Stream bleibt G1 OPEN.
+
 ## Korrektur des Quelltest-Fix­tures für die MIPS-Tabelle (2026-11-09)
 
 - [42609473038](https://github.com/Chakratos/Shipwright/actions/runs/42609473038) **FAIL**: 396 Python-Tests, 1 Regression fehlgeschlagen (test_pointer_table_reader_index_from_action_byte_field); die synthetische Tabelle wurde bei Wortindex 60 abgelegt, das zugehörige LW las aber Adresse High(0x8020)+0x3B90. Das ist kein Beweis eines Fehlers am Originalspiel; die Windows-ROM-Experimentstufe wurde wegen des Tests nicht erreicht.

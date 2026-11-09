@@ -447,6 +447,7 @@ def inspect_pointer_run_loads(words, base_pc: int, functions: list[dict],
             candidates.append({
                 'lw_pc': f'0x{base_pc+idx*4:08X}',
                 'source_function_pc': f"0x{f['start']:08X}",
+                'source_function_size': f['size'],
                 'table_candidate_address': f'0x{possible_address:08X}',
                 'base_register': f'r{base_reg}',
                 'register_loaded': f'r{loaded_reg}',
@@ -464,6 +465,71 @@ def inspect_pointer_run_loads(words, base_pc: int, functions: list[dict],
         'unrelocated_overlay_only': True,
     }
 
+
+
+
+def inspect_pointer_table_load_sinks(words, base_pc, function_start,
+                                     function_size, lw_pc, loaded_reg):
+    """Conservative syntactic consumers of a table-loaded function pointer.
+
+    Only same original function, bounded 32 words. Branches stop this path,
+    and no SW/call is interpreted as proof of execution.
+    """
+    from trace_player_writer_provenance import sign16, written_register
+    from trace_player_writer_cfg import is_control, origin_at
+    at = (lw_pc - base_pc) // 4
+    start = (function_start - base_pc) // 4
+    end = min(len(words), at + 33, (function_start + function_size - base_pc) // 4)
+    aliases = {loaded_reg}
+    sinks = []
+    for idx in range(at + 1, end):
+        word = words[idx]
+        op = word >> 26
+        rs, rt = (word >> 21) & 31, (word >> 16) & 31
+        fun = word & 63
+        if op == 0x2B and rt in aliases:
+            owner = origin_at(words, base_pc, start, idx, rs)
+            sinks.append({
+                'kind': 'sw_function_pointer_alias',
+                'pc': f'0x{base_pc + 4*idx:08X}',
+                'field_offset': sign16(word),
+                'base_register': f'r{rs}',
+                'base_origin': owner['origin'],
+                'base_complete': owner['complete'],
+                'actual_callback_execution_verified': False,
+            })
+        if op == 0 and fun in (8, 9) and rs in aliases:
+            sinks.append({
+                'kind': 'jalr_function_pointer_alias' if fun == 9
+                        else 'jr_function_pointer_alias',
+                'pc': f'0x{base_pc + 4*idx:08X}',
+                'actual_callback_execution_verified': False,
+            })
+        if op == 0 and fun == 8 and rs == 31 and 2 in aliases:
+            sinks.append({
+                'kind': 'return_function_pointer_alias_in_v0',
+                'pc': f'0x{base_pc + 4*idx:08X}',
+                'actual_callback_execution_verified': False,
+            })
+        if is_control(word):
+            break  # no naive traversal through branch or delay-slot
+        new_alias = None
+        if op == 0 and fun in (0x21, 0x25):
+            rd = (word >> 11) & 31
+            if ((rs in aliases and rt == 0) or
+                    (rt in aliases and rs == 0)):
+                new_alias = rd
+        dest = written_register(word)
+        if dest in aliases:
+            aliases.remove(dest)
+        if new_alias not in (None, 0):
+            aliases.add(new_alias)
+        if not aliases:
+            break
+    return {'observed_syntactic_consumers': sinks[:20],
+            'consumer_count': len(sinks),
+            'function_boundary_and_branch_limited': True,
+            'live_game_callback_not_verified': True}
 
 
 def annotate_pointer_run_index_ancestry(payload: bytes, base_pc: int,
@@ -506,6 +572,38 @@ def annotate_pointer_run_index_ancestry(payload: bytes, base_pc: int,
                     report['local_cfg_field_base_origin'] = owner['origin']
                     report['local_cfg_field_base_symbol'] = owner.get('symbol')
                     report['local_cfg_field_base_complete'] = owner['complete']
+                if (ancestry.get('index_scale_shift_pc') and
+                        ancestry.get('index_source_register')):
+                    index_source = origin_at(
+                        words, base_pc,
+                        (int(reader['source_function_pc'], 16) - base_pc) // 4,
+                        (int(ancestry['index_scale_shift_pc'], 16) - base_pc) // 4,
+                        int(ancestry['index_source_register'][1:]))
+                    report['index_source_cfg_origin'] = index_source['origin']
+                    report['index_source_cfg_complete'] = index_source['complete']
+                    report['index_source_cfg_constant_value'] = (
+                        index_source.get('constant_value'))
+                    report['index_source_syntactic_constant_candidate'] = (
+                        ancestry.get('constant_selector_candidate_index'))
+                    report['index_source_cfg_matches_syntactic_candidate'] = (
+                        index_source['complete'] and
+                        index_source['origin'] == 'constant' and
+                        index_source.get('constant_value') ==
+                        ancestry.get('constant_selector_candidate_index'))
+                else:
+                    report['index_source_cfg_origin'] = None
+                    report['index_source_cfg_complete'] = False
+                    report['index_source_cfg_constant_value'] = None
+                    report['index_source_syntactic_constant_candidate'] = None
+                    report['index_source_cfg_matches_syntactic_candidate'] = False
+                f_start = int(reader['source_function_pc'], 16)
+                # The reader source was validated against a pinned function
+                # by the public-symbol table-load scanner.
+                reader['post_load_sinks'] = inspect_pointer_table_load_sinks(
+                    words, base_pc, f_start,
+                    int(reader['source_function_size']),
+                    int(reader['lw_pc'], 16),
+                    int(reader['register_loaded'][1:]))
                 reader['index_ancestry'] = report
 
 
@@ -979,6 +1077,10 @@ def main(argv=None) -> int:
                        r['syntactic_original_lw_readers']['high_lui_matched_count'],
                        r['syntactic_original_lw_readers']['first_candidate_lw_sites'][:4])
                       for r in use['raw_word_pinned_function_pointer_adjacency'][:6]],
+                  'table_post_load_sinks=', [
+                      c.get('post_load_sinks')
+                      for r in use['raw_word_pinned_function_pointer_adjacency'][:6]
+                      for c in r['syntactic_original_lw_readers']['first_candidate_lw_sites'][:4]],
                   'table_index_source=', [
                       c.get('index_ancestry')
                       for r in use['raw_word_pinned_function_pointer_adjacency'][:6]

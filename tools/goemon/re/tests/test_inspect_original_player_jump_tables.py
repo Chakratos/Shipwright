@@ -435,6 +435,35 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertTrue(a['local_cfg_field_base_complete'])
         self.assertFalse(a['original_player_action_verified'])
 
+    def test_table_loaded_function_pointer_sw_sink_in_entry_a0(self):
+        from inspect_original_player_jump_tables import inspect_pointer_table_load_sinks
+        words = [(0x23 << 26) | (8 << 21) | (5 << 16) | 0x3B90,
+                 (0x2B << 26) | (4 << 21) | (5 << 16) | 0xC8,
+                 (31 << 21) | 8, 0]
+        result = inspect_pointer_table_load_sinks(words, BASE, BASE, 16, BASE, 5)
+        self.assertEqual(result['consumer_count'], 1)
+        sink = result['observed_syntactic_consumers'][0]
+        self.assertEqual(sink['field_offset'], 0xC8)
+        self.assertEqual(sink['base_origin'], 'entry_a0')
+        self.assertFalse(sink['actual_callback_execution_verified'])
+
+    def test_overwritten_table_loaded_register_has_no_false_sink(self):
+        from inspect_original_player_jump_tables import inspect_pointer_table_load_sinks
+        words = [(0x23 << 26) | (8 << 21) | (5 << 16) | 0x3B90,
+                 (9 << 26) | (0 << 21) | (5 << 16) | 0,
+                 (0x2B << 26) | (4 << 21) | (5 << 16) | 0xC8]
+        result = inspect_pointer_table_load_sinks(words, BASE, BASE, 12, BASE, 5)
+        self.assertEqual(result['consumer_count'], 0)
+
+    def test_loaded_table_pointer_moved_to_v0_then_returned(self):
+        from inspect_original_player_jump_tables import inspect_pointer_table_load_sinks
+        words = [(0x23 << 26) | (8 << 21) | (5 << 16) | 0x3B90,
+                 (5 << 21) | (2 << 11) | 0x21,
+                 (31 << 21) | 8, 0]
+        result = inspect_pointer_table_load_sinks(words, BASE, BASE, 16, BASE, 5)
+        self.assertEqual(result['observed_syntactic_consumers'][0]['kind'],
+                         'return_function_pointer_alias_in_v0')
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

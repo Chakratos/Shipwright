@@ -65,10 +65,11 @@
     "player_dispatch_pointer_adjacency": 42607985211,
     "original_dispatch_pointer_block_bounds": 42608364934,
     "original_232_ptr_table_lw_reader": 42608748950,
-    "player_table_index_regression_failure": 42609473038
+    "player_table_index_regression_failure": 42609473038,
+    "original_table_reader_index_source_r17": 42609767243
   },
-  "next_task": "Verify fixed consistent synthetic LUI/ADDU/LW test fixture, then rerun owner-private [goemon-player-jump-tables] table_index_source for real table LW 0x801DAF28. Extract field offset and true a0 owner, then authentic original AnimatedSkeleton.animation and numeric motion.",
+  "next_task": "Inspect owner-ROM [goemon-player-jump-tables] table_index_source CFG for r17 and table_post_load_sinks after 0x801DAF28, to identify which original object field receives/executes the loaded callback; then PlayerTask owner and actual AnimatedSkeleton.animation/numeric original pose.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "Run 42609473038 FAIL 1/396: newly written synthetic fixture had table word at wrong address for LUI high0x8020+LW low0x3B90. Fixed fixture pending retest, private ROM step not executed. G1 open."
+  "last_known_limitation": "Owner 42609767243 passed 396 Python/native; original pointer table read LW 0x801DAF28 has indexed ADDU with source r17; nearest syntactic chain r0-based, no proven action field or consumer. Enhanced CFG and sink scan awaiting private ROM result."
 }
