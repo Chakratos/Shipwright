@@ -212,6 +212,54 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
         self.assertEqual(r['origin'], 'entry_a0')
         self.assertTrue(r['complete'])
 
+
+    def test_zero_anchored_addiu_recovers_nonzero_immediate(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 24
+        words[3] = (9 << 26) | (9 << 16) | 3
+        words[4] = (9 << 16) | (10 << 11) | (2 << 6)
+        words[5] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[6] = (35 << 26) | (8 << 21) | (12 << 16)
+        got = trace_index_register_load(blob(words), BASE, BASE, BASE + 24)
+        self.assertEqual(got['constant_selector_candidate_index'], 3)
+        self.assertEqual(got['constant_selector_candidate_scaled_byte_offset'], 12)
+        self.assertEqual(got['constant_selector_candidate_control_transfers'], 0)
+        self.assertTrue(got['constant_selector_candidate_ignores_alternative_paths'])
+        self.assertTrue(got['no_live_player_pointer_or_action_proven'])
+
+    def test_zero_anchored_ori_and_addiu_chain(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 24
+        words[1] = (13 << 26) | (9 << 16) | 5
+        words[2] = (9 << 26) | (9 << 21) | (9 << 16) | 2
+        words[3] = (9 << 16) | (10 << 11) | (2 << 6)
+        words[4] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[5] = (35 << 26) | (8 << 21) | (12 << 16)
+        got = trace_index_register_load(blob(words), BASE, BASE, BASE + 20)
+        self.assertEqual(got['constant_selector_candidate_index'], 7)
+        self.assertEqual(got['constant_selector_candidate_scaled_byte_offset'], 28)
+
+    def test_literal_candidate_across_branch_is_not_cfg_proof(self):
+        from inspect_original_player_jump_tables import trace_index_register_load
+        words = [0] * 24
+        words[0] = (9 << 26) | (9 << 16) | 1
+        words[1] = (4 << 26) | (2 << 21) | (3 << 16) | 2
+        words[3] = (9 << 16) | (10 << 11) | (2 << 6)
+        words[4] = (8 << 21) | (10 << 16) | (8 << 11) | 0x21
+        words[5] = (35 << 26) | (8 << 21) | (12 << 16)
+        got = trace_index_register_load(blob(words), BASE, BASE, BASE + 20)
+        self.assertEqual(got['constant_selector_candidate_index'], 1)
+        self.assertEqual(got['constant_selector_candidate_control_transfers'], 1)
+        self.assertTrue(got['constant_selector_candidate_ignores_alternative_paths'])
+
+    def test_unresolved_variable_shift_rejects_literal_index(self):
+        from inspect_original_player_jump_tables import reconstruct_zero_register_selector_candidate
+        shift = (7 << 21) | (9 << 16) | (9 << 11) | 4
+        got = reconstruct_zero_register_selector_candidate(
+            [('sllv', shift), ('addiu', (9 << 26) | (9 << 16) | 2)], 2)
+        self.assertIsNone(got['candidate_index'])
+        self.assertFalse(got['evaluation_complete'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

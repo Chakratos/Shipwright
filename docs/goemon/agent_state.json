@@ -1,6 +1,6 @@
 {
   "schema": "goemon-agent-handoff-v1",
-  "updated_utc_date": "2026-11-08",
+  "updated_utc_date": "2026-11-09",
   "repository": "Chakratos/Shipwright",
   "branch": "feature/goemon-original-controller",
   "authoritative_documents": [
@@ -59,8 +59,8 @@
     "original_player_index_ancestry": 42485168086,
     "original_player_index_ancestry_latest": 42485758402
   },
-  "next_task": "G1 next: extend bounded backwards selector trace before PC 0x801DA1FC across the actual pinned .file_11 function, explicitly reporting control-flow ambiguity, and resolve second lhu +0x30(r3) base owner. Then recover true Object.graphics_1 and AnimatedSkeleton.animation and prove numeric bone/vertex motion. One-shot [goemon-player-jump-tables] for owner-private ROM.",
+  "next_task": "Read new private [goemon-player-jump-tables] literal_index_candidate and literal_index_path_controls logs; use full CFG reaching-definitions (not nearest textual MIPS definition) to establish first switch selector source. Then resolve second r4->LW+0x5C->r3->LHU+0x30 owner and active AnimatedSkeleton.animation. Numerical G1 open.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "Private ROM 42485758402: 368 Python and native tests pass; two JR table source addresses verified syntactically; 9/10 candidate action writers reached only under direct or guessed target CFG, none proven actual PlayerTask. First index source and second r3 owner remain unknown; no animated pose."
+  "last_known_limitation": "Baseline Windows 42486722655: 373 Python plus native tests passed; zero-register anchored ADDIU selector evaluation was incomplete. New source-only arithmetic candidate implementation queued for private ROM verification. Live animation ownership still not proven."
 }

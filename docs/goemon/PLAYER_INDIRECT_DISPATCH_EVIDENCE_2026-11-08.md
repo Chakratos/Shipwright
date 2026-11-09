@@ -28,3 +28,7 @@
 The ROM-private tool is tools/goemon/re/inspect_original_player_jump_tables.py and retains only the JSON metadata locally under C:\actions-runner-goemon\original-player-jump-table-candidates.json. To replay portable regressions: python tools/goemon/verify.py --native. To run the private owner-ROM experiment: use an explicit one-shot commit marker [goemon-player-jump-tables] on the goemon-selfhosted workflow, then inspect the actual Actions run log. Extend first register ancestry to actual source function bounds with branch ambiguity metadata, track second r3 source to a verified player global or call argument, then resolve active Object.graphics_1 / AnimatedSkeleton.animation and numerical source pose over real original frame increments.
 
 Never upgrade G1 merely because a jump table appears coherent. Runtime capture of actual original game is useful for validation but not necessary to progress on static ROM MIPS analysis.
+
+## 2026-11-09 follow-up
+
+First switch ancestry ends with zero-register input to an ADDIU. Added private-only numeric candidate evaluation of the ADDIU transform and subsequent shift; new diagnostic logs only candidate index and intervening control transfers, not ROM words. Static nearest textual definition is not a dominance or runtime ownership proof. Await the new marker-gated Windows ROM run.

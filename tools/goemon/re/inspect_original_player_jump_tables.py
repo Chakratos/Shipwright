@@ -102,6 +102,47 @@ def link_candidate_table_to_lui(payload: bytes, base_vram: int,
 
 
 
+
+def reconstruct_zero_register_selector_candidate(transforms, scale):
+    """Evaluate a syntactic r0-anchored selector; never prove game execution.
+
+    Transforms are private (operation, original decoded word) pairs, ordered
+    from consumer to producer. Only reduced integer metadata leaves this scope.
+    """
+    from trace_player_writer_provenance import sign16
+    value = 0
+    for operation, word in reversed(transforms):
+        imm = word & 0xFFFF
+        if operation in ('addi', 'addiu'):
+            value = (value + sign16(imm)) & 0xFFFFFFFF
+        elif operation == 'andi':
+            value &= imm
+        elif operation == 'ori':
+            value |= imm
+        elif operation == 'xori':
+            value ^= imm
+        elif operation in ('slti', 'sltiu'):
+            lhs = value if operation == 'sltiu' or value < 0x80000000 else value - 0x100000000
+            rhs = imm if operation == 'sltiu' else sign16(imm)
+            value = int(lhs < rhs)
+        elif operation in ('sll', 'srl', 'sra'):
+            shift = (word >> 6) & 31
+            if operation == 'sll':
+                value = (value << shift) & 0xFFFFFFFF
+            elif operation == 'srl':
+                value >>= shift
+            else:
+                signed = value - 0x100000000 if value & 0x80000000 else value
+                value = (signed >> shift) & 0xFFFFFFFF
+        elif operation == 'move_via_addu_or':
+            continue
+        else:
+            return {'candidate_index': None, 'scaled_byte_offset': None,
+                    'evaluation_complete': False}
+    return {'candidate_index': value,
+            'scaled_byte_offset': (value << scale) & 0xFFFFFFFF,
+            'evaluation_complete': True}
+
 def trace_index_register_load(payload: bytes, base_pc: int,
                               function_pc: int, lw_pc: int) -> dict:
     """Trace source metadata from JR-target LW base via ADDU, SLL, LBU.
@@ -148,6 +189,10 @@ def trace_index_register_load(payload: bytes, base_pc: int,
         'selector_object_register': None,
         'selector_transform_chain': [],
         'selector_chain_stop_reason': None,
+        'constant_selector_candidate_index': None,
+        'constant_selector_candidate_scaled_byte_offset': None,
+        'constant_selector_candidate_control_transfers': None,
+        'constant_selector_candidate_ignores_alternative_paths': True,
         'selector_chain_stop_pc': None,
         'selector_chain_stop_instruction_category': None,
         'selector_offset_cc_syntactic_candidate': False,
@@ -198,8 +243,19 @@ def trace_index_register_load(payload: bytes, base_pc: int,
         report['index_scale'] = scale
         report['index_source_register'] = f'r{source_reg}'
         cursor_reg, cursor = source_reg, shift_idx
+        syntactic_transform_words = []  # decoded words never serialized
         for _ in range(8):
             if cursor_reg == 0:
+                candidate = reconstruct_zero_register_selector_candidate(
+                    [(name, word) for name, word, _ in syntactic_transform_words],
+                    scale)
+                if candidate['evaluation_complete']:
+                    report['constant_selector_candidate_index'] = candidate['candidate_index']
+                    report['constant_selector_candidate_scaled_byte_offset'] = candidate['scaled_byte_offset']
+                    earliest = (min(i for _, _, i in syntactic_transform_words)
+                                if syntactic_transform_words else shift_idx)
+                    report['constant_selector_candidate_control_transfers'] = sum(
+                        is_control(w) for w in words[earliest + 1:lw_idx])
                 report['selector_chain_stop_reason'] = 'constant_zero_register'
                 return report
             load_idx, load = definition(cursor_reg, cursor)
@@ -261,6 +317,7 @@ def trace_index_register_load(payload: bytes, base_pc: int,
                 'pc': f'0x{base_pc + load_idx * 4:08X}',
                 'operation': name,
             })
+            syntactic_transform_words.append((name, load, load_idx))
             cursor_reg, cursor = next_reg, load_idx
         report['selector_chain_stop_reason'] = 'bounded_hop_limit'
         return report
@@ -526,6 +583,11 @@ def main(argv=None) -> int:
                       if row['syntactic_jump_index_ancestry'] else None,
                   'index_operand_def=', row['syntactic_jump_index_ancestry']['indexed_operand_definition_kinds']
                       if row['syntactic_jump_index_ancestry'] else None,
+                  'literal_index_candidate=', row['syntactic_jump_index_ancestry'].get('constant_selector_candidate_index')
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'literal_index_path_controls=', row['syntactic_jump_index_ancestry'].get('constant_selector_candidate_control_transfers')
+                      if row['syntactic_jump_index_ancestry'] else None,
+                  'literal_index_not_live_action=', True,
                   'selector_chain=', row['syntactic_jump_index_ancestry']['selector_transform_chain']
                       if row['syntactic_jump_index_ancestry'] else None,
                   'selector_stop=', row['syntactic_jump_index_ancestry']['selector_chain_stop_reason']

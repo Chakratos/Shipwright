@@ -2,6 +2,11 @@
 
 **Last audit:** 2026-11-08. **Branch:** feature/goemon-original-controller. **Status:** IN PROGRESS; no authentic animated gameplay clips in SoH. Evidence references are actual recorded GitHub Actions run IDs. New work MUST update this document on the same branch; never rewrite test failures as successes.
 
+## JR selector constant-source correction (2026-11-09)
+
+- Source-free evaluator now reduces a zero-register-anchored ADDIU/ORI/shift chain to a numeric syntactic selector candidate, rather than treating the entire index as zero because its earliest input is r0. Variable shift forms fail closed. Control-transfer count and permanent alternative-path warning remain visible; these are not animation/action proofs.
+- Four synthetic regression tests added; the opt-in private-ROM [goemon-player-jump-tables] check remains to be verified. Source-only change, no full Ship build. G1 OPEN.
+
 ## Original player JR dispatch offline ROM evidence (2026-11-08)
 
 - Owner ROM [42484532406](https://github.com/Chakratos/Shipwright/actions/runs/42484532406) **358/358 Python plus native C++20 PASS**: indirect JR PC 0x801DA23C (r12, LW 0x801DA238) has a contiguous 10-entry, 9-unique-target table at private original player overlay offset 0x03FAA0. JR 0x801E0980 (r24, LW 0x801E097C) has a 6-entry, 6-unique-target table at offset 0x03FD78. Both target PCs lie within pinned original functions. Structural candidates, NOT live action streams.

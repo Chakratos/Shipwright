@@ -71,3 +71,7 @@ Full pinned original player overlay symbol catalog contains 906 nonoverlapping p
 ## Original player switch table discoveries (2026-11-08)
 
 Owner-private NG5E file-table ID 10 / recompiler symbol .file_11 has two actual MIPS JR switch instructions at 0x801DA23C and 0x801E0980. Their preceding LW, static LUI-high/ADD-index base, and absolute in-function pointer table target addresses align (table offsets 0x03FAA0 and 0x03FD78). No original ROM code, table words or matrix data is serialized to GitHub. Structural tables do not prove original runtime action dispatch. Offline source selector 0x801E0980 uses lhu +0x30(r3) with unverified object owner, and the other selector's pre-shift register is still unresolved. The fake source progression matrix tests remain 0/371 true numeric motion; G1 must remain OPEN. Relevant ROM [42485758402](https://github.com/Chakratos/Shipwright/actions/runs/42485758402). Static reverse engineering does not strictly require interactive runtime game traces, but final player gameplay requires authentic numeric/visual verification.
+
+## Selector zero-register semantics, 2026-11-09
+
+A MIPS ADDIU rd,r0,imm supplies the signed immediate; treating the zero input register as the final switch-index value is erroneous. The private source-only jump-table tracer now evaluates constant-source arithmetic and reports derived candidate index only, tagged as nearest textual definition and not proven over all CFG paths. Raw MIPS machine words remain local, and no candidate index proves an original player action.
