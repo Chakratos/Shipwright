@@ -381,7 +381,7 @@ def inspect_selector_object_base(payload: bytes, base_vram: int,
 
 
 def inspect_static_callback_pointer_uses(words, base_pc, target_pc,
-                                         functions, pair_hints):
+                                         functions, pair_hints, action_sites=None):
     """Inspect executable SW uses and data adjacency without asserting runtime."""
     from trace_player_writer_provenance import sign16
     from trace_player_writer_cfg import origin_at
@@ -423,6 +423,12 @@ def inspect_static_callback_pointer_uses(words, base_pc, target_pc,
             })
     starts = {f['start'] for f in functions}
     starts.add(target_pc)
+    action_owner_starts = set()
+    for action in action_sites or []:
+        pc = int(action['pc'], 16)
+        for function in functions:
+            if function['start'] <= pc < function['start'] + function['size']:
+                action_owner_starts.add(function['start'])
     groups = []
     for idx, word in enumerate(words):
         if word != target_pc:
@@ -432,9 +438,18 @@ def inspect_static_callback_pointer_uses(words, base_pc, target_pc,
             begin -= 1
         while end + 1 < len(words) and words[end + 1] in starts:
             end += 1
+        run_targets = words[begin:end + 1]
+        matching_actions = sorted(action_owner_starts.intersection(run_targets))
         groups.append({
             'data_word_pc': f'0x{base_pc + idx*4:08X}',
+            'run_start_pc': f'0x{base_pc + begin*4:08X}',
+            'run_end_pc_exclusive': f'0x{base_pc + (end+1)*4:08X}',
+            'index_within_adjacent_function_pointer_run': idx - begin,
             'adjacent_pinned_function_pointer_word_count': end - begin + 1,
+            'distinct_pinned_function_pointer_count': len(set(run_targets)),
+            'candidate_action_writer_function_count_in_run': len(matching_actions),
+            'candidate_action_writer_function_pcs_in_run': [
+                f'0x{pc:08X}' for pc in matching_actions[:15]],
             'adjacency_does_not_prove_vtable_or_execution': True,
         })
     return {
@@ -678,7 +693,8 @@ def analyze_original_overlay(payload: bytes, base_vram: int,
                 'original_overlay_pointer_uses': (
                     inspect_static_callback_pointer_uses(
                         original_words, base_vram, int(target, 16), symbols,
-                        references[target]['first_lui_low_constant_pairs'])),
+                        references[target]['first_lui_low_constant_pairs'],
+                        action_sites=action_sites)),
                 'actual_original_dispatch_executed': False,
             } for target in dispatch_targets
         }
@@ -816,6 +832,12 @@ def main(argv=None) -> int:
                   'first_sw=', use['first_local_cfg_pointer_stores'][:5],
                   'literal_neighbor_counts=', [
                       r['adjacent_pinned_function_pointer_word_count']
+                      for r in use['raw_word_pinned_function_pointer_adjacency'][:6]],
+                  'pointer_runs=', [
+                      (r['run_start_pc'], r['run_end_pc_exclusive'],
+                       r['index_within_adjacent_function_pointer_run'],
+                       r['distinct_pinned_function_pointer_count'],
+                       r['candidate_action_writer_function_count_in_run'])
                       for r in use['raw_word_pinned_function_pointer_adjacency'][:6]],
                   'runtime_callback_verified=', False)
         print('GOEMON_INDIRECT_JR COMPLETE: static table hypotheses only')

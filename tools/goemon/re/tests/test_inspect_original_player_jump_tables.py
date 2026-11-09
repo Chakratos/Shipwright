@@ -346,6 +346,25 @@ class OriginalPlayerJumpTableTests(unittest.TestCase):
             'adjacent_pinned_function_pointer_word_count'], 3)
         self.assertTrue(r['external_or_relocated_callback_registration_unresolved'])
 
+    def test_callback_run_position_and_action_symbol_overlap_metadata(self):
+        from inspect_original_player_jump_tables import inspect_static_callback_pointer_uses
+        target, other, action = BASE + 0x40, BASE + 0x60, BASE + 0x80
+        words = [0, other, target, action, target, 0]
+        funcs = [{'start': target, 'size': 8}, {'start': other, 'size': 8},
+                 {'start': action, 'size': 8}]
+        use = inspect_static_callback_pointer_uses(
+            words, BASE, target, funcs, [],
+            action_sites=[{'pc': f'0x{action:08X}'}])
+        run = use['raw_word_pinned_function_pointer_adjacency'][0]
+        self.assertEqual(run['run_start_pc'], f'0x{BASE+4:08X}')
+        self.assertEqual(run['run_end_pc_exclusive'], f'0x{BASE+20:08X}')
+        self.assertEqual(run['index_within_adjacent_function_pointer_run'], 1)
+        self.assertEqual(run['adjacent_pinned_function_pointer_word_count'], 4)
+        self.assertEqual(run['distinct_pinned_function_pointer_count'], 3)
+        self.assertEqual(run['candidate_action_writer_function_count_in_run'], 1)
+        self.assertEqual(run['candidate_action_writer_function_pcs_in_run'], [
+            f'0x{action:08X}'])
+
     def test_jr_ra_is_not_switch_dispatch(self):
         words = [0] * 4
         words[1] = (31 << 21) | 8

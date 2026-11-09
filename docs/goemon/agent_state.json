@@ -61,10 +61,11 @@
     "player_jr_literal_index_one": 42584776027,
     "player_jr_forward_cfg_source": 42606446315,
     "player_dispatch_direct_call_graph": 42607234758,
-    "player_dispatch_static_pointer_refs": 42607558009
+    "player_dispatch_static_pointer_refs": 42607558009,
+    "player_dispatch_pointer_adjacency": 42607985211
   },
-  "next_task": "Owner-ROM [goemon-player-jump-tables] GOEMON_DISPATCH_POINTER_USES: 0x801E0944 pointer literal at 0x80203E78 and LUI/low at 0x801DD5F8/608. Find original SW destination/offset from path-merged MIPS CFG and callback-table neighbor counts; correlate destination with actual player Object/Task owner and original AnimatedSkeleton.animation. No G1 numeric motion yet.",
+  "next_task": "Owner-ROM [goemon-player-jump-tables] GOEMON_DISPATCH_POINTER_USES pointer_runs to determine boundaries/slot and overlap between 232 adjacent original function PCs and candidate action writer functions; trace real MIPS indexing/callsite and owner to original AnimatedSkeleton.animation and numerical motion.",
   "private_assets": "Never upload or commit original ROM, extracted Nintendo/Konami assets or raw matrix data; private Windows owner runner only.",
   "archipelago_test_install_must_remain_untouched": true,
-  "last_known_limitation": "Owner 42607558009 passes 388 Python/native. Second JR no direct JAL caller, but one absolute pointer literal and one LUI/low construction identified in owner .file_11; cannot yet prove the callback executes or its actor owner."
+  "last_known_limitation": "ROM 42607985211 391 source/native PASS; 0x801E0944 static function literal at 0x80203E78 is within 232 neighboring function pointers. This does not prove a unified callback table or live action selection."
 }
